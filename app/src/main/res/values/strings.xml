@@ -35,6 +35,8 @@
     <string name="chat_message_tts_short_link">(Link to %1$s)</string>
 
     <!-- User menu -->
+<string name="pilih_status">Pilih Status</string>
+
     <string name="user_menu_kick">Kick</string>
     <string name="user_menu_ban">Ban</string>
     <string name="user_menu_mute">Mute</string>
