@@ -42,7 +42,7 @@
         android:summary="@string/pref_show_user_count_summary"
         app:iconSpaceReserved="false" />
 
-    <se.lublin.mumla.preference.SeekBarDialogPreference
+    <ofaid.ahmad.ptt.preference.SeekBarDialogPreference
         android:key="pttButtonHeight"
         android:title="@string/pttButtonHeight"
         app:useSimpleSummaryProvider="true"

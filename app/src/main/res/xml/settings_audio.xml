@@ -35,7 +35,7 @@
         android:defaultValue="false"
         app:iconSpaceReserved="false"/>
 
-    <se.lublin.mumla.preference.SeekBarDialogPreference
+    <ofaid.ahmad.ptt.preference.SeekBarDialogPreference
         android:title="@string/audioInputVolume"
         android:summary="@string/audioInputVolumeSum"
         android:key="inputVolume"
@@ -48,7 +48,7 @@
         android:key="vad_settings"
         app:iconSpaceReserved="false">
         <!-- multiplier was previously 0.1, but never made sense, never worked -->
-        <se.lublin.mumla.preference.SeekBarDialogPreference
+        <ofaid.ahmad.ptt.preference.SeekBarDialogPreference
             app:multiplier="1"
             android:defaultValue="50"
             android:key="vadThreshold"
@@ -61,7 +61,7 @@
     <PreferenceCategory android:title="@string/pttSettings"
         android:key="ptt_settings"
         app:iconSpaceReserved="false">
-        <se.lublin.mumla.preference.KeySelectDialogPreference
+        <ofaid.ahmad.ptt.preference.KeySelectDialogPreference
             android:key="talkKey"
             android:summary="@string/pttKeySum"
             android:title="@string/pttKey"
@@ -114,7 +114,7 @@
             android:entryValues="@array/audioSampleRateValues"
             app:iconSpaceReserved="false"/>
 
-        <se.lublin.mumla.preference.SeekBarDialogPreference
+        <ofaid.ahmad.ptt.preference.SeekBarDialogPreference
             android:key="input_bitrate"
             android:title="@string/inputQuality"
             android:summary="@string/inputQualitySum"

@@ -24,28 +24,28 @@
         android:summary="@string/certificateGenerateSum"
         android:title="@string/certificateGenerate"
         app:iconSpaceReserved="false">
-        <intent android:action="se.lublin.mumla.app.CERTIFICATE_GENERATE" />
+        <intent android:action="ofaid.ahmad.ptt.app.CERTIFICATE_GENERATE" />
     </Preference>
 
     <Preference
         android:summary="@string/pref_certificate_summary"
         android:title="@string/pref_certificate_title"
         app:iconSpaceReserved="false">
-        <intent android:action="se.lublin.mumla.app.CERTIFICATE_SELECT" />
+        <intent android:action="ofaid.ahmad.ptt.app.CERTIFICATE_SELECT" />
     </Preference>
 
     <Preference
         android:summary="@string/pref_import_certificate_summary"
         android:title="@string/pref_import_certificate_title"
         app:iconSpaceReserved="false">
-        <intent android:action="se.lublin.mumla.app.CERTIFICATE_IMPORT" />
+        <intent android:action="ofaid.ahmad.ptt.app.CERTIFICATE_IMPORT" />
     </Preference>
 
     <Preference
         android:summary="@string/pref_export_certificate_summary"
         android:title="@string/pref_export_certificate_title"
         app:iconSpaceReserved="false">
-        <intent android:action="se.lublin.mumla.app.CERTIFICATE_EXPORT" />
+        <intent android:action="ofaid.ahmad.ptt.app.CERTIFICATE_EXPORT" />
     </Preference>
 
     <Preference
@@ -53,7 +53,7 @@
         android:title="@string/clearServerCertificates"
         android:summary="@string/clearServerCertificatesSum"
         app:iconSpaceReserved="false">
-        <intent android:action="se.lublin.mumla.app.CLEAR_SERVER_CERTIFICATES" />
+        <intent android:action="ofaid.ahmad.ptt.app.CLEAR_SERVER_CERTIFICATES" />
     </Preference>
 
     <EditTextPreference

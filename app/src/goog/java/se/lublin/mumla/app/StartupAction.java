@@ -1,10 +1,10 @@
-package se.lublin.mumla.app;
+package ofaid.ahmad.ptt.app;
 
 import static com.android.billingclient.api.BillingClient.BillingResponseCode.OK;
 import static com.android.billingclient.api.BillingClient.ProductType.INAPP;
 import static com.android.billingclient.api.Purchase.PurchaseState.PENDING;
 import static java.util.concurrent.TimeUnit.DAYS;
-import static se.lublin.mumla.app.DialogUtils.maybeShowNewsDialog;
+import static ofaid.ahmad.ptt.app.DialogUtils.maybeShowNewsDialog;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
@@ -28,7 +28,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.Collections;
 import java.util.concurrent.ThreadLocalRandom;
 
-import se.lublin.mumla.R;
+import ofaid.ahmad.ptt.R;
 
 public class StartupAction implements IStartupAction {
     private static final String DONATION_PRODUCT_ID = "mumla_donation_1";

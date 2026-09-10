@@ -1,6 +1,6 @@
-package se.lublin.mumla.app;
+package ofaid.ahmad.ptt.app;
 
-import static se.lublin.mumla.app.DialogUtils.maybeShowNewsDialog;
+import static ofaid.ahmad.ptt.app.DialogUtils.maybeShowNewsDialog;
 
 import android.app.Activity;
 
