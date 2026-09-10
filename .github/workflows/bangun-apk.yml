@@ -1,0 +1,71 @@
+name: Bangun Mumla
+run-name: Bangun Mumla
+
+on:
+  push:
+    branches:
+      - ptt-new
+  pull_request:
+    branches:
+      - ptt-new
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Info perubahan
+        run: |
+          echo "Pengirim: ${{ github.actor }}"
+          echo "Pesan: ${{ github.event.head_commit.message }}"
+          echo "Cabang: ${{ github.ref_name }}"
+          echo "Komit: ${{ github.sha }}"
+
+      - name: Ambil kode & submodul
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Bersihkan cache
+        run: |
+          rm -rf ~/.gradle/caches
+          rm -rf ~/.gradle/wrapper
+          ./gradlew clean --no-daemon || true
+
+      - name: Siapkan Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+          cache: 'gradle'
+
+      - name: Siapkan Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Pasang NDK
+        run: |
+          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
+
+      - name: Tulis lokasi SDK & NDK
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> local.properties
+
+      - name: Beri izin Gradle
+        run: chmod +x gradlew libraries/humla/gradlew
+
+      - name: Bangun SpongyCastle
+        run: |
+          cd libraries/humla/libs/humla-spongycastle
+          ../../../../gradlew jar
+          cd ../../../../
+
+      - name: Bangun APK
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
+
+      - name: Simpan APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OFA-APK
+          path: "**/*.apk"

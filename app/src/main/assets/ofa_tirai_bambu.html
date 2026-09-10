@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Tirai Bambu — OFA</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { 
+            height: 100%; 
+            min-height: 100vh;
+            font-family: 'Segoe UI', sans-serif; 
+            background: linear-gradient(180deg, #0f172a 0%, #1e293b 100%); 
+            color: #fff; 
+            overflow: hidden;
+        }
+        body {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px 16px;
+            padding-bottom: calc(20px + env(safe-area-inset-bottom));
+        }
+        .server-card-full { 
+            width: 100%;
+            max-width: 420px;
+            background: rgba(30, 41, 59, 0.8); 
+            border: 1px solid rgba(56, 189, 248, 0.15);
+            border-radius: 28px; 
+            padding: 40px 28px 32px; 
+            text-align: center;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 8px 32px rgba(0,0,0,0.3); 
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            min-height: 85vh;
+        }
+        .server-icon {
+            width: 90px;
+            height: 90px;
+            margin: 0 auto 28px;
+            background: linear-gradient(135deg, #38bdf8, #818cf8);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 40px;
+            color: white;
+            box-shadow: 0 4px 20px rgba(56, 189, 248, 0.35);
+        }
+        .server-name { 
+            font-size: 24px; 
+            font-weight: 700; 
+            margin-bottom: 32px; 
+            letter-spacing: -0.5px;
+            line-height: 1.3;
+        }
+        .server-details { 
+            font-size: 15px; 
+            color: #94a3b8; 
+            margin-bottom: auto;
+            line-height: 2;
+            padding: 20px 0;
+        }
+        .server-details span { display: block; }
+
+        /* ==================================================
+           🆕 TAMBAHAN — BLOK BARU: PERANGKAT & SINYAL
+           ✅ TIDAK MENGUBAH gaya yang sudah ada di atas!
+           ================================================== */
+        .blok-perangkat {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(148, 163, 184, 0.25);
+        }
+        .blok-sinyal {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed rgba(148, 163, 184, 0.25);
+        }
+        .indikator-sinyal {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .sinyal-titik {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            opacity: 0.25;
+        }
+        .sinyal-titik.aktif { opacity: 1; }
+        .sinyal-lemah  { background-color: #facc15; }
+        .sinyal-bagus  { background-color: #10b981; }
+        .sinyal-buruk  { background-color: #ef4444; }
+        /* ==================================================
+           🆕 AKHIR TAMBAHAN — BAGIAN BARU SAJA!
+           ================================================== */
+
+        .btn-connect-full { 
+            width: 100%; 
+            padding: 20px 24px; 
+            background: linear-gradient(135deg, #10b981, #059669); 
+            color: white; 
+            border: none; 
+            border-radius: 18px; 
+            font-size: 20px; 
+            font-weight: 600;
+            cursor: pointer; 
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 20px rgba(16, 185, 129, 0.35);
+            margin-top: 20px;
+        }
+        .btn-connect-full:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 24px rgba(16, 185, 129, 0.45);
+        }
+        .btn-connect-full:active { transform: scale(0.97); }
+        .btn-connect-full:disabled { 
+            background: #334155; 
+            opacity: 0.7; 
+            transform: none;
+            box-shadow: none;
+        }
+        .spinner { 
+            display: inline-block; 
+            width: 18px; 
+            height: 18px; 
+            border: 2px solid #fff; 
+            border-top-color: transparent; 
+            border-radius: 50%; 
+            animation: spin 1s linear infinite; 
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div id="dashboard-container">
+        <div style="text-align:center;padding-top:40px;color:#94a3b8;">
+            Memuat data server...
+        </div>
+    </div>
+
+    <script>
+        // ==================================================
+        // ✅ VARIABEL GLOBAL — TETAP SAMA, TIDAK DIUBAH!
+        // ==================================================
+        window.serverData = null;
+
+        // ==================================================
+        // ✅ BUAT ID UNIK — TETAP SAMA, TIDAK DIUBAH!
+        // ==================================================
+        function buatIdUnik() {
+            const karakter = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
+            let acak = '';
+            for (let i = 0; i < 6; i++) {
+                acak += karakter.charAt(Math.floor(Math.random() * karakter.length));
+            }
+            return 'OFA' + acak;
+        }
+
+        const OFA_CONFIG = {
+            ofaId: buatIdUnik(),
+            jenis: "Acer"
+        };
+
+        // ==================================================
+        // ✅ FUNGSI BANTU — TETAP SAMA, TIDAK DIUBAH!
+        // ==================================================
+        function getField(server, possibleNames) {
+            if (!server) return null;
+            for (let name of possibleNames) {
+                if (server[name] !== undefined && server[name] !== null && server[name] !== '') return server[name];
+            }
+            return null;
+        }
+
+        // ==================================================
+        // ✅ TOMBOL KONEKSI — TETAP SAMA, TIDAK DIUBAH!
+        // ==================================================
+        function handleConnect(btn, host, port) {
+            if (!host || !port) {
+                const pesan = "❌ Data belum lengkap!\nAlamat: " + (host || '-') + "\nPort: " + (port || '-');
+                if (window.MumlaBridge?.showToast) window.MumlaBridge.showToast(pesan);
+                else alert(pesan);
+                return;
+            }
+
+            if (!window.MumlaBridge || typeof window.MumlaBridge.connectToServer !== 'function') {
+                alert("⚠️ MumlaBridge BELUM SIAP!\n\nAlamat: " + host + "\nPort: " + port + "\n\nPastikan nama di Java: \"MumlaBridge\" & fungsi connectToServer ada!");
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Memproses...';
+
+            try {
+                window.MumlaBridge.connectToServer(host, port);
+                onConnectCommandReceived();
+            } catch (err) {
+                alert("❌ Gagal koneksi:\n" + err.message);
+                onConnectCommandReceived();
+            }
+        }
+
+        function onConnectCommandReceived() {
+            setTimeout(() => {
+                document.querySelectorAll('.btn-connect-full').forEach(btn => {
+                    if (btn.disabled) {
+                        btn.disabled = false;
+                        btn.innerHTML = '🔗 Hubungkan';
+                    }
+                });
+            }, 3000);
+        }
+
+        // ==================================================
+        // ✅ FUNGSI renderCard() — TETAP SAMA, TIDAK DIUBAH!
+        // ==================================================
+        function renderCard() {
+            console.log("[OFA] renderCard() dipanggil! Data:", window.serverData);
+            const container = document.getElementById('dashboard-container');
+            if (!container) return;
+
+            const serverArray = window.serverData;
+            if (!serverArray || !Array.isArray(serverArray) || serverArray.length === 0) {
+                container.innerHTML = '<div style="text-align:center;padding-top:60px;color:#94a3b8;">Belum ada server yang tersimpan</div>';
+                return;
+            }
+
+            container.innerHTML = '';
+            serverArray.forEach(server => {
+                const card = createServerCard(server);
+                container.appendChild(card);
+            });
+        }
+
+        // ==================================================
+        // 🆕 FUNGSI BARU — BUAT INDIKATOR SINYAL
+        // ✅ DITAMBAHKAN SAJA — TIDAK MENGGANGGU FUNGSI LAIN!
+        // ==================================================
+        function buatIndikatorSinyal(kekuatan) {
+            // kekuatan: 0=belum tahu/abu, 1=buruk/merah, 2=sedang/kuning, 3=bagus/hijau
+            const level = parseInt(kekuatan) || 0;
+            let html = '<div class="indikator-sinyal">';
+            for (let i = 1; i <= 3; i++) {
+                let kelas = 'sinyal-titik';
+                if (i <= level) {
+                    kelas += ' aktif';
+                    if (level === 1) kelas += ' sinyal-buruk';
+                    else if (level === 2) kelas += ' sinyal-lemah';
+                    else if (level === 3) kelas += ' sinyal-bagus';
+                }
+                html += `<span class="${kelas}"></span>`;
+            }
+            html += '</div>';
+            return html;
+        }
+
+        // ==================================================
+        // ✅ BUAT KARTU SERVER — DITAMBAH BLOK BARU SAJA!
+        // ==================================================
+        function createServerCard(server) {
+            const card = document.createElement('div');
+            card.className = 'server-card-full';
+
+            // ⚠️ Nama kolom asli — TETAP SAMA, TIDAK DIUBAH!
+            const host = getField(server, ['host', 'mHost', 'serverAddress', 'ip', 'address', 'hostname']);
+            const port = getField(server, ['port', 'mPort', 'serverPort', 'p', 'server_port']);
+            const nama = getField(server, ['name', 'mName', 'serverName', 'label', 'title']);
+            const user = getField(server, ['username', 'mUsername', 'user', 'userName', 'loginUser']);
+
+            // 🆕 AMBIL DATA BARU — cari nama kolomnya, kalau belum ada tetap aman tampil "-"
+            const perangkat = getField(server, ['deviceName','perangkat','device','namaPerangkat']) || navigator.userAgent?.substring(0,30) || '-';
+            const sinyal = getField(server, ['signalStrength','sinyal','pingKualitas','koneksiStatus']) || 0;
+
+            const topSection = document.createElement('div');
+
+            const iconDiv = document.createElement('div');
+            iconDiv.className = 'server-icon';
+            iconDiv.textContent = '🎙️';
+
+            const nameDiv = document.createElement('div');
+            nameDiv.className = 'server-name';
+            nameDiv.textContent = nama || host || "Server";
+
+            const detailsDiv = document.createElement('div');
+            detailsDiv.className = 'server-details';
+            detailsDiv.innerHTML = `
+                <span>🆔 OFA ID: ${OFA_CONFIG.ofaId}</span>
+                <span>🏷️ Jenis: ${OFA_CONFIG.jenis || '-'}</span>
+                <span>👤 User: ${user || 'Guest'}</span>
+                <span>🌐 ${host || '?'}:${port || '?'}</span>
+
+                <!-- 🆕 BLOK BARU — INFO PERANGKAT -->
+                <div class="blok-perangkat">
+                    <span>📱 Perangkat: ${perangkat}</span>
+                </div>
+
+                <!-- 🆕 BLOK BARU — STATUS SINYAL / KONEKSI -->
+                <div class="blok-sinyal">
+                    <span>📡 Sinyal / Koneksi: ${buatIndikatorSinyal(sinyal)}</span>
+                </div>
+            `;
+
+            topSection.appendChild(iconDiv);
+            topSection.appendChild(nameDiv);
+            topSection.appendChild(detailsDiv);
+
+            const btn = document.createElement('button');
+            btn.className = 'btn-connect-full';
+            btn.innerHTML = '🔗 Hubungkan';
+            btn.onclick = () => handleConnect(btn, host, port);
+
+            card.appendChild(topSection);
+            card.appendChild(btn);
+            return card;
+        }
+
+        // Siap saat halaman dimuat — TETAP SAMA, TIDAK DIUBAH!
+        document.addEventListener('DOMContentLoaded', function() {
+            console.log("[OFA] Halaman siap — menunggu data dari Java…");
+            if (window.serverData) renderCard();
+        });
+    </script>
+</body>
+</html>

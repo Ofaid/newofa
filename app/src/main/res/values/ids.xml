@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- ID Khusus Fitur OFA -->
+    <item type="id" name="menu_pilih_status" />
+</resources>

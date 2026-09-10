@@ -1,0 +1,86 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:id="@+id/user_row_title"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="horizontal"
+    android:paddingVertical="10dp"
+    android:paddingHorizontal="12dp"
+    android:gravity="top"
+    android:clickable="true"
+    android:focusable="true">
+
+    <!-- Ikon Mikrofon / Tempat Avatar — tetap di kiri sejajar dua baris -->
+    <ImageView
+        android:id="@+id/user_row_talk_highlight"
+        android:layout_width="20dp"
+        android:layout_height="20dp"
+        android:scaleType="fitCenter"
+        android:layout_marginEnd="12dp" />
+
+    <!-- Wadah untuk Nama + Baris Bawah (ID + Status) — di sebelah kanan ikon -->
+    <LinearLayout
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:orientation="vertical"
+        android:gravity="start">
+
+        <!-- BARIS 1 — Nama Pengguna, utama & jelas -->
+        <TextView
+            android:id="@+id/user_row_name"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="15sp"
+            android:textColor="?android:attr/textColorPrimary"
+            android:maxLines="1"
+            android:ellipsize="end" />
+
+        <!-- BARIS 2 — ID OFA — Pemisah — Status, berdekatan jarak pas! -->
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:layout_marginTop="2dp"
+            android:gravity="center_vertical">
+
+            <TextView
+                android:id="@+id/user_row_id"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:maxLines="1" />
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text=" — "
+                android:textSize="12sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:layout_marginHorizontal="2dp" />
+
+            <TextView
+                android:id="@+id/user_row_status"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textSize="12sp"
+                android:textColor="?android:attr/textColorSecondary"
+                android:maxLines="1"
+                android:ellipsize="end" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+    <!-- Tombol Menu Titik Tiga — tetap di pojok kanan atas sejajar nama -->
+    <ImageView
+        android:id="@+id/user_row_more"
+        android:layout_width="24dp"
+        android:layout_height="24dp"
+        android:scaleType="centerInside"
+        android:padding="4dp"
+        android:layout_marginStart="8dp"
+        android:src="@android:drawable/ic_menu_more"
+        android:tint="?android:attr/textColorSecondary" />
+
+</LinearLayout>

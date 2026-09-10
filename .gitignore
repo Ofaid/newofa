@@ -1,0 +1,31 @@
+# ===== Gradle / Android Studio =====
+build/
+.idea/
+.gradle/
+*.iml
+signing.gradle
+captures/
+navigation/
+*.log
+
+# ===== Eclipse =====
+bin/
+gen/
+.settings/
+.classpath
+.project
+
+# ===== Android =====
+local.properties
+apk/
+*.apk
+*.ap_
+*.aab
+
+# ===== Java =====
+*.class
+
+# ===== OS =====
+.DS_Store
+Thumbs.db
+

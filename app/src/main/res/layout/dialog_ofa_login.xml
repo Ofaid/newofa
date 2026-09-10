@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 
+  OFA Login — Layout WebView untuk Tambah Server
+  Tampilan depan: Web | Proses belakang: Form asli tetap utuh!
+-->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="#121212"
+    android:fillViewport="true">
+
+    <!-- WebView — tempat tampil OFA Login.html -->
+    <WebView
+        android:id="@+id/ofa_login_webview"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent" />
+
+</LinearLayout>

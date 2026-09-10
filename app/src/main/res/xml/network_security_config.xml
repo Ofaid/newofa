@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Izinkan cleartext & trust semua sertifikat untuk domain Cak -->
+    <domain-config cleartextTrafficPermitted="true">
+        <domain includeSubdomains="true">jz13gri.liveblog365.com</domain>
+        <trust-anchors>
+            <certificates src="system" />
+            <certificates src="user" />
+        </trust-anchors>
+    </domain-config>
+    
+    <!-- Fallback: izinkan semua traffic lain juga (untuk testing) -->
+    <base-config cleartextTrafficPermitted="true" />
+</network-security-config>

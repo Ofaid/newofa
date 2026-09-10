@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OFA Login — Tambah Server</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Roboto, sans-serif; }
+        body {
+            background: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+            color: #f0f0f0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            padding: 20px;
+        }
+        .header { text-align: center; margin-bottom: 30px; padding-top: 10px; }
+        .header h1 { font-size: 24px; color: #4CAF50; margin-bottom: 5px; }
+        .header p { font-size: 14px; color: #999; }
+        .form-container {
+            background: #242424;
+            border-radius: 12px;
+            padding: 25px 20px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+            max-width: 420px;
+            margin: 0 auto;
+            width: 100%;
+        }
+        .form-group { margin-bottom: 20px; }
+        label {
+            display: block;
+            font-size: 15px;
+            color: #ccc;
+            margin-bottom: 8px;
+            font-weight: 500;
+        }
+        input {
+            width: 100%;
+            padding: 14px 15px;
+            background: #2f2f2f;
+            border: 1px solid #444;
+            border-radius: 8px;
+            color: #fff;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+        input:focus {
+            border-color: #4CAF50;
+            background: #353535;
+            box-shadow: 0 0 0 3px rgba(76, 175, 80, 0.15);
+        }
+        .hint { font-size: 13px; color: #777; margin-top: 6px; }
+        .button-group { display: flex; gap: 12px; margin-top: 30px; }
+        button {
+            flex: 1;
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.25s ease;
+        }
+        .btn-cancel { background: #3a3a3a; color: #ccc; }
+        .btn-cancel:hover { background: #454545; color: #fff; }
+        .btn-save {
+            background: linear-gradient(135deg, #4CAF50 0%, #45a049 100%);
+            color: white;
+        }
+        .btn-save:hover { transform: translateY(-1px); box-shadow: 0 4px 12px rgba(76, 175, 80, 0.35); }
+        .info-box {
+            background: rgba(76, 175, 80, 0.08);
+            border-left: 3px solid #4CAF50;
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 25px;
+            font-size: 13px;
+            color: #b6d9b9;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="header">
+        <h1>🔐 OFA Login</h1>
+        <p>Tambah Server Baru — Siap Pakai</p>
+    </div>
+
+    <div class="form-container">
+        <div class="info-box">
+            ✅ Sudah siap untuk server lokal (127.0.0.1:64738).<br>
+            Ubah alamat & port kalau pakai server publik atau server lain!
+        </div>
+
+        <div class="form-group">
+            <label for="server-name">Nama Server *</label>
+            <input type="text" id="server-name" placeholder="Contoh: Server Rumah, OFA Lokal" autocomplete="off">
+            <div class="hint">Beri nama yang mudah diingat</div>
+        </div>
+
+        <div class="form-group">
+            <label for="server-host">Alamat Server</label>
+            <input type="text" id="server-host" value="127.0.0.1">
+            <div class="hint">Ubah untuk server luar / publik</div>
+        </div>
+
+        <div class="form-group">
+            <label for="server-port">Port</label>
+            <input type="text" id="server-port" value="64738">
+            <div class="hint">Default Mumble: 64738</div>
+        </div>
+
+        <div class="form-group">
+            <label for="server-username">Nama Pengguna</label>
+            <input type="text" id="server-username" value="Mumla_User">
+            <div class="hint">Ubah sesuai nama Anda</div>
+        </div>
+
+        <div class="button-group">
+            <button class="btn-cancel" id="btn-cancel">Batal</button>
+            <button class="btn-save" id="btn-save">Simpan & Lanjut</button>
+        </div>
+    </div>
+
+    <script>
+        function kirimKeAndroid() {
+            const nama = document.getElementById('server-name').value.trim();
+            if (!nama) {
+                alert('⚠️ Silakan isi Nama Server terlebih dahulu!');
+                document.getElementById('server-name').focus();
+                return;
+            }
+
+            const data = {
+                name: nama,
+                host: document.getElementById('server-host').value.trim(),
+                port: parseInt(document.getElementById('server-port').value) || 64738,
+                username: document.getElementById('server-username').value.trim()
+            };
+
+            console.log('[OFA Login] Data siap dikirim:', data);
+
+            if (window.AndroidBridge) {
+                window.AndroidBridge.onServerDataReady(
+                    data.name,
+                    data.host,
+                    data.port,
+                    data.username
+                );
+            } else {
+                alert('✅ Data Siap:\n\n' +
+                    'Nama: ' + data.name + '\n' +
+                    'Alamat: ' + data.host + ':' + data.port + '\n' +
+                    'Pengguna: ' + data.username);
+            }
+        }
+
+        function batal() {
+            if (window.AndroidBridge) {
+                window.AndroidBridge.onCancel();
+            } else {
+                alert('❌ Dibatalkan');
+            }
+        }
+
+        document.getElementById('btn-save').addEventListener('click', kirimKeAndroid);
+        document.getElementById('btn-cancel').addEventListener('click', batal);
+        document.getElementById('server-name').addEventListener('keypress', e => e.key === 'Enter' && kirimKeAndroid());
+    </script>
+
+</body>
+</html>

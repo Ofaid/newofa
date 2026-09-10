@@ -1,0 +1,222 @@
+/*
+ * Copyright (C) 2015 Andrew Comminos <andrew@comminos.com>
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ */
+
+package ofaid.ahmad.ptt.channel;
+
+import android.content.Context;
+import android.os.Bundle;
+import android.util.Log;
+import android.view.Menu;
+import android.view.MenuItem;
+import android.view.View;
+import android.widget.EditText;
+
+import androidx.appcompat.widget.PopupMenu;
+import androidx.fragment.app.Fragment;
+import androidx.fragment.app.FragmentManager;
+
+import com.google.android.material.dialog.MaterialAlertDialogBuilder;
+
+import java.util.List;
+
+import se.lublin.humla.model.IChannel;
+import se.lublin.humla.model.IUser;
+import se.lublin.humla.net.Permissions;
+import ofaid.ahmad.ptt.R;
+import ofaid.ahmad.ptt.channel.comment.UserCommentFragment;
+// ✅ IMPOR Fitur OFA — TAMBAHAN SAJA, TIDAK UBAH YANG LAIN
+import ofaid.ahmad.ptt.ofa.OfaUserStatus;
+import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
+import ofaid.ahmad.ptt.service.MumlaService;
+import ofaid.ahmad.ptt.util.ModelUtils;
+
+/**
+ * Created by andrew on 19/11/15.
+ * OFA: Ditambahkan fitur Status Pengguna — terpisah, tidak ganggu fungsi asli
+ */
+public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, PopupMenu.OnMenuItemClickListener {
+    private static final String TAG = UserMenu.class.getName();
+
+    private final Context mContext;
+    private final IUser mUser;
+    private final MumlaService mService;
+    private final FragmentManager mFragmentManager;
+    private final IUserLocalStateListener mStateListener;
+
+    public UserMenu(Context context, IUser user, MumlaService service,
+                    FragmentManager fragmentManager, IUserLocalStateListener stateListener) {
+        mContext = context;
+        mUser = user;
+        mService = service;
+        mFragmentManager = fragmentManager;
+        mStateListener = stateListener;
+    }
+
+    @Override
+    public void onMenuPrepare(Menu menu, int permissions) {
+        // === KODE ASLI — TETAP UTUH, TIDAK DIUBAH SATU BARIS PUN ===
+        boolean self;
+        try {
+            self = mUser.getSession() == mService.getSessionId();
+        } catch (IllegalStateException e) {
+            Log.d(TAG, "exception in onMenuPrepare: " + e);
+            return;
+        }
+        int perms = mService.getPermissions();
+        IChannel channel = mUser.getChannel();
+        if (channel == null) {
+            Log.d(TAG, "mUser.getChannel()==null in onMenuPrepare");
+            return;
+        }
+        int channelPerms = channel.getId() != 0 ? channel.getPermissions() : perms;
+
+        menu.findItem(R.id.context_kick).setVisible(
+                !self && (perms & (Permissions.Kick | Permissions.Ban | Permissions.Write)) > 0);
+        menu.findItem(R.id.context_ban).setVisible(
+                !self && (perms & (Permissions.Ban | Permissions.Write)) > 0);
+        menu.findItem(R.id.context_mute).setVisible(
+                ((channelPerms & (Permissions.Write | Permissions.MuteDeafen)) > 0 &&
+                        (!self || mUser.isMuted() || mUser.isSuppressed())));
+        menu.findItem(R.id.context_deafen).setVisible(
+                ((channelPerms & (Permissions.Write | Permissions.MuteDeafen)) > 0 &&
+                        (!self || mUser.isDeafened())));
+        menu.findItem(R.id.context_priority).setVisible(
+                ((channelPerms & (Permissions.Write | Permissions.MuteDeafen)) > 0));
+        menu.findItem(R.id.context_move).setVisible(
+                !self && (perms & Permissions.Move) > 0);
+        menu.findItem(R.id.context_change_comment).setVisible(self);
+        menu.findItem(R.id.context_reset_comment).setVisible(
+                !self && ((mUser.getComment() != null && !mUser.getComment().isEmpty()) ||
+                        (mUser.getCommentHash() != null)) &&
+                        (perms & (Permissions.Move | Permissions.Write)) > 0);
+        menu.findItem(R.id.context_view_comment).setVisible(
+                (mUser.getComment() != null && !mUser.getComment().isEmpty()) ||
+                        (mUser.getCommentHash() != null));
+        menu.findItem(R.id.context_register).setVisible(mUser.getUserId() < 0 &&
+                (mUser.getHash() != null && !mUser.getHash().isEmpty()) &&
+                (perms & ((self ? Permissions.SelfRegister : Permissions.Register) | Permissions.Write)) > 0);
+        menu.findItem(R.id.context_local_mute).setVisible(!self);
+        menu.findItem(R.id.context_ignore_messages).setVisible(!self);
+
+        // ✅ === TAMBAH TOMBOL PILIH STATUS — HANYA UNTUK DIRI SENDIRI ===
+        // ⚠️ JANGAN LUPA tambah di res/values/ids.xml: <item type="id" name="menu_pilih_status" />
+        MenuItem itemPilihStatus = menu.add(0, R.id.menu_pilih_status, 0, R.string.pilih_status);
+        itemPilihStatus.setVisible(self); // ✅ HANYA MUNCUL UNTUK DIRI SENDIRI — aman!
+
+        // Highlight toggles — tetap asli, tidak diubah
+        menu.findItem(R.id.context_mute).setChecked(mUser.isMuted() || mUser.isSuppressed());
+        menu.findItem(R.id.context_deafen).setChecked(mUser.isDeafened());
+        menu.findItem(R.id.context_priority).setChecked(mUser.isPrioritySpeaker());
+        menu.findItem(R.id.context_local_mute).setChecked(mUser.isLocalMuted());
+        menu.findItem(R.id.context_ignore_messages).setChecked(mUser.isLocalIgnored());
+    }
+
+    @Override
+    public boolean onMenuItemClick(final MenuItem menuItem) {
+        int itemId = menuItem.getItemId();
+        
+        // ✅ === PENANGANAN KLIK PILIH STATUS — TAMBAHAN BARU, TIDAK GANGGU YANG LAIN ===
+        if (itemId == R.id.menu_pilih_status) {
+            int idPengguna = mUser.getSession(); // ✅ SESUAI ASLI — pakai getSession()!
+            String namaPengguna = mUser.getName();
+            PilihStatusDialog dialog = PilihStatusDialog.buat(idPengguna, namaPengguna);
+            dialog.show(mFragmentManager, "PilihStatusDialog");
+            return true;
+        }
+
+        // === SEMUA KODE ASLI — TETAP BERJALAN PERSIS SEPERTI SEMULA! 🛡️ TIDAK DIUBAH SATU BARIS PUN ===
+        if (itemId == R.id.context_ban || itemId == R.id.context_kick) {
+            final EditText reasonField = new EditText(mContext);
+            reasonField.setHint(R.string.hint_reason);
+            new MaterialAlertDialogBuilder(mContext)
+                    .setTitle(R.string.user_menu_kick)
+                    .setView(reasonField)
+                    .setPositiveButton(R.string.user_menu_kick, (dialog, which) ->
+                            mService.kickBanUser(mUser.getSession(), reasonField.getText().toString(), menuItem.getItemId() == R.id.context_ban))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+        } else if (itemId == R.id.context_mute) {
+            mService.setMuteDeafState(mUser.getSession(), !(mUser.isMuted() || mUser.isSuppressed()), mUser.isDeafened());
+        } else if (itemId == R.id.context_deafen) {
+            mService.setMuteDeafState(mUser.getSession(), mUser.isMuted(), !mUser.isDeafened());
+        } else if (itemId == R.id.context_move) {
+            showChannelMoveDialog();
+        } else if (itemId == R.id.context_priority) {
+            mService.setPrioritySpeaker(mUser.getSession(), !mUser.isPrioritySpeaker());
+        } else if (itemId == R.id.context_local_mute) {
+            mUser.setLocalMuted(!mUser.isLocalMuted());
+            mStateListener.onLocalUserStateUpdated(mUser);
+        } else if (itemId == R.id.context_ignore_messages) {
+            mUser.setLocalIgnored(!mUser.isLocalIgnored());
+            mStateListener.onLocalUserStateUpdated(mUser);
+        } else if (itemId == R.id.context_change_comment) {
+            showUserComment(true);
+        } else if (itemId == R.id.context_view_comment) {
+            showUserComment(false);
+        } else if (itemId == R.id.context_reset_comment) {
+            new MaterialAlertDialogBuilder(mContext)
+                    .setMessage(mContext.getString(R.string.confirm_reset_comment, mUser.getName()))
+                    .setPositiveButton(R.string.confirm, (dialog, which) ->
+                            mService.setUserComment(mUser.getSession(), ""))
+                    .setNegativeButton(android.R.string.cancel, null)
+                    .show();
+        } else if (itemId == R.id.context_register) {
+            mService.registerUser(mUser.getSession());
+        } else {
+            return false;
+        }
+        return true;
+    }
+
+    // === SEMUA METODE ASLI — TETAP UTUH, TIDAK DIUBAH! 🛡️ ===
+    private void showUserComment(final boolean edit) {
+        Bundle args = new Bundle();
+        args.putInt("session", mUser.getSession());
+        args.putString("comment", mUser.getComment());
+        args.putBoolean("editing", edit);
+        UserCommentFragment fragment = (UserCommentFragment) Fragment.instantiate(mContext, UserCommentFragment.class.getName(), args);
+        fragment.show(mFragmentManager, UserCommentFragment.class.getName());
+    }
+
+    private void showChannelMoveDialog() {
+        final List<IChannel> channels = ModelUtils.getChannelList(mService.getRootChannel());
+        final CharSequence[] channelNames = new CharSequence[channels.size()];
+        for (int i = 0; i < channels.size(); i++) {
+            channelNames[i] = channels.get(i).getName();
+        }
+        new MaterialAlertDialogBuilder(mContext)
+                .setTitle(R.string.user_menu_move)
+                .setItems(channelNames, (dialog, which) -> {
+                    IChannel channel = channels.get(which);
+                    mService.moveUserToChannel(mUser.getSession(), channel.getId());
+                })
+                .show();
+    }
+
+    public void showPopup(View anchor) {
+        PermissionsPopupMenu popupMenu = new PermissionsPopupMenu(mContext, anchor,
+                R.menu.context_user, this, this, mUser.getChannel(), mService);
+        popupMenu.show();
+    }
+
+    /**
+     * A listener notified whenever the user's local state changes.
+     */
+    public interface IUserLocalStateListener {
+        void onLocalUserStateUpdated(IUser user);
+    }
+}
