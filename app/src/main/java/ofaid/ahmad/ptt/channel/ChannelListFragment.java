@@ -114,16 +114,20 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
             Log.w(TAG, "Belum terhubung ke layanan");
         }
     }
+private void tampilkanPilihStatus() {
+    // Sementara sampai kelas Builder dibuat
+    Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
+}
 
 
-    // Tampilkan dialog pilih status
+   /* // Tampilkan dialog pilih status
     private void tampilkanPilihStatus() {
         new PilihStatusDialog.Builder(getContext())
             .setOnStatusDipilihListener(statusYangDipilih -> {
                 kirimStatusPengguna(statusYangDipilih);
             })
             .show();
-    }
+    }*/
 
     // ======================================================
 
