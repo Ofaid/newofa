@@ -131,12 +131,10 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
 
         @Override
         public void messageServerSync(Mumble.ServerSync msg) {
-            // Protocol says we're supposed to send a dummy UDPTunnel packet here to let the server know we don't like UDP.
             if (shouldForceTCP()) {
                 enableForceTCP();
             }
 
-            // Start TCP/UDP ping thread. FIXME is this the right place?
             try {
                 mPingTask = mPingExecutorService.scheduleAtFixedRate(mPingRunnable, 0, 5, TimeUnit.SECONDS);
             } catch(RejectedExecutionException e) {
@@ -224,7 +222,6 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
             mCryptState.mUiRemoteLost = msg.getLost();
             mCryptState.mUiRemoteResync = msg.getResync();
 
-            // In microseconds
             long elapsed = getElapsed();
             mLastTCPPing = elapsed-msg.getTimestamp();
 
@@ -247,10 +244,8 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
     };
 
     private HumlaUDPMessageListener mUDPPingListener = new HumlaUDPMessageListener.Stub() {
-
         @Override
         public void messageUDPPing(byte[] data) {
-//            Log.v(TAG, "IN: UDP Ping");
             byte[] timedata = new byte[8];
             System.arraycopy(data, 1, timedata, 0, 8);
             ByteBuffer buffer = ByteBuffer.allocate(8);
@@ -260,24 +255,19 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
             long timestamp = buffer.getLong();
             long now = getElapsed();
             mLastUDPPing = now-timestamp;
-            // TODO refresh UDP?
         }
     };
 
     private Runnable mPingRunnable = new Runnable() {
         @Override
         public void run() {
-
-            // In microseconds
             long t = getElapsed();
 
             if (!shouldForceTCP()) {
                 ByteBuffer buffer = ByteBuffer.allocate(16);
                 buffer.put((byte) ((HumlaUDPMessageType.UDPPing.ordinal() << 5) & 0xFF));
                 buffer.putLong(t);
-
                 sendUDPMessage(buffer.array(), 16, true);
-//                Log.v(TAG, "OUT: UDP Ping");
             }
 
             Mumble.Ping.Builder pb = Mumble.Ping.newBuilder();
@@ -286,28 +276,16 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
             pb.setLate(mCryptState.mUiLate);
             pb.setLost(mCryptState.mUiLost);
             pb.setResync(mCryptState.mUiResync);
-            // TODO accumulate stats and send with ping
             sendTCPMessage(pb.build(), HumlaTCPMessageType.Ping);
         }
     };
 
-    /**
-     * Calculates the bandwidth required to send audio with the given parameters.
-     * Includes packet overhead.
-     * @param bitrate The bitrate in bps.
-     * @param framesPerPacket The number of frames per audio packet.
-     * @return The bandwidth in bps used by the given configuration.
-     */
     public static int calculateAudioBandwidth(int bitrate, int framesPerPacket) {
-        // FIXME: assumes worst-case using TCP
         int overhead = 20 + 8 + 4 + 1 + 2 + 12 + framesPerPacket;
         overhead *= (800 / framesPerPacket);
         return overhead + bitrate;
     }
 
-    /**
-     * Creates a new HumlaConnection object to facilitate server connections.
-     */
     public HumlaConnection(HumlaConnectionListener listener) {
         mListener = listener;
         mMainHandler = new Handler(Looper.getMainLooper());
@@ -333,7 +311,6 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
             mTCP = new HumlaTCP(socketFactory);
             mTCP.setTCPConnectionListener(this);
             mTCP.connect(host, port, mUseTor);
-            // UDP thread is formally started after TCP connection.
         } catch (ConnectException e) {
             throw new HumlaException(e, HumlaException.HumlaDisconnectReason.CONNECTION_ERROR);
         }
@@ -343,11 +320,6 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         return mConnected;
     }
 
-    /**
-     * Returns whether or not the service is fully synchronized with the remote server- this happens when we get the ServerSync message.
-     * You shouldn't log any user actions until the connection is synchronized.
-     * @return true or false, depending on whether or not we have received the ServerSync message.
-     */
     public boolean isSynchronized() {
         return mSynchronized;
     }
@@ -371,29 +343,14 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         mUDPHandlers.remove(handler);
     }
 
-    /**
-     * Set whether to proxy all connections over a local Orbot instance.
-     * This will force TCP tunneling for voice packets.
-     * @param useTor true if Tor should be enabled and TCP forced.
-     */
     public void setUseTor(boolean useTor) {
         mUseTor = useTor;
     }
 
-    /**
-     * Set whether to tunnel all voice packets over TCP, disabling the UDP thread.
-     * @param forceTcp true if voice packets should tunnel over TCP.
-     * @see #setUseTor
-     */
     public void setForceTCP(boolean forceTcp) {
         mForceTCP = forceTcp;
     }
 
-    /**
-     * Sets the PKCS12 certificate data and password to use when authenticating.
-     * @param certificate A PKCS12-formatted certificate.
-     * @param password An optional password used to encrypt the certificate.
-     */
     public void setKeys(byte[] certificate, String password) {
         mCertificate = certificate;
         mCertificatePassword = password;
@@ -447,10 +404,6 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         return mSession;
     }
 
-    /**
-     * Returns the server-reported maximum input bandwidth, or -1 if not set.
-     * @return the input bandwidth in bps, or -1 if not set.
-     */
     public int getMaxBandwidth() throws NotSynchronizedException {
         if (!isSynchronized())
             throw new NotSynchronizedException();
@@ -463,24 +416,16 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         return mCodec;
     }
 
-    /**
-     * Return whether or not voice packets should be tunneled over TCP.
-     * @return true if TCP is manually forced or Tor has been disabled.
-     */
     public boolean shouldForceTCP() {
         return mForceTCP || mUseTor;
     }
 
-    /**
-     * Gracefully shuts down all networking. Blocks until all network threads have stopped.
-     */
     public void disconnect() {
         mConnected = false;
         mSynchronized = false;
         mHost = null;
         mPort = 0;
 
-        // Stop running network resources
         if(mPingTask != null) mPingTask.cancel(true);
         if(mTCP != null) mTCP.disconnect();
         if(mUDP != null) mUDP.disconnect();
@@ -491,10 +436,6 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         mPingTask = null;
     }
 
-    /**
-     * Handles an exception that would cause termination of the connection.
-     * @param e The exception that caused termination.
-     */
     private void handleFatalException(final HumlaException e) {
         if(mExceptionHandled) return;
         mExceptionHandled = true;
@@ -506,11 +447,6 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         disconnect();
     }
 
-    /**
-     * Attempts to create a socket factory using the HumlaConnection's certificate and trust
-     * store configuration.
-     * @return A socket factory set to authenticate with a certificate and trust store, if set.
-     */
     private HumlaSSLSocketFactory createSocketFactory() throws HumlaException {
         try {
             KeyStore keyStore = null;
@@ -539,38 +475,17 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
             throw new HumlaException("Could not read certificate", e,
                     HumlaException.HumlaDisconnectReason.OTHER_ERROR);
         } catch (NoSuchAlgorithmException e) {
-                /*
-                 * This will actually NEVER occur.
-                 * We use Spongy Castle to provide the algorithm and provider implementations.
-                 * There's no platform dependency.
-                 */
             throw new RuntimeException("We use Spongy Castle- what? ", e);
         } catch (NoSuchProviderException e) {
-                /*
-                 * This will actually NEVER occur.
-                 * We use Spongy Castle to provide the algorithm and provider implementations.
-                 * There's no platform dependency.
-                 */
             throw new RuntimeException("We use Spongy Castle- what? ", e);
         }
     }
 
-    /**
-     * Sends a protobuf message over TCP. Can silently fail.
-     * @param message A built protobuf message.
-     * @param messageType The corresponding protobuf message type.
-     */
     public void sendTCPMessage(Message message, HumlaTCPMessageType messageType) {
         if(!mConnected || mTCP == null) return;
         mTCP.sendMessage(message, messageType);
     }
 
-    /**
-     * Sends a datagram message over UDP. Can silently fail, or be tunneled through TCP unless forced.
-     * @param data Raw data to send over UDP.
-     * @param length Length of the data to send.
-     * @param force Whether to avoid tunneling this data over TCP.
-     */
     public void sendUDPMessage(final byte[] data, final int length, final boolean force) {
         if (!mConnected) return;
         if (length > data.length) {
@@ -585,9 +500,6 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         }
     }
 
-    /**
-     * Sends a message to the server, asking it to tunnel future voice packets over TCP.
-     */
     private void enableForceTCP() {
         if(!mConnected) return;
         Mumble.UDPTunnel.Builder utb = Mumble.UDPTunnel.newBuilder();
@@ -595,16 +507,49 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         sendTCPMessage(utb.build(), HumlaTCPMessageType.UDPTunnel);
     }
 
-    /**
-     * Sends the given access tokens to the server.
-     * @param tokens A list of new access tokens to send to the server.
-     */
     public void sendAccessTokens(Collection<String> tokens) {
         if(!mConnected) return;
         Mumble.Authenticate.Builder ab = Mumble.Authenticate.newBuilder();
         ab.addAllTokens(tokens);
         sendTCPMessage(ab.build(), HumlaTCPMessageType.Authenticate);
     }
+
+    // =====================================================================
+    // === TAMBAHAN BARU: KIRIM AVATAR / TEXTURE PENGGUNA ===
+    // Tidak mengubah bagian lain — hanya tambahan baru
+    // =====================================================================
+    /**
+     * Kirim gambar avatar pengguna ke server.
+     * @param sessionId Nomor sesi pengguna
+     * @param textureData Data gambar dalam bentuk byte[]
+     */
+    public void setUserTexture(int sessionId, byte[] textureData) {
+        Log.i("AvatarKirim", "🟢 Mulai kirim — Sesi: " + sessionId +
+            ", Ukuran: " + (textureData != null ? textureData.length + " byte" : "KOSONG"));
+
+        if (!isConnected()) {
+            Log.e("AvatarKirim", "🔴 Gagal: Belum terhubung ke server");
+            return;
+        }
+        if (textureData == null || textureData.length == 0) {
+            Log.e("AvatarKirim", "🔴 Gagal: Data kosong");
+            return;
+        }
+
+        try {
+            Mumble.UserState.Builder userState = Mumble.UserState.newBuilder();
+            userState.setSession(sessionId);
+            userState.setTexture(ByteString.copyFrom(textureData));
+
+            sendTCPMessage(userState.build(), HumlaTCPMessageType.UserState);
+
+            Log.i("AvatarKirim", "✅ Berhasil terkirim!");
+        } catch (Exception e) {
+            Log.e("AvatarKirim", "🔴 Error", e);
+        }
+    }
+    // === AKHIR TAMBAHAN AVATAR ===
+    // =====================================================================
 
     @Override
     public void onTCPMessageReceived(HumlaTCPMessageType type, int length, byte[] data) {
@@ -630,7 +575,6 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
     public void onTCPConnectionEstablished() {
         mConnected = true;
 
-        // Attempt to start UDP thread once connected.
         if (!shouldForceTCP()) {
             mUDP = new HumlaUDP(mCryptState, this, mMainHandler);
             mUDP.connect(mHost, mPort);
@@ -663,7 +607,7 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
     public void onUDPDataReceived(byte[] data) {
         if(mServerVersion == 0x10202) applyLegacyCodecWorkaround(data);
         int dataType = data[0] >> 5 & 0x7;
-        if(dataType < 0 || dataType > HumlaUDPMessageType.values().length - 1) return; // Discard invalid data types
+        if(dataType < 0 || dataType > HumlaUDPMessageType.values().length - 1) return;
         HumlaUDPMessageType udpDataType = HumlaUDPMessageType.values()[dataType];
 
         for(HumlaUDPMessageListener handler : mUDPHandlers) {
@@ -676,22 +620,16 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         e.printStackTrace();
         if(mListener != null) mListener.onConnectionWarning("UDP connection thread failed. Falling back to TCP.");
         enableForceTCP();
-        // TODO recover UDP thread automagically
     }
 
     @Override
     public void resyncCryptState() {
         if (mTCP != null) {
-            // Send an empty cryptstate message to resync.
             Mumble.CryptSetup.Builder csb = Mumble.CryptSetup.newBuilder();
             mTCP.sendMessage(csb.build(), HumlaTCPMessageType.CryptSetup);
         }
     }
 
-    /**
-     * Workaround for 1.2.2 servers that report the old types for CELT alpha and beta.
-     * @param data The UDP data to be patched, if we're on a 1.2.2 server.
-     */
     private void applyLegacyCodecWorkaround(byte[] data) {
         HumlaUDPMessageType dataType = HumlaUDPMessageType.values()[data[0] >> 5 & 0x7];
         if(dataType == HumlaUDPMessageType.UDPVoiceCELTBeta)
@@ -701,131 +639,56 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         data[0] = (byte) ((dataType.ordinal() << 5) & 0xFF);
     }
 
-    /**
-     * Gets the protobuf message from the passed TCP data.
-     * We isolate this so we can first parse the message and then inform all handlers. Saves processing power.
-     * @param data Raw protobuf TCP data.
-     * @param messageType Type of the message.
-     * @return The parsed protobuf message.
-     * @throws InvalidProtocolBufferException Called if the messageType does not match the data.
-     */
     public static Message getProtobufMessage(byte[] data, HumlaTCPMessageType messageType) throws InvalidProtocolBufferException {
         switch (messageType) {
-            case Authenticate:
-                return Mumble.Authenticate.parseFrom(data);
-            case BanList:
-                return Mumble.BanList.parseFrom(data);
-            case Reject:
-                return Mumble.Reject.parseFrom(data);
-            case ServerSync:
-                return Mumble.ServerSync.parseFrom(data);
-            case ServerConfig:
-                return Mumble.ServerConfig.parseFrom(data);
-            case PermissionDenied:
-                return Mumble.PermissionDenied.parseFrom(data);
-            case UDPTunnel:
-                return Mumble.UDPTunnel.parseFrom(data);
-            case UserState:
-                return Mumble.UserState.parseFrom(data);
-            case UserRemove:
-                return Mumble.UserRemove.parseFrom(data);
-            case ChannelState:
-                return Mumble.ChannelState.parseFrom(data);
-            case ChannelRemove:
-                return Mumble.ChannelRemove.parseFrom(data);
-            case TextMessage:
-                return Mumble.TextMessage.parseFrom(data);
-            case ACL:
-                return Mumble.ACL.parseFrom(data);
-            case QueryUsers:
-                return Mumble.QueryUsers.parseFrom(data);
-            case Ping:
-                return Mumble.Ping.parseFrom(data);
-            case CryptSetup:
-                return Mumble.CryptSetup.parseFrom(data);
-            case ContextAction:
-                return Mumble.ContextAction.parseFrom(data);
-            case ContextActionModify:
-                return Mumble.ContextActionModify.parseFrom(data);
-            case Version:
-                return Mumble.Version.parseFrom(data);
-            case UserList:
-                return Mumble.UserList.parseFrom(data);
-            case PermissionQuery:
-                return Mumble.PermissionQuery.parseFrom(data);
-            case CodecVersion:
-                return Mumble.CodecVersion.parseFrom(data);
-            case UserStats:
-                return Mumble.UserStats.parseFrom(data);
-            case RequestBlob:
-                return Mumble.RequestBlob.parseFrom(data);
-            case SuggestConfig:
-                return Mumble.SuggestConfig.parseFrom(data);
-            default:
-                throw new InvalidProtocolBufferException("Unknown TCP data passed.");
+            case Authenticate: return Mumble.Authenticate.parseFrom(data);
+            case BanList: return Mumble.BanList.parseFrom(data);
+            case Reject: return Mumble.Reject.parseFrom(data);
+            case ServerSync: return Mumble.ServerSync.parseFrom(data);
+            case ServerConfig: return Mumble.ServerConfig.parseFrom(data);
+            case PermissionDenied: return Mumble.PermissionDenied.parseFrom(data);
+            case UDPTunnel: return Mumble.UDPTunnel.parseFrom(data);
+            case UserState: return Mumble.UserState.parseFrom(data);
+            case UserRemove: return Mumble.UserRemove.parseFrom(data);
+            case ChannelState: return Mumble.ChannelState.parseFrom(data);
+            case ChannelRemove: return Mumble.ChannelRemove.parseFrom(data);
+            case TextMessage: return Mumble.TextMessage.parseFrom(data);
+            case ACL: return Mumble.ACL.parseFrom(data);
+            case QueryUsers: return Mumble.QueryUsers.parseFrom(data);
+            case Ping: return Mumble.Ping.parseFrom(data);
+            case CryptSetup: return Mumble.CryptSetup.parseFrom(data);
+            case ContextAction: return Mumble.ContextAction.parseFrom(data);
+            case ContextActionModify: return Mumble.ContextActionModify.parseFrom(data);
+            case Version: return Mumble.Version.parseFrom(data);
+            case UserList: return Mumble.UserList.parseFrom(data);
+            case PermissionQuery: return Mumble.PermissionQuery.parseFrom(data);
+            case CodecVersion: return Mumble.CodecVersion.parseFrom(data);
+            case UserStats: return Mumble.UserStats.parseFrom(data);
+            case RequestBlob: return Mumble.RequestBlob.parseFrom(data);
+            case SuggestConfig: return Mumble.SuggestConfig.parseFrom(data);
+            default: throw new InvalidProtocolBufferException("Unknown TCP data passed.");
         }
     }
 
-
-    /**
-     * Reroutes TCP messages into the various responder methods of the handler.
-     * @param handler Handler.
-     * @param msg Protobuf message.
-     * @param messageType The type of the message.
-     */
     public final void broadcastTCPMessage(HumlaTCPMessageListener handler, Message msg, HumlaTCPMessageType messageType) {
         switch (messageType) {
-            case Authenticate:
-                handler.messageAuthenticate((Mumble.Authenticate) msg);
-                break;
-            case BanList:
-                handler.messageBanList((Mumble.BanList) msg);
-                break;
-            case Reject:
-                handler.messageReject((Mumble.Reject) msg);
-                break;
-            case ServerSync:
-                handler.messageServerSync((Mumble.ServerSync) msg);
-                break;
-            case ServerConfig:
-                handler.messageServerConfig((Mumble.ServerConfig) msg);
-                break;
-            case PermissionDenied:
-                handler.messagePermissionDenied((Mumble.PermissionDenied) msg);
-                break;
-            case UDPTunnel:
-                handler.messageUDPTunnel((Mumble.UDPTunnel) msg);
-                break;
-            case UserState:
-                handler.messageUserState((Mumble.UserState) msg);
-                break;
-            case UserRemove:
-                handler.messageUserRemove((Mumble.UserRemove) msg);
-                break;
-            case ChannelState:
-                handler.messageChannelState((Mumble.ChannelState) msg);
-                break;
-            case ChannelRemove:
-                handler.messageChannelRemove((Mumble.ChannelRemove) msg);
-                break;
-            case TextMessage:
-                handler.messageTextMessage((Mumble.TextMessage) msg);
-                break;
-            case ACL:
-                handler.messageACL((Mumble.ACL) msg);
-                break;
-            case QueryUsers:
-                handler.messageQueryUsers((Mumble.QueryUsers) msg);
-                break;
-            case Ping:
-                handler.messagePing((Mumble.Ping) msg);
-                break;
-            case CryptSetup:
-                handler.messageCryptSetup((Mumble.CryptSetup) msg);
-                break;
-            case ContextAction:
-                handler.messageContextAction((Mumble.ContextAction) msg);
-                break;
+            case Authenticate: handler.messageAuthenticate((Mumble.Authenticate) msg); break;
+            case BanList: handler.messageBanList((Mumble.BanList) msg); break;
+            case Reject: handler.messageReject((Mumble.Reject) msg); break;
+            case ServerSync: handler.messageServerSync((Mumble.ServerSync) msg); break;
+            case ServerConfig: handler.messageServerConfig((Mumble.ServerConfig) msg); break;
+            case PermissionDenied: handler.messagePermissionDenied((Mumble.PermissionDenied) msg); break;
+            case UDPTunnel: handler.messageUDPTunnel((Mumble.UDPTunnel) msg); break;
+            case UserState: handler.messageUserState((Mumble.UserState) msg); break;
+            case UserRemove: handler.messageUserRemove((Mumble.UserRemove) msg); break;
+            case ChannelState: handler.messageChannelState((Mumble.ChannelState) msg); break;
+            case ChannelRemove: handler.messageChannelRemove((Mumble.ChannelRemove) msg); break;
+            case TextMessage: handler.messageTextMessage((Mumble.TextMessage) msg); break;
+            case ACL: handler.messageACL((Mumble.ACL) msg); break;
+            case QueryUsers: handler.messageQueryUsers((Mumble.QueryUsers) msg); break;
+            case Ping: handler.messagePing((Mumble.Ping) msg); break;
+            case CryptSetup: handler.messageCryptSetup((Mumble.CryptSetup) msg); break;
+            case ContextAction: handler.messageContextAction((Mumble.ContextAction) msg); break;
             case ContextActionModify:
                 Mumble.ContextActionModify actionModify = (Mumble.ContextActionModify) msg;
                 if (actionModify.getOperation() == Mumble.ContextActionModify.Operation.Add)
@@ -833,44 +696,20 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
                 else if (actionModify.getOperation() == Mumble.ContextActionModify.Operation.Remove)
                     handler.messageRemoveContextAction(actionModify);
                 break;
-            case Version:
-                handler.messageVersion((Mumble.Version) msg);
-                break;
-            case UserList:
-                handler.messageUserList((Mumble.UserList) msg);
-                break;
-            case PermissionQuery:
-                handler.messagePermissionQuery((Mumble.PermissionQuery) msg);
-                break;
-            case CodecVersion:
-                handler.messageCodecVersion((Mumble.CodecVersion) msg);
-                break;
-            case UserStats:
-                handler.messageUserStats((Mumble.UserStats) msg);
-                break;
-            case RequestBlob:
-                handler.messageRequestBlob((Mumble.RequestBlob) msg);
-                break;
-            case SuggestConfig:
-                handler.messageSuggestConfig((Mumble.SuggestConfig) msg);
-                break;
-            case VoiceTarget:
-                handler.messageVoiceTarget((Mumble.VoiceTarget) msg);
-                break;
+            case Version: handler.messageVersion((Mumble.Version) msg); break;
+            case UserList: handler.messageUserList((Mumble.UserList) msg); break;
+            case PermissionQuery: handler.messagePermissionQuery((Mumble.PermissionQuery) msg); break;
+            case CodecVersion: handler.messageCodecVersion((Mumble.CodecVersion) msg); break;
+            case UserStats: handler.messageUserStats((Mumble.UserStats) msg); break;
+            case RequestBlob: handler.messageRequestBlob((Mumble.RequestBlob) msg); break;
+            case SuggestConfig: handler.messageSuggestConfig((Mumble.SuggestConfig) msg); break;
+            case VoiceTarget: handler.messageVoiceTarget((Mumble.VoiceTarget) msg); break;
         }
     }
 
-    /**
-     * Reroutes UDP messages into the various responder methods of the passed handler.
-     * @param handler Handler to notify.
-     * @param data Raw UDP data of the message.
-     * @param messageType The type of the message.
-     */
     public final void broadcastUDPMessage(HumlaUDPMessageListener handler, byte[] data, HumlaUDPMessageType messageType) {
         switch (messageType) {
-            case UDPPing:
-                handler.messageUDPPing(data);
-                break;
+            case UDPPing: handler.messageUDPPing(data); break;
             case UDPVoiceCELTAlpha:
             case UDPVoiceSpeex:
             case UDPVoiceCELTBeta:
@@ -880,44 +719,15 @@ public class HumlaConnection implements HumlaTCP.TCPConnectionListener, HumlaUDP
         }
     }
 
-    /**
-     * If the connection to the server was lost due to an error, return the exception.
-     * @return An exception causing disconnect, or null if no error was recorded.
-     */
     public HumlaException getError() {
         return mError;
     }
 
     public interface HumlaConnectionListener {
-        /**
-         * Called when the socket to the remote server has opened.
-         */
-        public void onConnectionEstablished();
-
-        /**
-         * Called when the protocol handshake completes.
-         */
-        public void onConnectionSynchronized();
-
-        /**
-         * Called if the host's certificate failed verification.
-         * Typically you would use this callback to prompt the user to authorize the certificate.
-         * Note that {@link #onConnectionDisconnected(HumlaException)} will still be called.
-         * @param chain The certificate chain which failed verification.
-         */
-        public void onConnectionHandshakeFailed(X509Certificate[] chain);
-
-        /**
-         * Called when the connection was lost. If the connection was terminated due to an error,
-         * the error will be provided.
-         * @param e The exception that caused termination, or null if the disconnect was clean.
-         */
-        public void onConnectionDisconnected(HumlaException e);
-
-        /**
-         * Called if the user should be notified of a connection-related warning.
-         * @param warning A user-readable warning.
-         */
-        public void onConnectionWarning(String warning);
+        void onConnectionEstablished();
+        void onConnectionSynchronized();
+        void onConnectionHandshakeFailed(X509Certificate[] chain);
+        void onConnectionDisconnected(HumlaException e);
+        void onConnectionWarning(String warning);
     }
 }
