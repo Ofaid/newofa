@@ -1,27 +1,15 @@
 /*
- * Copyright (C) 2014 Andrew Comminos
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
-
+ * Copyright (C) 2014 Andrew Comminos modif OFAID 2026*/
+ 
 package ofaid.ahmad.ptt.channel;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.TypedArray;
+import android.graphics.BitmapFactory;
 import android.net.Uri;
 import android.os.Bundle;
+import android.os.Handler;
 import android.util.Log;
 import android.util.TypedValue;
 import android.view.LayoutInflater;
@@ -83,6 +71,7 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
     private List<OnChatTargetSelectedListener> mChatTargetListeners = new ArrayList<OnChatTargetSelectedListener>();
 
     private boolean mTalkButtonHidden;
+    private Handler mHandler = new Handler(); // ✅ untuk kirim ulang nanti
 
     private HumlaObserver mObserver = new HumlaObserver() {
         @Override
@@ -215,7 +204,7 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
         return view;
     }
 
-    // === AVATAR: Proses hasil gambar ===
+    // === AVATAR: Proses hasil gambar + SIMPAN ===
     @Override
     public void onActivityResult(int kodePermintaan, int kodeHasil, Intent data) {
         super.onActivityResult(kodePermintaan, kodeHasil, data);
@@ -242,7 +231,11 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
                 IHumlaSession sesi = layanan.HumlaSession();
                 int nomorSesi = sesi.getSessionId();
                 sesi.setUserTexture(nomorSesi, dataAvatar);
-                Toast.makeText(getActivity(), "Avatar dikirim! ✅", Toast.LENGTH_SHORT).show();
+                
+                // ✅ SIMPAN KE HP — otomatis ganti yang lama
+                AvatarUtil.simpanAvatar(getActivity(), dataAvatar);
+                
+                Toast.makeText(getActivity(), "Avatar dikirim & disimpan! ✅", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
                 Log.e("AvatarLayar", "🔴 Gagal kirim", e);
                 Toast.makeText(getActivity(), "Gagal mengirim avatar", Toast.LENGTH_SHORT).show();
@@ -303,7 +296,11 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
         super.onPause();
         if (getService() != null && getService().isConnected() &&
             !Settings.getInstance(getActivity()).isPushToTalkToggle()) {
-            getService().HumlaSession().setTalkingState(false);
+            try {
+                getService().HumlaSession().setTalkingState(false);
+            } catch (Exception e) {
+                Log.d(TAG, "onPause gagal ubah state bicara", e);
+            }
         }
     }
 
@@ -319,12 +316,45 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
         return mObserver;
     }
 
+    // ✅ SAAT TERHUBUNG → KIRIM ULANG FOTO YANG TERSIMPAN
     @Override
     public void onServiceBound(IHumlaService service) {
         super.onServiceBound(service);
         if (service.getConnectionState() == HumlaService.ConnectionState.CONNECTED) {
             configureTargetPanel();
             configureInput();
+            
+            // Tunggu sesi siap, lalu kirim ulang foto
+            mHandler.postDelayed(new Runnable() {
+                @Override
+                public void run() {
+                    kirimUlangAvatarTersimpan();
+                }
+            }, 800);
+        }
+    }
+
+    // ✅ FUNGSI KIRIM ULANG OTOMATIS
+    private void kirimUlangAvatarTersimpan() {
+        if (!isAdded() || getActivity() == null) return; // sudah keluar, hentikan
+        
+        byte[] fotoTersimpan = AvatarUtil.ambilAvatarTersimpan(getActivity());
+        if (fotoTersimpan == null) {
+            Log.i("AvatarOtomatis", "ℹ️ Belum ada foto tersimpan, lewati");
+            return;
+        }
+
+        try {
+            IHumlaService layanan = getService();
+            if (layanan == null || !layanan.isConnected()) return;
+            
+            IHumlaSession sesi = layanan.HumlaSession();
+            int nomorSaya = sesi.getSessionId();
+            sesi.setUserTexture(nomorSaya, fotoTersimpan);
+            
+            Log.i("AvatarOtomatis", "✅ Foto dikirim ulang otomatis! — " + fotoTersimpan.length + " byte");
+        } catch (Exception e) {
+            Log.e("AvatarOtomatis", "🔴 Gagal kirim ulang foto", e);
         }
     }
 
