@@ -1,19 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
- */
+ * Modif By Ofaid 2026*/
 
 package ofaid.ahmad.ptt.channel;
 
@@ -64,7 +51,10 @@ import se.lublin.humla.util.IHumlaObserver;
 import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.Settings;
 import ofaid.ahmad.ptt.db.DatabaseProvider;
+import ofaid.ahmad.ptt.ofa.OfaIdentity;
+import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
+import ofaid.ahmad.ptt.util.MumlaService;
 
 public class ChannelListFragment extends HumlaServiceFragment implements OnChannelClickListener, OnUserClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String TAG = ChannelListFragment.class.getName();
@@ -97,6 +87,41 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
     private DatabaseProvider mDatabaseProvider;
     private ActionMode mActionMode;
     private Settings mSettings;
+
+    // ========== FUNGSI TAMBAHAN — STATUS & ID OFA ==========
+    
+    // Ambil ID OFA yang tersimpan
+    private String getMyOfaId() {
+        return OfaIdentity.getSavedId(getContext());
+    }
+
+    // Kirim status ke server
+    private void kirimStatusPengguna(String statusTeks) {
+        String idOFA = getMyOfaId();
+        if (idOFA == null || idOFA.trim().isEmpty()) {
+            Log.w(TAG, "ID OFA belum tersedia — tidak bisa kirim status");
+            return;
+        }
+
+        IHumlaService service = getService();
+        if (service instanceof MumlaService) {
+            ((MumlaService) service).kirimStatusDenganId(idOFA, statusTeks);
+            Log.i(TAG, "✅ Status dikirim: " + idOFA + " | " + statusTeks);
+        } else {
+            Log.w(TAG, "Belum terhubung ke layanan");
+        }
+    }
+
+    // Tampilkan dialog pilih status
+    private void tampilkanPilihStatus() {
+        new PilihStatusDialog.Builder(getContext())
+            .setOnStatusDipilihListener(statusYangDipilih -> {
+                kirimStatusPengguna(statusYangDipilih);
+            })
+            .show();
+    }
+
+    // ======================================================
 
     private IHumlaObserver mServiceObserver = new HumlaObserver() {
         @Override
@@ -163,10 +188,8 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
             super.onUserStateUpdated(user);
             
             if (mChannelListAdapter != null && mChannelView != null && user != null) {
-                // ✅ Langsung perbarui tampilan status di layar
                 mChannelListAdapter.refreshUserStatus(user.getSession());
                 
-                // Cadangan — pastikan tetap berjalan
                 int posisi = mChannelListAdapter.getUserPositionBySession(user.getSession());
                 if (posisi != -1) {
                     mChannelView.getAdapter().notifyItemChanged(posisi);
@@ -180,29 +203,23 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
 
         @Override
         public void onUserTalkStateUpdated(IUser user) {
-            // Update indikator mic merah/putih
             mChannelListAdapter.updateUserStates(user, mChannelView);
             
-            // UPDATE BANNER NAMA SPEAKER AKTIF
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
-                    // Reset timer saat ada event suara baru
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     
-                    // Update nama pembicara
                     String displayName = user.getName();
                     if (!displayName.equals(currentSpeakerName)) {
                         currentSpeakerName = displayName;
                         tvSpeakerName.setText(displayName);
                     }
                     
-                    // Tampilkan banner
                     if (bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
                         bannerActiveSpeaker.setVisibility(View.VISIBLE);
                         bannerActiveSpeaker.setAlpha(1f);
                     }
                     
-                    // Sembunyikan otomatis setelah 2 detik diam
                     bannerHideHandler.postDelayed(bannerHideRunnable, 2000);
                 });
             }
@@ -249,7 +266,6 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
         mChannelView = view.findViewById(R.id.channelUsers);
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
         
-        // Inisialisasi banner indikator pembicara
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
         
@@ -304,6 +320,7 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
 
         MenuItem muteItem = menu.findItem(R.id.menu_mute_button);
         MenuItem deafenItem = menu.findItem(R.id.menu_deafen_button);
+        MenuItem statusItem = menu.findItem(R.id.menu_status_pilihan);
 
         if(getService() != null && getService().isConnected()) {
             IHumlaSession session = getService().HumlaSession();
@@ -319,6 +336,16 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
 
             MenuItem bluetoothItem = menu.findItem(R.id.menu_bluetooth);
             bluetoothItem.setChecked(session.usingBluetoothSco());
+            
+            // Tampilkan tombol status saat terhubung
+            if (statusItem != null) {
+                statusItem.setVisible(true);
+            }
+        } else {
+            // Sembunyikan tombol status saat tidak terhubung
+            if (statusItem != null) {
+                statusItem.setVisible(false);
+            }
         }
     }
 
@@ -368,7 +395,13 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
 
         IHumlaSession session = getService().HumlaSession();
         int itemId = item.getItemId();
-        if (itemId == R.id.menu_mute_button) {
+        
+        // ✅ TOMBOL PILIH STATUS
+        if (itemId == R.id.menu_status_pilihan) {
+            tampilkanPilihStatus();
+            return true;
+        }
+        else if (itemId == R.id.menu_mute_button) {
             IUser self = session.getSessionUser();
             if (self != null) {
                 boolean muted = !self.isSelfMuted();
@@ -402,7 +435,6 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
                 mDatabaseProvider.getDatabase(), getChildFragmentManager(),
                 isShowingPinnedChannels(), mSettings.shouldShowUserCount());
         
-        // ✅ Hubungkan RecyclerView ke Adapter untuk pembaruan langsung
         mChannelListAdapter.attachRecyclerView(mChannelView);
         
         mChannelListAdapter.setOnChannelClickListener(this);
