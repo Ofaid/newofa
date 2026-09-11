@@ -10,17 +10,14 @@
     android:clickable="true"
     android:focusable="true">
 
-  
-    <!-- Avatar / Foto Profil — DIPERBESAR + BINGKAI NEON -->
-<ImageView
-    android:id="@+id/user_row_avatar"
-    android:layout_width="48dp"          
-    android:layout_height="48dp"
-    android:layout_marginStart="12dp"
-    android:layout_marginTop="6dp"
-    android:layout_marginBottom="6dp"
-    android:padding="3dp"             
-    android:background="@drawable/avatar_neon_frame" />
+    <!-- Ikon Mikrofon / Tempat Avatar — tetap di kiri sejajar dua baris -->
+    <ImageView
+        android:id="@+id/user_row_talk_highlight"
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:scaleType="fitCenter"
+        android:layout_marginEnd="12dp"
+ android:background="@drawable/avatar_neon_frame"/>
 
     <!-- Wadah untuk Nama + Baris Bawah (ID + Status) — di sebelah kanan ikon -->
     <LinearLayout
