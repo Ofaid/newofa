@@ -9,7 +9,6 @@ public class OfaIdentity {
     private static final String PREFS_NAME = "ofa_identity_prefs";
     private static final String PREF_OFA_ID_PREFIX = "ofa_id_";
 
-    // ✅ Dipanggil DARI HALAMAN DEPAN saja — saat kode SUDAH dibuat di sana!
     public static void saveForServer(Context context, String host, int port, String ofaId) {
         if (context == null || host == null || host.trim().isEmpty() || ofaId == null) return;
         String key = PREF_OFA_ID_PREFIX + host.toLowerCase(Locale.ROOT) + "_" + port;
@@ -19,7 +18,6 @@ public class OfaIdentity {
                 .apply();
     }
 
-    // ✅ Dipakai di mana saja untuk MEMBACA kode yang SUDAH ADA
     public static String getExistingForServer(Context context, String host, int port) {
         if (context == null || host == null || host.trim().isEmpty()) return null;
         String key = PREF_OFA_ID_PREFIX + host.toLowerCase(Locale.ROOT) + "_" + port;
@@ -28,7 +26,6 @@ public class OfaIdentity {
         return (existing != null && !existing.trim().isEmpty()) ? existing : null;
     }
 
-    // ✅ Hapus saat server dihapus dari daftar favorit
     public static void removeForServer(Context context, String host, int port) {
         if (context == null || host == null) return;
         String key = PREF_OFA_ID_PREFIX + host.toLowerCase(Locale.ROOT) + "_" + port;
