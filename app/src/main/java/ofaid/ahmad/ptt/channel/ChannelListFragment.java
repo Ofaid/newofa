@@ -54,7 +54,7 @@ import ofaid.ahmad.ptt.db.DatabaseProvider;
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
-import ofaid.ahmad.ptt.util.MumlaService;
+import ofaid.ahmad.ptt.service.MumlaService;
 
 public class ChannelListFragment extends HumlaServiceFragment implements OnChannelClickListener, OnUserClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String TAG = ChannelListFragment.class.getName();
