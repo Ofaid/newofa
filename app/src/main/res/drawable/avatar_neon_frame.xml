@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<layer-list xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Bayangan luar = efek neon menyala ✨ -->
+    <item>
+        <shape android:shape="oval">
+            <gradient
+                android:startColor="#4ADE80"
+                android:centerColor="#22D3EE"
+                android:endColor="#3B82F6"
+                android:angle="45" />
+            <size android:width="48dp" android:height="48dp" />
+        </shape>
+    </item>
+    <!-- Isi dalam = tempat foto -->
+    <item
+        android:left="3dp"
+        android:top="3dp"
+        android:right="3dp"
+        android:bottom="3dp">
+        <shape android:shape="oval">
+            <solid android:color="#1E293B" />
+        </shape>
+    </item>
+</layer-list>
