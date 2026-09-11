@@ -88,19 +88,25 @@
         android:gravity="center_horizontal"
         android:orientation="vertical">
 
-        <Button
-            android:id="@+id/pushtotalk"
-            android:layout_width="match_parent"
-            android:layout_height="50dp"
-            android:text="@string/ptt"
-            android:textColor="?android:attr/textColorPrimaryInverse"
-            android:textAllCaps="true"
-            android:textStyle="bold"
-            android:textSize="14sp"
-            app:backgroundTint="@drawable/ptt_button_tint"
-            app:cornerRadius="0dp"
-            android:insetTop="0dp"
-            android:insetBottom="0dp" />
+  <!-- TOMBOL PUSH-TO-TALK — SAMA CANTIK DENGAN TOMBOL AVATAR ✅ -->
+<Button
+    android:id="@+id/pushtotalk"
+    android:layout_width="match_parent"
+    android:layout_height="56dp"
+    android:text="TEKAN UNTUK BICARA"
+    android:textSize="17sp"
+    android:textStyle="bold"
+    android:textColor="#FFFFFF"
+    android:backgroundTint="#3B82F6"
+    android:insetTop="0dp"
+    android:insetBottom="0dp"
+    android:stateListAnimator="@null"
+    app:cornerRadius="14dp"
+    android:elevation="3dp"
+    android:layout_marginStart="20dp"
+    android:layout_marginEnd="20dp"
+    android:layout_marginBottom="16dp" />
+
     </LinearLayout>
 
 </LinearLayout>
