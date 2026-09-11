@@ -82,6 +82,12 @@ android {
 
     buildTypes {
         release {
+            // ✅ PELINDUNG: Kaburkan & Kecilkan Kode
+            minifyEnabled true
+            shrinkResources true
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                          'proguard-rules.pro'
+
             if (android.hasProperty("signingConfigs")) {
                 if (signingConfigs.hasProperty("release")) {
                     signingConfig = signingConfigs.release
@@ -133,5 +139,6 @@ dependencies {
     implementation 'com.android.billingclient:billing:7.1.1'
     implementation 'com.google.code.gson:gson:2.10.1'
 
-implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.25'
+    // ✅ GIF — SUDAH PASANG, TETAP AMAN
+    implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.25'
 }
