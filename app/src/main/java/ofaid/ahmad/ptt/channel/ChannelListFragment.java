@@ -54,7 +54,7 @@ import ofaid.ahmad.ptt.db.DatabaseProvider;
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
-import ofaid.ahmad.ptt.service.MumlaService;
+import ofaid.ahmad.ptt.util.MumlaService;
 
 public class ChannelListFragment extends HumlaServiceFragment implements OnChannelClickListener, OnUserClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
     private static final String TAG = ChannelListFragment.class.getName();
@@ -90,20 +90,12 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
 
     // ========== FUNGSI TAMBAHAN — STATUS & ID OFA ==========
     
-    // ✅ Ambil ID OFA yang tersimpan — DIPERBAIKI ikut fungsi yang ada di OfaIdentity
+      // Ambil ID OFA yang tersimpan
     private String getMyOfaId() {
         Context ctx = getContext();
-        if (ctx == null || getService() == null || !getService().isConnected()) {
-            return null;
-        }
-        try {
-            String host = getService().getServerHost();
-            int port = getService().getServerPort();
-            return OfaIdentity.getExistingForServer(ctx, host, port);
-        } catch (Exception e) {
-            Log.w(TAG, "Gagal ambil ID OFA", e);
-            return null;
-        }
+        if (ctx == null) return null;
+        return ctx.getSharedPreferences("ofa_identity_prefs", Context.MODE_PRIVATE)
+                .getString("ofa_id", null);
     }
 
     // Kirim status ke server
@@ -122,6 +114,7 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
             Log.w(TAG, "Belum terhubung ke layanan");
         }
     }
+
 
     // Tampilkan dialog pilih status
     private void tampilkanPilihStatus() {
@@ -348,10 +341,12 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
             MenuItem bluetoothItem = menu.findItem(R.id.menu_bluetooth);
             bluetoothItem.setChecked(session.usingBluetoothSco());
             
+            // Tampilkan tombol status saat terhubung
             if (statusItem != null) {
                 statusItem.setVisible(true);
             }
         } else {
+            // Sembunyikan tombol status saat tidak terhubung
             if (statusItem != null) {
                 statusItem.setVisible(false);
             }
@@ -405,6 +400,7 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
         IHumlaSession session = getService().HumlaSession();
         int itemId = item.getItemId();
         
+        // ✅ TOMBOL PILIH STATUS
         if (itemId == R.id.menu_status_pilihan) {
             tampilkanPilihStatus();
             return true;
