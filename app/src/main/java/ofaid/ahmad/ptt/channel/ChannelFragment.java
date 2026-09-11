@@ -17,8 +17,10 @@
 
 package ofaid.ahmad.ptt.channel;
 
+import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.res.TypedArray;
+import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
 import android.util.TypedValue;
@@ -32,6 +34,7 @@ import android.view.ViewGroup;
 import android.widget.Button;
 import android.widget.ImageView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.fragment.app.Fragment;
 import androidx.fragment.app.FragmentManager;
@@ -54,6 +57,7 @@ import se.lublin.humla.util.IHumlaObserver;
 import se.lublin.humla.util.VoiceTargetMode;
 import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.Settings;
+import ofaid.ahmad.ptt.util.AvatarUtil;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 
 /**
@@ -63,20 +67,21 @@ import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 public class ChannelFragment extends HumlaServiceFragment implements SharedPreferences.OnSharedPreferenceChangeListener, ChatTargetProvider {
     private static final String TAG = ChannelFragment.class.getName();
 
+    private static final int KODE_PILIH_AVATAR = 1001;
+
     private ViewPager mViewPager;
     private PagerTabStrip mTabStrip;
     private Button mTalkButton;
     private View mTalkView;
+    private Button mAvatarButton;
 
     private View mTargetPanel;
     private ImageView mTargetPanelCancel;
     private TextView mTargetPanelText;
 
     private ChatTarget mChatTarget;
-    /** Chat target listeners, notified when the chat target is changed. */
     private List<OnChatTargetSelectedListener> mChatTargetListeners = new ArrayList<OnChatTargetSelectedListener>();
 
-    /** True iff the talk button has been hidden (e.g. when muted) */
     private boolean mTalkButtonHidden;
 
     private HumlaObserver mObserver = new HumlaObserver() {
@@ -93,8 +98,6 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
                 return;
             }
             if (user != null && user.getSession() == selfSession) {
-                // Manually set button selection colour when we receive a talk state update.
-                // This allows representation of talk state when using hot corners and PTT toggle.
                 switch (user.getTalkState()) {
                 case TALKING:
                 case SHOUTING:
@@ -157,10 +160,22 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
 
         mTalkView = view.findViewById(R.id.pushtotalk_view);
         mTalkButton = (Button) view.findViewById(R.id.pushtotalk);
-        /*========Original=====""*/ mTalkButton.setOnTouchListener(new View.OnTouchListener() {
 
+        // === AVATAR: Pasang tombol pilih avatar ===
+        mAvatarButton = (Button) view.findViewById(R.id.tombol_pilih_avatar);
+        if (mAvatarButton != null) {
+            mAvatarButton.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    Intent bukaGaleri = new Intent(Intent.ACTION_PICK);
+                    bukaGaleri.setType("image/*");
+                    startActivityForResult(bukaGaleri, KODE_PILIH_AVATAR);
+                }
+            });
+        }
+        // === AKHIR AVATAR ===
 
-
+        mTalkButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent event) {
                 switch (event.getAction()) {
@@ -178,7 +193,7 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
                 return true;
             }
         });
-       /*===ori====*/
+
         mTargetPanel = view.findViewById(R.id.target_panel);
         mTargetPanelCancel = (ImageView) view.findViewById(R.id.target_panel_cancel);
         mTargetPanelCancel.setOnClickListener(new View.OnClickListener() {
@@ -200,6 +215,42 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
         return view;
     }
 
+    // === AVATAR: Proses hasil gambar ===
+    @Override
+    public void onActivityResult(int kodePermintaan, int kodeHasil, Intent data) {
+        super.onActivityResult(kodePermintaan, kodeHasil, data);
+
+        if (kodePermintaan == KODE_PILIH_AVATAR && kodeHasil == getActivity().RESULT_OK) {
+            Uri uriGambar = data.getData();
+            Log.i("AvatarLayar", "🟢 Gambar dipilih");
+
+            byte[] dataAvatar = AvatarUtil.olahGambar(getActivity(), uriGambar);
+            if (dataAvatar == null) {
+                Toast.makeText(getActivity(), "Gagal memproses gambar", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            Log.i("AvatarLayar", "✅ Gambar siap — " + dataAvatar.length + " byte");
+
+            IHumlaService layanan = getService();
+            if (layanan == null || !layanan.isConnected()) {
+                Toast.makeText(getActivity(), "Belum terhubung ke server", Toast.LENGTH_SHORT).show();
+                return;
+            }
+
+            try {
+                IHumlaSession sesi = layanan.HumlaSession();
+                int nomorSesi = sesi.getSessionId();
+                sesi.setUserTexture(nomorSesi, dataAvatar);
+                Toast.makeText(getActivity(), "Avatar dikirim! ✅", Toast.LENGTH_SHORT).show();
+            } catch (Exception e) {
+                Log.e("AvatarLayar", "🔴 Gagal kirim", e);
+                Toast.makeText(getActivity(), "Gagal mengirim avatar", Toast.LENGTH_SHORT).show();
+            }
+        }
+    }
+    // === AKHIR AVATAR ===
+
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
@@ -207,10 +258,10 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
         preferences.registerOnSharedPreferenceChangeListener(this);
 
-        if(mViewPager != null) { // Phone
+        if(mViewPager != null) {
             ChannelFragmentPagerAdapter pagerAdapter = new ChannelFragmentPagerAdapter(getChildFragmentManager());
             mViewPager.setAdapter(pagerAdapter);
-        } else { // Tablet
+        } else {
             ChannelListFragment listFragment = new ChannelListFragment();
             Bundle listArgs = new Bundle();
             listArgs.putBoolean("pinned", isShowingPinnedChannels());
@@ -252,8 +303,6 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
         super.onPause();
         if (getService() != null && getService().isConnected() &&
             !Settings.getInstance(getActivity()).isPushToTalkToggle()) {
-            // XXX: This ensures that push to talk is disabled when we pause.
-            // We don't want to leave the talk state active if the fragment is paused while pressed.
             getService().HumlaSession().setTalkingState(false);
         }
     }
@@ -295,17 +344,11 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
         }
     }
 
-    /**
-     * @return true if the channel fragment is set to display only the user's pinned channels.
-     */
     private boolean isShowingPinnedChannels() {
         return getArguments() != null &&
                getArguments().getBoolean("pinned");
     }
 
-    /**
-     * Configures the fragment in accordance with the user's interface preferences.
-     */
     private void configureInput() {
         Settings settings = Settings.getInstance(getActivity());
 
@@ -366,7 +409,6 @@ public class ChannelFragment extends HumlaServiceFragment implements SharedPrefe
     }
 
     private class ChannelFragmentPagerAdapter extends FragmentPagerAdapter {
-
         public ChannelFragmentPagerAdapter(FragmentManager fm) {
             super(fm);
         }
