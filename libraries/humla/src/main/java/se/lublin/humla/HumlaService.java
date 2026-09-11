@@ -1179,6 +1179,7 @@ public void setTalkingState(boolean talking) {
         return mLatestRecordingBuffer != null ? mLatestRecordingBuffer.clone() : null;
     }
     // ==============================================
+    @Override
 public void setStatusDenganId(String idOFA, String statusTeks) {
          if (!isSynchronized()) {
              Log.w(TAG, "Belum terhubung — tidak bisa kirim status");
