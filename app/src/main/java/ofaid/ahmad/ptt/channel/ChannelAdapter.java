@@ -30,15 +30,26 @@ import se.lublin.humla.model.IUser;
 import se.lublin.humla.model.TalkState;
 import se.lublin.humla.model.User;
 import ofaid.ahmad.ptt.R;
+import ofaid.ahmad.ptt.ofa.OfaLokasi;
 
 /**
  * Simple adapter to display the users in a single channel.
  * Created by andrew on 24/11/13.
+ * Tambahan: Lokasi otomatis GPS — OFAID
  */
 public class ChannelAdapter extends BaseAdapter {
 
     private Context mContext;
     private IChannel mChannel;
+
+    // Penampung tampilan — biar rapi & cepat
+    static class ViewHolder {
+        TextView userName;
+        TextView userId;
+        TextView userStatus;
+        TextView userLokasi;  // ✅ Tambah: Lokasi
+        ImageView userState;
+    }
 
     public ChannelAdapter(Context context, IChannel channel) {
         mContext = context;
@@ -66,30 +77,67 @@ public class ChannelAdapter extends BaseAdapter {
     @Override
     public View getView(int position, View convertView, ViewGroup parent) {
         View v = convertView;
-        if(v == null) {
-            LayoutInflater layoutInflater = LayoutInflater.from(mContext);
-            v = layoutInflater.inflate(R.layout.overlay_user_row, parent, false);
-        }
-        User user = (User) getItem(position);
-        TextView titleView = (TextView) v.findViewById(R.id.user_row_name);
-        titleView.setText(user.getName());
+        ViewHolder holder;
 
-        ImageView state = (ImageView) v.findViewById(R.id.user_row_state);
+        if (v == null) {
+            LayoutInflater layoutInflater = LayoutInflater.from(mContext);
+            v = layoutInflater.inflate(R.layout.channel_user_row, parent, false); // ✅ Pakai layout yang benar
+
+            // Simpan referensi sekali — tidak cari ulang tiap tampil
+            holder = new ViewHolder();
+            holder.userName = v.findViewById(R.id.user_row_name);
+            holder.userId = v.findViewById(R.id.user_row_id);
+            holder.userStatus = v.findViewById(R.id.user_row_status);
+            holder.userLokasi = v.findViewById(R.id.user_lokasi); // ✅ Lokasi
+            holder.userState = v.findViewById(R.id.user_row_state);
+
+            v.setTag(holder);
+        } else {
+            holder = (ViewHolder) v.getTag();
+        }
+
+        User user = (User) getItem(position);
+
+        // === NAMA USER ===
+        holder.userName.setText(user.getName());
+
+        // === ID UNIK ===
+        if (holder.userId != null) {
+            holder.userId.setText("OFA-" + Integer.toHexString(user.getUserId()).toUpperCase());
+        }
+
+        // === STATUS ===
+        if (holder.userStatus != null) {
+            String status = user.getComment();
+            if (status == null || status.trim().isEmpty()) {
+                status = "Siap / Tersedia";
+            }
+            holder.userStatus.setText(status);
+        }
+
+        // === ✅ LOKASI OTOMATIS DARI GPS ===
+        if (holder.userLokasi != null) {
+            String lokasi = OfaLokasi.formatLokasiTampil(mContext);
+            holder.userLokasi.setText(lokasi);
+            holder.userLokasi.setVisibility(View.VISIBLE);
+        }
+
+        // === IKON BICARA/DIAM — TETAP SAMA PERSIS ===
         if (user.isSelfDeafened())
-            state.setImageResource(R.drawable.outline_circle_deafened);
+            holder.userState.setImageResource(R.drawable.outline_circle_deafened);
         else if (user.isSelfMuted())
-            state.setImageResource(R.drawable.outline_circle_muted);
+            holder.userState.setImageResource(R.drawable.outline_circle_muted);
         else if (user.isDeafened())
-            state.setImageResource(R.drawable.outline_circle_server_deafened);
+            holder.userState.setImageResource(R.drawable.outline_circle_server_deafened);
         else if (user.isMuted())
-            state.setImageResource(R.drawable.outline_circle_server_muted);
+            holder.userState.setImageResource(R.drawable.outline_circle_server_muted);
         else if (user.isSuppressed())
-            state.setImageResource(R.drawable.outline_circle_suppressed);
+            holder.userState.setImageResource(R.drawable.outline_circle_suppressed);
         else
         if (user.getTalkState() == TalkState.TALKING)
-            state.setImageResource(R.drawable.outline_circle_talking_on);
+            holder.userState.setImageResource(R.drawable.outline_circle_talking_on);
         else
-            state.setImageResource(R.drawable.outline_circle_talking_off);
+            holder.userState.setImageResource(R.drawable.outline_circle_talking_off);
 
         return v;
     }
