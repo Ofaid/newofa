@@ -2,7 +2,57 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:orientation="vertical"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:background="#0f172a">
+
+    <!-- ✅ BAR ATAS: GARIS 3 KIRI + JUDUL + STATUS KANAN -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:fitsSystemWindows="true">
+
+        <!-- TOMBOL GARIS 3 — BUKA MENU SAMPING -->
+        <ImageView
+            android:id="@+id/btn_drawer_tombol"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:src="@drawable/ic_menu_hamburger"
+            android:tint="#ffffff"
+            android:padding="8dp"
+            android:layout_gravity="start"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:clickable="true"
+            android:focusable="true"/>
+
+        <!-- JUDUL DI TENGAH -->
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="CHANNEL"
+            android:textColor="#ffffff"
+            android:textSize="18sp"
+            android:layout_gravity="center"
+            android:textStyle="bold"/>
+
+        <!-- TOMBOL STATUS DI KANAN -->
+        <TextView
+            android:id="@+id/btn_status_atas"
+            android:layout_width="wrap_content"
+            android:layout_height="32dp"
+            android:text="Status"
+            android:textSize="13sp"
+            android:textColor="#ffffff"
+            android:background="#2563eb"
+            android:paddingLeft="16dp"
+            android:paddingRight="16dp"
+            android:layout_gravity="end"
+            android:layout_marginEnd="4dp"
+            android:gravity="center"
+            android:clickable="true"
+            android:focusable="true"/>
+
+    </FrameLayout>
 
     <!-- INDIKATOR SPEAKER AKTIF -->
     <FrameLayout
@@ -24,12 +74,12 @@
             android:textColor="@android:color/white"
             android:textSize="15sp"
             android:textStyle="bold"
-            android:drawableLeft="@drawable/outline_circle_talking_on"
             android:drawablePadding="8dp"
             android:gravity="center_vertical" />
 
     </FrameLayout>
 
+    <!-- DAFTAR USER / CHANNEL -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/channelUsers"
         android:layout_width="match_parent"
