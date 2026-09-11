@@ -1,103 +1,64 @@
-/*Created by Ofaid 2026*/
-package ofaid.ahmad.ptt.util;
+/*Created By Ofaid*/
+package se.lublin.mumla.util;
 
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.graphics.Canvas;
-import android.graphics.PixelFormat;
-import android.graphics.drawable.BitmapDrawable;
-import android.graphics.drawable.Drawable;
-import android.net.Uri;
+import android.util.Base64;
 import android.util.Log;
 
 import java.io.ByteArrayOutputStream;
-import java.io.InputStream;
 
 public class AvatarUtil {
-    private static final int MAKS_UKURAN = 96; // piksel
-    private static final int KUALITAS_JPEG = 85; // %
+    private static final int MAKS_UKURAN = 96;
+    private static final int KUALITAS = 85;
+    
+    // === PENYIMPANAN DI HP ===
+    private static final String NAMA_SIMPANAN = "ofa_avatar_penyimpanan";
+    private static final String KUNCI_DATA = "avatar_data";
 
-    public static byte[] olahGambar(Context konteks, Uri uriGambar) {
+    // Simpan setelah dikirim
+    public static void simpanAvatar(Context konteks, byte[] data) {
+        if (konteks == null || data == null) return;
+        String base64 = Base64.encodeToString(data, Base64.NO_WRAP);
+        konteks.getSharedPreferences(NAMA_SIMPANAN, Context.MODE_PRIVATE)
+               .edit()
+               .putString(KUNCI_DATA, base64)
+               .apply();
+        Log.i("AvatarSimpan", "✅ Tersimpan — " + data.length + " byte");
+    }
+
+    // Ambil kembali saat buka aplikasi
+    public static byte[] ambilAvatarTersimpan(Context konteks) {
+        if (konteks == null) return null;
+        String base64 = konteks.getSharedPreferences(NAMA_SIMPANAN, Context.MODE_PRIVATE)
+                                .getString(KUNCI_DATA, null);
+        if (base64 == null) {
+            Log.i("AvatarSimpan", "ℹ️ Belum ada foto tersimpan");
+            return null;
+        }
         try {
-            // 1. Baca ukuran asli dulu
-            InputStream aliranCek = konteks.getContentResolver().openInputStream(uriGambar);
-            BitmapFactory.Options opsi = new BitmapFactory.Options();
-            opsi.inJustDecodeBounds = true;
-            BitmapFactory.decodeStream(aliranCek, null, opsi);
-            aliranCek.close();
-
-            int lebarAsli = opsi.outWidth;
-            int tinggiAsli = opsi.outHeight;
-
-            // 2. Hitung skala agar tidak terlalu besar
-            int skala = 1;
-            while ((lebarAsli / skala) > MAKS_UKURAN || (tinggiAsli / skala) > MAKS_UKURAN) {
-                skala *= 2;
-            }
-
-            // 3. Baca gambar asli dengan skala
-            InputStream aliranGambar = konteks.getContentResolver().openInputStream(uriGambar);
-            opsi.inJustDecodeBounds = false;
-            opsi.inSampleSize = skala;
-            Bitmap bitmapAsli = BitmapFactory.decodeStream(aliranGambar, null, opsi);
-            aliranGambar.close();
-
-            if (bitmapAsli == null) {
-                Log.e("AvatarUtil", "Gagal baca gambar");
-                return null;
-            }
-
-            // 4. Potong jadi persegi
-            int sisiTerkecil = Math.min(bitmapAsli.getWidth(), bitmapAsli.getHeight());
-            int mulaiX = (bitmapAsli.getWidth() - sisiTerkecil) / 2;
-            int mulaiY = (bitmapAsli.getHeight() - sisiTerkecil) / 2;
-            Bitmap bitmapPersegi = Bitmap.createBitmap(
-                bitmapAsli, mulaiX, mulaiY, sisiTerkecil, sisiTerkecil
-            );
-
-            if (bitmapPersegi != bitmapAsli) {
-                bitmapAsli.recycle();
-            }
-
-            // 5. Ubah ukuran jadi MAKS_UKURAN x MAKS_UKURAN
-            Bitmap bitmapAkhir = Bitmap.createScaledBitmap(
-                bitmapPersegi, MAKS_UKURAN, MAKS_UKURAN, true
-            );
-            bitmapPersegi.recycle();
-
-            // 6. Ubah ke JPEG — ini yang server minta ✅
-            ByteArrayOutputStream keluar = new ByteArrayOutputStream();
-            bitmapAkhir.compress(Bitmap.CompressFormat.JPEG, KUALITAS_JPEG, keluar);
-            bitmapAkhir.recycle();
-
-            byte[] hasil = keluar.toByteArray();
-            Log.i("AvatarUtil", "✅ Berhasil — " + hasil.length + " byte, format: JPEG");
-            return hasil;
-
+            byte[] data = Base64.decode(base64, Base64.NO_WRAP);
+            Log.i("AvatarSimpan", "✅ Diambil kembali — " + data.length + " byte");
+            return data;
         } catch (Exception e) {
-            Log.e("AvatarUtil", "🔴 Error olah gambar", e);
+            Log.e("AvatarSimpan", "🔴 Gagal baca simpanan", e);
             return null;
         }
     }
 
-    // Bantu: Ubah Drawable ke byte[] kalau dibutuhkan
-    public static byte[] dariDrawable(Drawable gbr) {
-        if (gbr instanceof BitmapDrawable) {
-            Bitmap bmp = ((BitmapDrawable) gbr).getBitmap();
+    // Ubah gambar jadi byte[] (otomatis JPEG)
+    public static byte[] olahGambar(Bitmap bitmap) {
+        if (bitmap == null) return null;
+        try {
+            Bitmap skala = Bitmap.createScaledBitmap(bitmap, MAKS_UKURAN, MAKS_UKURAN, true);
             ByteArrayOutputStream keluar = new ByteArrayOutputStream();
-            bmp.compress(Bitmap.CompressFormat.JPEG, KUALITAS_JPEG, keluar);
+            skala.compress(Bitmap.CompressFormat.JPEG, KUALITAS, keluar);
+            skala.recycle();
             return keluar.toByteArray();
+        } catch (Exception e) {
+            Log.e("AvatarOlah", "🔴 Gambar gagal diproses", e);
+            return null;
         }
-        Bitmap bmp = Bitmap.createBitmap(
-            gbr.getIntrinsicWidth(), gbr.getIntrinsicHeight(),
-            gbr.getOpacity() != PixelFormat.OPAQUE ? Bitmap.Config.ARGB_8888 : Bitmap.Config.RGB_565
-        );
-        Canvas kanvas = new Canvas(bmp);
-        gbr.setBounds(0, 0, kanvas.getWidth(), kanvas.getHeight());
-        gbr.draw(kanvas);
-        ByteArrayOutputStream keluar = new ByteArrayOutputStream();
-        bmp.compress(Bitmap.CompressFormat.JPEG, KUALITAS_JPEG, keluar);
-        return keluar.toByteArray();
     }
 }
