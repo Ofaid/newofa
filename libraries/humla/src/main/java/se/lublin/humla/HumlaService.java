@@ -1179,13 +1179,28 @@ public void setTalkingState(boolean talking) {
         return mLatestRecordingBuffer != null ? mLatestRecordingBuffer.clone() : null;
     }
     // ==============================================
-
-    public enum ConnectionState {
-        DISCONNECTED,
-        CONNECTING,
-        CONNECTED,
-        CONNECTION_LOST
-    }
+public void setStatusDenganId(String idOFA, String statusTeks) {
+         if (!isSynchronized()) {
+             Log.w(TAG, "Belum terhubung — tidak bisa kirim status");
+             return;
+         }
+         
+         try {
+             int sesiSaya = getSessionId();
+             String statusPenuh = idOFA + " | " + statusTeks;
+             
+             setUserComment(sesiSaya, statusPenuh);
+             Log.i(TAG, "✅ Status terkirim: " + statusPenuh);
+         } catch (IllegalStateException e) {
+             Log.e(TAG, "❌ Gagal kirim status: " + e.getMessage());
+         }
+     }
+     public enum ConnectionState {
+         DISCONNECTED,
+         CONNECTING,
+         CONNECTED,
+         CONNECTION_LOST
+     }
 
     public static class HumlaBinder extends Binder {
         private final IHumlaService mService;
