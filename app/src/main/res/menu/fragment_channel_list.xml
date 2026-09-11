@@ -5,11 +5,12 @@
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
       xmlns:mumla="http://schemas.android.com/apk/res-auto">
 
-    <item
-        android:id="@+id/menu_status_pilihan"
-        android:icon="@drawable/ic_action_status"
-        android:title="Status"
-        mumla:showAsAction="ifRoom" />  <!-- ✅ GANTI app → mumla -->
+  <item
+    android:id="@+id/menu_status_pilihan"
+    android:icon="@drawable/ic_action_microphone"  <!-- ✅ Ganti pakai yang sudah ada -->
+    android:title="Status"
+    mumla:showAsAction="ifRoom" />
+ <!-- ✅ GANTI app → mumla -->
 
     <item 
         android:id="@+id/menu_mute_button" 
