@@ -14,12 +14,12 @@
     <!-- Avatar / Foto Profil — DIPERBESAR + BINGKAI NEON -->
 <ImageView
     android:id="@+id/user_row_avatar"
-    android:layout_width="48dp"          <!-- DULU: 32dp → SEKARANG: 48dp ✅ -->
+    android:layout_width="48dp"          
     android:layout_height="48dp"
     android:layout_marginStart="12dp"
     android:layout_marginTop="6dp"
     android:layout_marginBottom="6dp"
-    android:padding="3dp"                <!-- ruang untuk bingkai neon -->
+    android:padding="3dp"             
     android:background="@drawable/avatar_neon_frame" />
 
     <!-- Wadah untuk Nama + Baris Bawah (ID + Status) — di sebelah kanan ikon -->
