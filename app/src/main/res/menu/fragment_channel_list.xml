@@ -3,8 +3,8 @@
 
     <item
         android:id="@+id/menu_status_pilihan"
-        android:icon="@drawable/ic_action_microphone"  <!-- ✅ PAKAI YANG SUDAH ADA -->
-        android:title="Status"
+        android:icon="@drawable/ic_action_microphone" 
+   android:title="Status"
         mumla:showAsAction="ifRoom" />
 
     <item android:id="@+id/menu_mute_button" android:title="@string/mute" mumla:showAsAction="ifRoom" android:icon="@drawable/ic_action_microphone"></item>
