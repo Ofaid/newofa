@@ -1034,13 +1034,34 @@ public void setTalkingState(boolean talking) {
         }
     }
 
-    @Override
+     @Override
     public void setUserComment(int session, String comment) {
         Mumble.UserState.Builder usb = Mumble.UserState.newBuilder();
         usb.setSession(session);
         usb.setComment(comment);
         getConnection().sendTCPMessage(usb.build(), HumlaTCPMessageType.UserState);
     }
+
+    // =============================================================
+    // TAMBAHAN BARU — KIRIM AVATAR
+    // Ikut pola persis seperti setUserComment di atas
+    // =============================================================
+    @Override
+    public void setUserTexture(int session, byte[] data) {
+        Log.i("AvatarSesi", "🟢 setUserTexture dipanggil — Sesi: " + session +
+            ", Ukuran: " + (data != null ? data.length + " byte" : "KOSONG"));
+
+        Mumble.UserState.Builder usb = Mumble.UserState.newBuilder();
+        usb.setSession(session);
+        usb.setTexture(com.google.protobuf.ByteString.copyFrom(data));
+        getConnection().sendTCPMessage(usb.build(), HumlaTCPMessageType.UserState);
+
+        Log.i("AvatarSesi", "✅ Pesan avatar dikirim");
+    }
+    // =============================================================
+    // AKHIR TAMBAHAN
+    // =============================================================
+
 
     @Override
     public void setPrioritySpeaker(int session, boolean priority) {
