@@ -47,6 +47,7 @@ import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.Settings;
 import ofaid.ahmad.ptt.util.AvatarUtil;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
+import ofaid.ahmad.ptt.util.AvatarUtil;  // ✅ HARUS ADA
 
 /**
  * Class to encapsulate both a ChannelListFragment and ChannelChatFragment.
