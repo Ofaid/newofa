@@ -5,12 +5,12 @@
     android:layout_height="match_parent">
 
     <!-- ==============================================
-         ✅ BANNER — TINGGI TETAP, TIDAK BERUBAH!
+         ✅ BANNER — TINGGI TETAP 48dp, TIDAK DORONG!
          ============================================== -->
     <FrameLayout
         android:id="@+id/bannerActiveSpeaker"
         android:layout_width="match_parent"
-        android:layout_height="48dp"            <!-- ✅ TETAP 48dp → TIDAK DORONG! -->
+        android:layout_height="48dp"
         android:background="#D32F2F"
         android:paddingTop="10dp"
         android:paddingBottom="10dp"
@@ -22,7 +22,7 @@
             android:id="@+id/tvSpeakerName"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"        <!-- ✅ TENGAH KALAU MUNCUL -->
+            android:layout_gravity="center"
             android:textColor="@android:color/white"
             android:textSize="15sp"
             android:textStyle="bold"
@@ -32,12 +32,12 @@
     </FrameLayout>
 
     <!-- ==============================================
-         ✅ DAFTAR — AMBIL SISA RUANG SAJA
+         ✅ DAFTAR — AMBIL SISA RUANG SAJA, TETAP DIAM
          ============================================== -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/channelUsers"
         android:layout_width="match_parent"
-        android:layout_height="0dp"              <!-- ✅ TETAP, TIDAK IKUT BERGERAK -->
+        android:layout_height="0dp"
         android:layout_weight="1"
         android:divider="@android:color/transparent"
         android:dividerHeight="0dp"
