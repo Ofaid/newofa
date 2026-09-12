@@ -7,6 +7,7 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.Color;
 import android.graphics.Typeface;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.Drawable.ConstantState;
@@ -42,7 +43,7 @@ import ofaid.ahmad.ptt.db.MumlaDatabase;
 import ofaid.ahmad.ptt.drawable.CircleDrawable;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.ofa.OfaUserStatus;
-import ofaid.ahmad.ptt.ofa.OfaLokasi; // ✅ Tambah: Lokasi GPS
+import ofaid.ahmad.ptt.ofa.OfaLokasi;
 
 public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements UserMenu.IUserLocalStateListener {
     private static final String TAG = ChannelListAdapter.class.getName();
@@ -205,31 +206,68 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     }
                 }
             });
-/*==============≠===================*/
-            //Lokasi GPS — BACA DARI DATA PENGGUNA, BUKAN DARI HP! ✅
-if (uvh.mUserLokasi != null) {
-    String keteranganPengguna = user.getComment();
-    String lokasiTampil = null;
 
-    if (keteranganPengguna != null && !keteranganPengguna.trim().isEmpty()) {
-        String[] baris = keteranganPengguna.split("\\r?\\n");
-        for (String b : baris) {
-            if (b.trim().startsWith("📍")) {
-                lokasiTampil = b.trim();
-                break;
+            // =============================================
+            // ✅ TAMPILKAN NAMA — DIPASTIKAN TERLIHAT!
+            // =============================================
+            if (uvh.mUserName != null) {
+                uvh.mUserName.setText(user.getName());
+                uvh.mUserName.setVisibility(View.VISIBLE);
+                uvh.mUserName.setTextColor(Color.BLACK);
             }
-        }
-    }
 
-    if (lokasiTampil != null) {
-        uvh.mUserLokasi.setText(lokasiTampil);
-        uvh.mUserLokasi.setVisibility(View.VISIBLE);
-    } else {
-        uvh.mUserLokasi.setVisibility(View.GONE); // belum kirim = kosong
-    }
-}
+            // =============================================
+            // ✅ TAMPILKAN ID PENGGUNA — DIKEMBALIKAN!
+            // =============================================
+            if (uvh.mUserIdView != null) {
+                int uid = user.getUserId();
+                // Buat kode tampilan OFA
+                int gabungan = Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000;
+                uvh.mUserIdView.setText("OFA-" + gabungan);
+                uvh.mUserIdView.setVisibility(View.VISIBLE);
+                uvh.mUserIdView.setTextColor(0xFF607D8B); // warna abu-biru lembut
+            }
 
+            // =============================================
+            // ✅ TAMPILKAN STATUS
+            // =============================================
+            if (uvh.mUserStatusView != null) {
+                String status = OfaUserStatus.dapatStatus(mContext, user.getSession());
+                uvh.mUserStatusView.setText(status);
+                uvh.mUserStatusView.setVisibility(View.VISIBLE);
+                if (status.contains("Sibuk") || status.contains("Jangan")) {
+                    uvh.mUserStatusView.setTextColor(0xFFFF5252);
+                } else if (status.contains("Siap") || status.contains("Tersedia")) {
+                    uvh.mUserStatusView.setTextColor(0xFF4CAF50);
+                } else {
+                    uvh.mUserStatusView.setTextColor(0xFFBBBBBB);
+                }
+            }
 
+            // =============================================
+            // ✅ TAMPILKAN LOKASI GPS
+            // =============================================
+            if (uvh.mUserLokasi != null) {
+                String keteranganPengguna = user.getComment();
+                String lokasiTampil = null;
+
+                if (keteranganPengguna != null && !keteranganPengguna.trim().isEmpty()) {
+                    String[] baris = keteranganPengguna.split("\\r?\\n");
+                    for (String b : baris) {
+                        if (b.trim().startsWith("📍")) {
+                            lokasiTampil = b.trim();
+                            break;
+                        }
+                    }
+                }
+
+                if (lokasiTampil != null) {
+                    uvh.mUserLokasi.setText(lokasiTampil);
+                    uvh.mUserLokasi.setVisibility(View.VISIBLE);
+                } else {
+                    uvh.mUserLokasi.setVisibility(View.GONE);
+                }
+            }
 
             final int typefaceStyle;
             int selfSession = -1;
@@ -246,7 +284,9 @@ if (uvh.mUserLokasi != null) {
             } else {
                 typefaceStyle = Typeface.NORMAL;
             }
-            uvh.mUserName.setTypeface(null, typefaceStyle);
+            if (uvh.mUserName != null) {
+                uvh.mUserName.setTypeface(null, typefaceStyle);
+            }
             uvh.mUserTalkHighlight.setImageDrawable(getTalkStateDrawable(user));
 
             DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
@@ -394,6 +434,10 @@ if (uvh.mUserLokasi != null) {
                                         uvh.mUserStatusView.setTextColor(0xFFBBBBBB);
                                     }
                                 }
+                                // ✅ Segarkan ID juga
+                                if (uvh.mUserIdView != null) {
+                                    // ID tetap, tidak perlu diubah
+                                }
                             }
                         }
                         return;
@@ -474,7 +518,6 @@ if (uvh.mUserLokasi != null) {
         }
     }
 
-    // ✅ UserViewHolder — DITAMBAH mUserLokasi!
     private static class UserViewHolder extends RecyclerView.ViewHolder {
         public LinearLayout mUserHolder;
         public TextView mUserName;
@@ -482,7 +525,7 @@ if (uvh.mUserLokasi != null) {
         public ImageView mMoreButton;
         public TextView mUserIdView;
         public TextView mUserStatusView;
-        public TextView mUserLokasi; // ✅ Baris lokasi
+        public TextView mUserLokasi;
 
         public UserViewHolder(View itemView) {
             super(itemView);
@@ -492,7 +535,7 @@ if (uvh.mUserLokasi != null) {
             mMoreButton = (ImageView) itemView.findViewById(R.id.user_row_more);
             mUserIdView = (TextView) itemView.findViewById(R.id.user_row_id);
             mUserStatusView = (TextView) itemView.findViewById(R.id.user_row_status);
-            mUserLokasi = (TextView) itemView.findViewById(R.id.user_lokasi); // ✅ Sambung ke XML
+            mUserLokasi = (TextView) itemView.findViewById(R.id.user_lokasi);
         }
     }
 
