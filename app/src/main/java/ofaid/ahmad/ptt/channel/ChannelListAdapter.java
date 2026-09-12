@@ -42,6 +42,7 @@ import ofaid.ahmad.ptt.db.MumlaDatabase;
 import ofaid.ahmad.ptt.drawable.CircleDrawable;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.ofa.OfaUserStatus;
+import ofaid.ahmad.ptt.ofa.OfaLokasi; // ✅ Tambah: Lokasi GPS
 
 public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements UserMenu.IUserLocalStateListener {
     private static final String TAG = ChannelListAdapter.class.getName();
@@ -229,6 +230,13 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 }
             }
 
+            // ✅ LOKASI OTOMATIS GPS — TAMPIL DI BAWAH STATUS
+            if (uvh.mUserLokasi != null) {
+                String lokasi = OfaLokasi.formatLokasiTampil(mContext);
+                uvh.mUserLokasi.setText(lokasi);
+                uvh.mUserLokasi.setVisibility(View.VISIBLE);
+            }
+
             final int typefaceStyle;
             int selfSession = -1;
             try {
@@ -368,7 +376,6 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         return -1;
     }
 
-    // ✅ PEMBARUAN LANGSUNG — TANPA TUNGGU REFRESH HALAMAN! ⚡
     public void refreshUserStatus(int sessionId) {
         if (sessionId <= 0) return;
         long targetItemId = USER_ID_MASK | sessionId;
@@ -473,6 +480,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
     }
 
+    // ✅ UserViewHolder — DITAMBAH mUserLokasi!
     private static class UserViewHolder extends RecyclerView.ViewHolder {
         public LinearLayout mUserHolder;
         public TextView mUserName;
@@ -480,6 +488,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         public ImageView mMoreButton;
         public TextView mUserIdView;
         public TextView mUserStatusView;
+        public TextView mUserLokasi; // ✅ Baris lokasi
 
         public UserViewHolder(View itemView) {
             super(itemView);
@@ -489,6 +498,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             mMoreButton = (ImageView) itemView.findViewById(R.id.user_row_more);
             mUserIdView = (TextView) itemView.findViewById(R.id.user_row_id);
             mUserStatusView = (TextView) itemView.findViewById(R.id.user_row_status);
+            mUserLokasi = (TextView) itemView.findViewById(R.id.user_lokasi); // ✅ Sambung ke XML
         }
     }
 
@@ -546,5 +556,13 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         public int getDepth() { return mDepth; }
         public boolean isExpanded() { return mExpanded; }
         public void setExpanded(boolean expanded) { mExpanded = expanded; }
+    }
+
+    public interface OnUserClickListener {
+        void onUserClick(IUser user);
+    }
+
+    public interface OnChannelClickListener {
+        void onChannelClick(IChannel channel);
     }
 }
