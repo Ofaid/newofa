@@ -10,16 +10,16 @@
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Ikon Mikrofon / Tempat Avatar — tetap di kiri sejajar dua baris -->
+    <!-- Ikon Mikrofon / Avatar — Kiri -->
     <ImageView
         android:id="@+id/user_row_talk_highlight"
         android:layout_width="40dp"
         android:layout_height="40dp"
         android:scaleType="fitCenter"
         android:layout_marginEnd="12dp"
- android:background="@drawable/avatar_neon_frame"/>
+        android:background="@drawable/avatar_neon_frame"/>
 
-    <!-- Wadah untuk Nama + Baris Bawah (ID + Status) — di sebelah kanan ikon -->
+    <!-- Wadah Semua Teks — Kanan Ikon -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -27,7 +27,7 @@
         android:orientation="vertical"
         android:gravity="start">
 
-        <!-- BARIS 1 — Nama Pengguna, utama & jelas -->
+        <!-- BARIS 1 — Nama -->
         <TextView
             android:id="@+id/user_row_name"
             android:layout_width="wrap_content"
@@ -37,7 +37,7 @@
             android:maxLines="1"
             android:ellipsize="end" />
 
-        <!-- BARIS 2 — ID OFA — Pemisah — Status, berdekatan jarak pas! -->
+        <!-- BARIS 2 — ID — Pemisah — Status -->
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
@@ -70,20 +70,21 @@
                 android:maxLines="1"
                 android:ellipsize="end" />
 
-<TextView
-    android:id="@+id/user_lokasi"
-    android:layout_width="wrap_content"
-    android:layout_height="wrap_content"
-    android:textSize="11sp"
-    android:textColor="#666666"
-    android:layout_marginTop="2dp"
-    android:visibility="gone" />
-
-
         </LinearLayout>
+
+        <!-- ✅ BARIS 3 — LOKASI SENDIRI, TIDAK BERDESAKAN! -->
+        <TextView
+            android:id="@+id/user_lokasi"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:textSize="11sp"
+            android:textColor="#666666"
+            android:layout_marginTop="2dp"
+            android:visibility="gone" />
+
     </LinearLayout>
 
-    <!-- Tombol Menu Titik Tiga — tetap di pojok kanan atas sejajar nama -->
+    <!-- Tombol Menu — Pojok Kanan -->
     <ImageView
         android:id="@+id/user_row_more"
         android:layout_width="24dp"
