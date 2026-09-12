@@ -143,6 +143,13 @@ public class ChannelListFragment extends HumlaServiceFragment
         // Nanti diaktifkan saat PilihStatusDialog siap
     }
 
+    // ========== HENTIKAN BACA LOKASI — DIPERBAIKI ✅ ==========
+    private void hentikanBacaLokasi() {
+        if (mLocationManager != null) {
+            mLocationManager.removeUpdates(lokasiPendengar);
+        }
+    }
+
     // ========== MINTA IZIN LOKASI OTOMATIS ==========
     private void mintaIzinLokasiOtomatis() {
         if (getContext() == null) return;
@@ -219,7 +226,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             Log.e(TAG, "Izin lokasi tidak tersedia", e);
         }
     }
-    /*----------------++++++++------*/
+
     private void bacaNamaLokasi(Location lokasi) {
         if (getContext() == null) return;
 
@@ -238,20 +245,17 @@ public class ChannelListFragment extends HumlaServiceFragment
 
                 lokasiTerbaca = "📍 " + sb.toString().trim().replaceAll(", $", "");
                 Log.i(TAG, "✅ Lokasi: " + lokasiTerbaca);
-                kirimLokasiKeServer(lokasiTerbaca); // ✅ KIRIM!
+                kirimLokasiKeServer(lokasiTerbaca);
             } else {
                 lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
-                kirimLokasiKeServer(lokasiTerbaca); // ✅ KIRIM!
+                kirimLokasiKeServer(lokasiTerbaca);
             }
         } catch (Exception e) {
             Log.e(TAG, "Gagal baca nama lokasi", e);
             lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
-            kirimLokasiKeServer(lokasiTerbaca); // ✅ KIRIM!
+            kirimLokasiKeServer(lokasiTerbaca);
         }
     }
-
-    // ===========================================
-
 
     // =============================================
     // ✅ FUNGSI KIRIM LOKASI KE SERVER
@@ -267,17 +271,14 @@ public class ChannelListFragment extends HumlaServiceFragment
             IUser saya = sesi.getSessionUser();
             if (saya == null) return;
             
-            // Baca keterangan yang sudah ada
             String keteranganLama = saya.getComment();
             String keteranganBaru;
             
             if (keteranganLama == null || keteranganLama.trim().isEmpty()) {
                 keteranganBaru = teksLokasi;
-            } else if (keteranganLama.startsWith("📍")) {
-                // Sudah ada lokasi → ganti yang lama
+            } else if (keteranganLama.trim().startsWith("📍")) {
                 keteranganBaru = teksLokasi;
             } else {
-                // Ada keterangan lain → tambahkan lokasi
                 keteranganBaru = keteranganLama + "\n" + teksLokasi;
             }
             
