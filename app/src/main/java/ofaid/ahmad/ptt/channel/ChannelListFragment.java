@@ -502,7 +502,7 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     @Override
     public void onChannelClick(IChannel channel) {
-        ChatTargetProvider.Target target = mTargetProvider.getChatTarget();
+        ChatTargetProvider.ChatTarget target = mTargetProvider.getChatTarget();
         if (target != null && channel.equals(target.getChannel()) && mActionMode != null) {
             mActionMode.finish();
         } else {
@@ -519,9 +519,9 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-    @Override
+        @Override
     public void onUserClick(IUser user) {
-        ChatTargetProvider.Target target = mTargetProvider.getChatTarget();
+        ChatTargetProvider.ChatTarget target = mTargetProvider.getChatTarget();
         if (target != null && user.equals(target.getUser()) && mActionMode != null) {
             mActionMode.finish();
         } else {
@@ -537,6 +537,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             mActionMode = ((AppCompatActivity) requireActivity()).startSupportActionMode(cb);
         }
     }
+
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
