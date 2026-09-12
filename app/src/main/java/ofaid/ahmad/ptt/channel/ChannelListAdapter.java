@@ -237,7 +237,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 uvh.mUserStatusView.setVisibility(View.VISIBLE);
                 if (status.contains("Sibuk") || status.contains("Jangan")) {
                     uvh.mUserStatusView.setTextColor(0xFFFF5252);
-                } else if (status.contains("Siap") || status.contains("Tersedia")) {
+                } else if (status.contains("Next") || status.contains("Fitur Disini")) {
                     uvh.mUserStatusView.setTextColor(0xFF4CAF50);
                 } else {
                     uvh.mUserStatusView.setTextColor(0xFFBBBBBB);
