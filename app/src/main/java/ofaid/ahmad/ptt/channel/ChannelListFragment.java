@@ -219,7 +219,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             Log.e(TAG, "Izin lokasi tidak tersedia", e);
         }
     }
-
+    /*----------------++++++++------*/
     private void bacaNamaLokasi(Location lokasi) {
         if (getContext() == null) return;
 
@@ -238,22 +238,56 @@ public class ChannelListFragment extends HumlaServiceFragment
 
                 lokasiTerbaca = "📍 " + sb.toString().trim().replaceAll(", $", "");
                 Log.i(TAG, "✅ Lokasi: " + lokasiTerbaca);
+                kirimLokasiKeServer(lokasiTerbaca); // ✅ KIRIM!
             } else {
                 lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
+                kirimLokasiKeServer(lokasiTerbaca); // ✅ KIRIM!
             }
         } catch (Exception e) {
             Log.e(TAG, "Gagal baca nama lokasi", e);
             lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
-        }
-    }
-
-    private void hentikanBacaLokasi() {
-        if (mLocationManager != null) {
-            mLocationManager.removeUpdates(lokasiPendengar);
+            kirimLokasiKeServer(lokasiTerbaca); // ✅ KIRIM!
         }
     }
 
     // ===========================================
+
+
+    // =============================================
+    // ✅ FUNGSI KIRIM LOKASI KE SERVER
+    // =============================================
+    private void kirimLokasiKeServer(String teksLokasi) {
+        if (getService() == null || !getService().isConnected()) {
+            Log.w(TAG, "Belum terhubung — lokasi belum dikirim");
+            return;
+        }
+        
+        try {
+            IHumlaSession sesi = getService().HumlaSession();
+            IUser saya = sesi.getSessionUser();
+            if (saya == null) return;
+            
+            // Baca keterangan yang sudah ada
+            String keteranganLama = saya.getComment();
+            String keteranganBaru;
+            
+            if (keteranganLama == null || keteranganLama.trim().isEmpty()) {
+                keteranganBaru = teksLokasi;
+            } else if (keteranganLama.startsWith("📍")) {
+                // Sudah ada lokasi → ganti yang lama
+                keteranganBaru = teksLokasi;
+            } else {
+                // Ada keterangan lain → tambahkan lokasi
+                keteranganBaru = keteranganLama + "\n" + teksLokasi;
+            }
+            
+            sesi.setComment(keteranganBaru);
+            Log.i(TAG, "✅ Lokasi dikirim ke server: " + teksLokasi);
+            
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal kirim lokasi", e);
+        }
+    }
 
     private final IHumlaObserver mServiceObserver = new HumlaObserver() {
         @Override
