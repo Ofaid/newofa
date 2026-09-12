@@ -55,16 +55,20 @@ import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 import ofaid.ahmad.ptt.service.MumlaService;
+import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnChannelClickListener;
+import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnUserClickListener;
 
-public class ChannelListFragment extends HumlaServiceFragment implements OnChannelClickListener, OnUserClickListener, SharedPreferences.OnSharedPreferenceChangeListener {
+public class ChannelListFragment extends HumlaServiceFragment
+        implements OnChannelClickListener, OnUserClickListener,
+                   SharedPreferences.OnSharedPreferenceChangeListener {
+
     private static final String TAG = ChannelListFragment.class.getName();
 
-    // --- FIELD UNTUK BANNER INDIKATOR SPEAKER ---
+    // --- BANNER INDIKATOR PEMBICARA ---
     private FrameLayout bannerActiveSpeaker;
     private TextView tvSpeakerName;
-    private String currentSpeakerName = null; 
-    
-    // Handler & Runnable untuk Auto-Hide Banner
+    private String currentSpeakerName = null;
+
     private final Handler bannerHideHandler = new Handler(Looper.getMainLooper());
     private final Runnable bannerHideRunnable = () -> {
         if (bannerActiveSpeaker != null && bannerActiveSpeaker.getVisibility() == View.VISIBLE) {
@@ -80,7 +84,7 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
         }
     };
 
-    // --- FIELD UTAMA FRAGMENT ---
+    // --- KOMPONEN UTAMA ---
     private RecyclerView mChannelView;
     private ChannelListAdapter mChannelListAdapter;
     private ChatTargetProvider mTargetProvider;
@@ -88,9 +92,8 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
     private ActionMode mActionMode;
     private Settings mSettings;
 
-    // ========== FUNGSI TAMBAHAN — STATUS & ID OFA ==========
-    
-      // Ambil ID OFA yang tersimpan
+    // ========== FUNGSI STATUS & ID OFA ==========
+
     private String getMyOfaId() {
         Context ctx = getContext();
         if (ctx == null) return null;
@@ -98,7 +101,6 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
                 .getString("ofa_id", null);
     }
 
-    // Kirim status ke server
     private void kirimStatusPengguna(String statusTeks) {
         String idOFA = getMyOfaId();
         if (idOFA == null || idOFA.trim().isEmpty()) {
@@ -114,40 +116,35 @@ public class ChannelListFragment extends HumlaServiceFragment implements OnChann
             Log.w(TAG, "Belum terhubung ke layanan");
         }
     }
-private void tampilkanPilihStatus() {
-    // Sementara sampai kelas Builder dibuat
-    Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
-}
 
-
-   /* // Tampilkan dialog pilih status
     private void tampilkanPilihStatus() {
-        new PilihStatusDialog.Builder(getContext())
-            .setOnStatusDipilihListener(statusYangDipilih -> {
-                kirimStatusPengguna(statusYangDipilih);
-            })
-            .show();
-    }*/
+        Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
+        // Nanti diaktifkan saat PilihStatusDialog siap
+    }
 
-    // ======================================================
+    // ===========================================
 
-    private IHumlaObserver mServiceObserver = new HumlaObserver() {
+    private final IHumlaObserver mServiceObserver = new HumlaObserver() {
         @Override
         public void onDisconnected(HumlaException e) {
-            mChannelView.setAdapter(null);
+            if (mChannelView != null) {
+                mChannelView.setAdapter(null);
+            }
         }
 
         @Override
         public void onUserJoinedChannel(IUser user, IChannel newChannel, IChannel oldChannel) {
-            mChannelListAdapter.updateChannels();
-            mChannelListAdapter.notifyDataSetChanged();
+            if (mChannelListAdapter != null) {
+                mChannelListAdapter.updateChannels();
+                mChannelListAdapter.notifyDataSetChanged();
+            }
 
             if (getService() == null || !getService().isConnected()) return;
 
             int selfSession;
             try {
                 selfSession = getService().HumlaSession().getSessionId();
-            } catch (HumlaDisconnectedException|IllegalStateException e) {
+            } catch (HumlaDisconnectedException | IllegalStateException e) {
                 Log.d(TAG, "exception in onUserJoinedChannel: " + e);
                 return;
             }
@@ -159,51 +156,58 @@ private void tampilkanPilihStatus() {
 
         @Override
         public void onChannelAdded(IChannel channel) {
-            mChannelListAdapter.updateChannels();
-            mChannelListAdapter.notifyDataSetChanged();
+            if (mChannelListAdapter != null) {
+                mChannelListAdapter.updateChannels();
+                mChannelListAdapter.notifyDataSetChanged();
+            }
         }
 
         @Override
         public void onChannelRemoved(IChannel channel) {
-            mChannelListAdapter.updateChannels();
-            mChannelListAdapter.notifyDataSetChanged();
+            if (mChannelListAdapter != null) {
+                mChannelListAdapter.updateChannels();
+                mChannelListAdapter.notifyDataSetChanged();
+            }
         }
 
         @Override
         public void onChannelStateUpdated(IChannel channel) {
-            mChannelListAdapter.updateChannels();
-            mChannelListAdapter.notifyDataSetChanged();
+            if (mChannelListAdapter != null) {
+                mChannelListAdapter.updateChannels();
+                mChannelListAdapter.notifyDataSetChanged();
+            }
         }
 
         @Override
         public void onUserConnected(IUser user) {
-            mChannelListAdapter.updateChannels();
-            mChannelListAdapter.notifyDataSetChanged();
+            if (mChannelListAdapter != null) {
+                mChannelListAdapter.updateChannels();
+                mChannelListAdapter.notifyDataSetChanged();
+            }
         }
 
         @Override
         public void onUserRemoved(IUser user, String reason) {
             if (getService() == null || !getService().isConnected()) return;
-            mChannelListAdapter.updateChannels();
-            mChannelListAdapter.notifyDataSetChanged();
+            if (mChannelListAdapter != null) {
+                mChannelListAdapter.updateChannels();
+                mChannelListAdapter.notifyDataSetChanged();
+            }
         }
 
-        // ==================================================
-        // ✅ PEMBARUAN LANGSUNG STATUS — TANPA TUTUP HALAMAN! ⚡
-        // ==================================================
         @Override
         public void onUserStateUpdated(IUser user) {
             super.onUserStateUpdated(user);
-            
+
             if (mChannelListAdapter != null && mChannelView != null && user != null) {
                 mChannelListAdapter.refreshUserStatus(user.getSession());
-                
+
                 int posisi = mChannelListAdapter.getUserPositionBySession(user.getSession());
                 if (posisi != -1) {
                     mChannelView.getAdapter().notifyItemChanged(posisi);
                 }
             }
-            
+
             if (getActivity() != null && !isDetached()) {
                 getActivity().supportInvalidateOptionsMenu();
             }
@@ -211,34 +215,40 @@ private void tampilkanPilihStatus() {
 
         @Override
         public void onUserTalkStateUpdated(IUser user) {
-            mChannelListAdapter.updateUserStates(user, mChannelView);
-            
+            if (mChannelListAdapter != null && mChannelView != null) {
+                mChannelListAdapter.updateUserStates(user, mChannelView);
+            }
+
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
-                    
+
                     String displayName = user.getName();
                     if (!displayName.equals(currentSpeakerName)) {
                         currentSpeakerName = displayName;
-                        tvSpeakerName.setText(displayName);
+                        if (tvSpeakerName != null) {
+                            tvSpeakerName.setText(displayName);
+                        }
                     }
-                    
-                    if (bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
+
+                    if (bannerActiveSpeaker != null &&
+                        bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
                         bannerActiveSpeaker.setVisibility(View.VISIBLE);
                         bannerActiveSpeaker.setAlpha(1f);
                     }
-                    
+
                     bannerHideHandler.postDelayed(bannerHideRunnable, 2000);
                 });
             }
         }
     };
 
-    private BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
+    private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if(getActivity() != null)
+            if (getActivity() != null) {
                 getActivity().supportInvalidateOptionsMenu();
+            }
         }
     };
 
@@ -254,12 +264,14 @@ private void tampilkanPilihStatus() {
         try {
             mTargetProvider = (ChatTargetProvider) getParentFragment();
         } catch (ClassCastException e) {
-            throw new ClassCastException(getParentFragment().toString()+" must implement ChatTargetProvider");
+            throw new ClassCastException(getParentFragment().toString() +
+                    " must implement ChatTargetProvider");
         }
         try {
-            mDatabaseProvider = (DatabaseProvider) getActivity();
+            mDatabaseProvider = (DatabaseProvider) activity;
         } catch (ClassCastException e) {
-            throw new ClassCastException(getActivity().toString()+" must implement DatabaseProvider");
+            throw new ClassCastException(activity.toString() +
+                    " must implement DatabaseProvider");
         }
         mSettings = Settings.getInstance(activity);
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(activity);
@@ -270,13 +282,13 @@ private void tampilkanPilihStatus() {
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_channel_list, container, false);
-        
+
         mChannelView = view.findViewById(R.id.channelUsers);
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
-        
+
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
-        
+
         return view;
     }
 
@@ -284,24 +296,30 @@ private void tampilkanPilihStatus() {
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         registerForContextMenu(mChannelView);
+        IntentFilter filter = new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_CHANGED);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-            getActivity().registerReceiver(mBluetoothReceiver, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_CHANGED), RECEIVER_NOT_EXPORTED);
+            getActivity().registerReceiver(mBluetoothReceiver, filter, RECEIVER_NOT_EXPORTED);
         } else {
-            getActivity().registerReceiver(mBluetoothReceiver, new IntentFilter(AudioManager.ACTION_SCO_AUDIO_STATE_CHANGED));
+            getActivity().registerReceiver(mBluetoothReceiver, filter);
         }
     }
 
     @Override
     public void onDetach() {
-        getActivity().unregisterReceiver(mBluetoothReceiver);
+        if (getActivity() != null) {
+            getActivity().unregisterReceiver(mBluetoothReceiver);
+        }
         super.onDetach();
     }
 
     @Override
     public void onDestroy() {
+        if (getActivity() != null) {
+            SharedPreferences preferences =
+                    PreferenceManager.getDefaultSharedPreferences(getActivity());
+            preferences.unregisterOnSharedPreferenceChangeListener(this);
+        }
         super.onDestroy();
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
-        preferences.unregisterOnSharedPreferenceChangeListener(this);
     }
 
     @Override
@@ -330,27 +348,39 @@ private void tampilkanPilihStatus() {
         MenuItem deafenItem = menu.findItem(R.id.menu_deafen_button);
         MenuItem statusItem = menu.findItem(R.id.menu_status_pilihan);
 
-        if(getService() != null && getService().isConnected()) {
+        if (getService() != null && getService().isConnected()) {
             IHumlaSession session = getService().HumlaSession();
-            int foregroundColor = getActivity().getTheme().obtainStyledAttributes(new int[]{android.R.attr.textColorPrimaryInverse}).getColor(0, -1);
+            int foregroundColor = requireActivity().getTheme()
+                    .obtainStyledAttributes(new int[]{android.R.attr.textColorPrimaryInverse})
+                    .getColor(0, -1);
 
-            IUser self = session.getSessionUser();
+            IUser self = null;
+            try {
+                self = session.getSessionUser();
+            } catch (Exception ignored) {}
+
             if (self != null) {
-                muteItem.setIcon(self.isSelfMuted() ? R.drawable.ic_action_microphone_muted : R.drawable.ic_action_microphone);
-                deafenItem.setIcon(self.isSelfDeafened() ? R.drawable.ic_action_audio_muted : R.drawable.ic_action_audio);
-                muteItem.getIcon().mutate().setColorFilter(foregroundColor, PorterDuff.Mode.MULTIPLY);
-                deafenItem.getIcon().mutate().setColorFilter(foregroundColor, PorterDuff.Mode.MULTIPLY);
+                muteItem.setIcon(self.isSelfMuted() ?
+                        R.drawable.ic_action_microphone_muted :
+                        R.drawable.ic_action_microphone);
+                deafenItem.setIcon(self.isSelfDeafened() ?
+                        R.drawable.ic_action_audio_muted :
+                        R.drawable.ic_action_audio);
+                if (muteItem.getIcon() != null) {
+                    muteItem.getIcon().mutate().setColorFilter(foregroundColor, PorterDuff.Mode.MULTIPLY);
+                }
+                if (deafenItem.getIcon() != null) {
+                    deafenItem.getIcon().mutate().setColorFilter(foregroundColor, PorterDuff.Mode.MULTIPLY);
+                }
             }
 
             MenuItem bluetoothItem = menu.findItem(R.id.menu_bluetooth);
             bluetoothItem.setChecked(session.usingBluetoothSco());
-            
-            // Tampilkan tombol status saat terhubung
+
             if (statusItem != null) {
                 statusItem.setVisible(true);
             }
         } else {
-            // Sembunyikan tombol status saat tidak terhubung
             if (statusItem != null) {
                 statusItem.setVisible(false);
             }
@@ -362,32 +392,34 @@ private void tampilkanPilihStatus() {
         inflater.inflate(R.menu.fragment_channel_list, menu);
 
         MenuItem searchItem = menu.findItem(R.id.menu_search);
-        SearchManager searchManager = (SearchManager) getActivity().getSystemService(Context.SEARCH_SERVICE);
-        final SearchView searchView = (SearchView)MenuItemCompat.getActionView(searchItem);
-        searchView.setSearchableInfo(searchManager.getSearchableInfo(getActivity().getComponentName()));
-        
+        SearchManager searchManager = (SearchManager)
+                requireActivity().getSystemService(Context.SEARCH_SERVICE);
+        SearchView searchView = (SearchView) MenuItemCompat.getActionView(searchItem);
+        searchView.setSearchableInfo(searchManager.getSearchableInfo(requireActivity().getComponentName()));
+
         searchView.setOnSuggestionListener(new SearchView.OnSuggestionListener() {
             @Override
-            public boolean onSuggestionSelect(int i) { return false; }
+            public boolean onSuggestionSelect(int position) { return false; }
 
             @Override
-            public boolean onSuggestionClick(int i) {
+            public boolean onSuggestionClick(int position) {
                 if (getService() == null || !getService().isConnected()) return false;
-                CursorWrapper cursor = (CursorWrapper) searchView.getSuggestionsAdapter().getItem(i);
+
+                CursorWrapper cursor = (CursorWrapper) searchView.getSuggestionsAdapter().getItem(position);
                 int typeColumn = cursor.getColumnIndex(SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA);
                 int dataIdColumn = cursor.getColumnIndex(SearchManager.SUGGEST_COLUMN_INTENT_DATA);
                 String itemType = cursor.getString(typeColumn);
                 int itemId = cursor.getInt(dataIdColumn);
 
                 IHumlaSession session = getService().HumlaSession();
-                if(ChannelSearchProvider.INTENT_DATA_CHANNEL.equals(itemType)) {
-                    if(session.getSessionChannel().getId() != itemId) {
+                if (ChannelSearchProvider.INTENT_DATA_CHANNEL.equals(itemType)) {
+                    if (session.getSessionChannel().getId() != itemId) {
                         session.joinChannel(itemId);
                     } else {
                         scrollToChannel(itemId);
                     }
                     return true;
-                } else if(ChannelSearchProvider.INTENT_DATA_USER.equals(itemType)) {
+                } else if (ChannelSearchProvider.INTENT_DATA_USER.equals(itemType)) {
                     scrollToUser(itemId);
                     return true;
                 }
@@ -398,26 +430,25 @@ private void tampilkanPilihStatus() {
 
     @Override
     public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (getService() == null || !getService().isConnected())
+        if (getService() == null || !getService().isConnected()) {
             return super.onOptionsItemSelected(item);
+        }
 
         IHumlaSession session = getService().HumlaSession();
         int itemId = item.getItemId();
-        
-        // ✅ TOMBOL PILIH STATUS
+
         if (itemId == R.id.menu_status_pilihan) {
             tampilkanPilihStatus();
             return true;
-        }
-        else if (itemId == R.id.menu_mute_button) {
+        } else if (itemId == R.id.menu_mute_button) {
             IUser self = session.getSessionUser();
             if (self != null) {
                 boolean muted = !self.isSelfMuted();
                 boolean deafened = self.isSelfDeafened();
-                deafened &= muted; 
+                deafened &= muted;
                 session.setSelfMuteDeafState(muted, deafened);
             }
-            getActivity().supportInvalidateOptionsMenu();
+            requireActivity().supportInvalidateOptionsMenu();
             return true;
         } else if (itemId == R.id.menu_deafen_button) {
             IUser self = session.getSessionUser();
@@ -425,7 +456,7 @@ private void tampilkanPilihStatus() {
                 boolean deafened = !self.isSelfDeafened();
                 session.setSelfMuteDeafState(deafened, deafened);
             }
-            getActivity().supportInvalidateOptionsMenu();
+            requireActivity().supportInvalidateOptionsMenu();
             return true;
         } else if (itemId == R.id.menu_search) {
             return false;
@@ -439,12 +470,15 @@ private void tampilkanPilihStatus() {
     }
 
     private void setupChannelList() throws RemoteException {
-        mChannelListAdapter = new ChannelListAdapter(getActivity(), getService(),
-                mDatabaseProvider.getDatabase(), getChildFragmentManager(),
-                isShowingPinnedChannels(), mSettings.shouldShowUserCount());
-        
+        mChannelListAdapter = new ChannelListAdapter(
+                requireActivity(),
+                getService(),
+                mDatabaseProvider.getDatabase(),
+                getChildFragmentManager(),
+                isShowingPinnedChannels(),
+                mSettings.shouldShowUserCount());
+
         mChannelListAdapter.attachRecyclerView(mChannelView);
-        
         mChannelListAdapter.setOnChannelClickListener(this);
         mChannelListAdapter.setOnUserClickListener(this);
         mChannelView.setAdapter(mChannelListAdapter);
@@ -452,52 +486,55 @@ private void tampilkanPilihStatus() {
     }
 
     public void scrollToChannel(int channelId) {
-        int channelPosition = mChannelListAdapter.getChannelPosition(channelId);
-        mChannelView.scrollToPosition(channelPosition);
+        int posisi = mChannelListAdapter.getChannelPosition(channelId);
+        mChannelView.scrollToPosition(posisi);
     }
 
     public void scrollToUser(int userId) {
-        int userPosition = mChannelListAdapter.getUserPosition(userId);
-        mChannelView.scrollToPosition(userPosition);
+        int posisi = mChannelListAdapter.getUserPosition(userId);
+        mChannelView.scrollToPosition(posisi);
     }
 
     private boolean isShowingPinnedChannels() {
-        return getArguments().getBoolean("pinned");
+        Bundle args = getArguments();
+        return args != null && args.getBoolean("pinned");
     }
 
     @Override
     public void onChannelClick(IChannel channel) {
-        if (mTargetProvider.getChatTarget() != null &&
-                channel.equals(mTargetProvider.getChatTarget().getChannel()) &&
-                mActionMode != null) {
+        ChatTargetProvider.Target target = mTargetProvider.getChatTarget();
+        if (target != null && channel.equals(target.getChannel()) && mActionMode != null) {
             mActionMode.finish();
         } else {
-            ActionMode.Callback cb = new ChatTargetActionModeCallback(mTargetProvider, new ChatTargetProvider.ChatTarget(channel)) {
+            ActionMode.Callback cb = new ChatTargetActionModeCallback(
+                    mTargetProvider,
+                    new ChatTargetProvider.ChatTarget(channel)) {
                 @Override
                 public void onDestroyActionMode(ActionMode actionMode) {
                     super.onDestroyActionMode(actionMode);
                     mActionMode = null;
                 }
             };
-            mActionMode = ((AppCompatActivity)getActivity()).startSupportActionMode(cb);
+            mActionMode = ((AppCompatActivity) requireActivity()).startSupportActionMode(cb);
         }
     }
 
     @Override
     public void onUserClick(IUser user) {
-        if (mTargetProvider.getChatTarget() != null &&
-                user.equals(mTargetProvider.getChatTarget().getUser()) &&
-                mActionMode != null) {
+        ChatTargetProvider.Target target = mTargetProvider.getChatTarget();
+        if (target != null && user.equals(target.getUser()) && mActionMode != null) {
             mActionMode.finish();
         } else {
-            ActionMode.Callback cb = new ChatTargetActionModeCallback(mTargetProvider, new ChatTargetProvider.ChatTarget(user)) {
+            ActionMode.Callback cb = new ChatTargetActionModeCallback(
+                    mTargetProvider,
+                    new ChatTargetProvider.ChatTarget(user)) {
                 @Override
                 public void onDestroyActionMode(ActionMode actionMode) {
                     super.onDestroyActionMode(actionMode);
                     mActionMode = null;
                 }
             };
-            mActionMode = ((AppCompatActivity)getActivity()).startSupportActionMode(cb);
+            mActionMode = ((AppCompatActivity) requireActivity()).startSupportActionMode(cb);
         }
     }
 
