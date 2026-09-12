@@ -1,19 +1,29 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- ==============================================
-         ✅ BANNER — TINGGI TETAP 48dp, TIDAK DORONG!
-         ============================================== -->
+    <!-- ✅ DAFTAR CHANNEL — DI BAWAH, TETAP DIAM, TIDAK PERNAH BERGERAK! -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/channelUsers"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="0dp"
+        android:divider="@android:color/transparent"
+        android:dividerHeight="0dp"
+        android:fastScrollEnabled="true"
+        android:choiceMode="singleChoice"
+        android:clipToPadding="false"/>
+
+    <!-- ✅ BANNER — TUMPUK DI ATAS, TIDAK MENGGESER SIAPA PUN! -->
     <FrameLayout
         android:id="@+id/bannerActiveSpeaker"
         android:layout_width="match_parent"
-        android:layout_height="48dp"
+        android:layout_height="wrap_content"
+        android:layout_gravity="top"
         android:background="#D32F2F"
-        android:paddingTop="10dp"
-        android:paddingBottom="10dp"
+        android:paddingTop="4dp"
+        android:paddingBottom="4dp"
         android:paddingLeft="16dp"
         android:paddingRight="16dp"
         android:visibility="gone">
@@ -31,17 +41,4 @@
 
     </FrameLayout>
 
-    <!-- ==============================================
-         ✅ DAFTAR — AMBIL SISA RUANG SAJA, TETAP DIAM
-         ============================================== -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/channelUsers"
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1"
-        android:divider="@android:color/transparent"
-        android:dividerHeight="0dp"
-        android:fastScrollEnabled="true"
-        android:choiceMode="singleChoice"/>
-
-</LinearLayout>
+</FrameLayout>
