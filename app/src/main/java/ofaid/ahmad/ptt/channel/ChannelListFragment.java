@@ -6,6 +6,7 @@ package ofaid.ahmad.ptt.channel;
 
 import static android.content.Context.RECEIVER_NOT_EXPORTED;
 
+import android.Manifest;
 import android.app.Activity;
 import android.app.SearchManager;
 import android.content.BroadcastReceiver;
@@ -13,8 +14,12 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.database.CursorWrapper;
 import android.graphics.PorterDuff;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.media.AudioManager;
 import android.os.Build;
 import android.os.Bundle;
@@ -35,6 +40,7 @@ import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.appcompat.view.ActionMode;
 import androidx.appcompat.widget.SearchView;
+import androidx.core.content.ContextCompat;
 import androidx.core.view.MenuItemCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -63,6 +69,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                    SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final String TAG = ChannelListFragment.class.getName();
+    private static final int KODE_IZIN_LOKASI = 1001;
 
     // --- BANNER INDIKATOR PEMBICARA ---
     private FrameLayout bannerActiveSpeaker;
@@ -82,6 +89,19 @@ public class ChannelListFragment extends HumlaServiceFragment
                 })
                 .start();
         }
+    };
+
+    // --- LOKASI OTOMATIS ---
+    private LocationManager mLocationManager;
+    private String lokasiTerbaca = null;
+    private final LocationListener lokasiPendengar = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            bacaNamaLokasi(location);
+        }
+        @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
+        @Override public void onProviderEnabled(@NonNull String provider) {}
+        @Override public void onProviderDisabled(@NonNull String provider) {}
     };
 
     // --- KOMPONEN UTAMA ---
@@ -120,6 +140,126 @@ public class ChannelListFragment extends HumlaServiceFragment
     private void tampilkanPilihStatus() {
         Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
         // Nanti diaktifkan saat PilihStatusDialog siap
+    }
+
+    // ========== MINTA IZIN LOKASI OTOMATIS ==========
+    private void mintaIzinLokasiOtomatis() {
+        if (getContext() == null) return;
+
+        boolean sudahIzin =
+            ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
+            ContextCompat.checkSelfPermission(requireContext(),
+                Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+
+        if (sudahIzin) {
+            Log.i(TAG, "✅ Izin lokasi sudah ada — mulai baca lokasi");
+            mulaiBacaLokasi();
+            return;
+        }
+
+        requestPermissions(
+            new String[]{
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            },
+            KODE_IZIN_LOKASI
+        );
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int kode, @NonNull String[] izin,
+                                             @NonNull int[] hasil) {
+        super.onRequestPermissionsResult(kode, izin, hasil);
+        if (kode == KODE_IZIN_LOKASI) {
+            if (hasil.length > 0 && hasil[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.i(TAG, "✅ Izin lokasi DITERIMA");
+                mulaiBacaLokasi();
+            } else {
+                Log.i(TAG, "⚠️ Izin lokasi DITOLAK");
+                lokasiTerbaca = "📍 Izinkan lokasi agar terlihat teman-teman";
+                if (mChannelListAdapter != null) {
+                    mChannelListAdapter.setLokasiTeks(lokasiTerbaca);
+                }
+            }
+        }
+    }
+
+    // ========== BACA NAMA LOKASI ==========
+    private void mulaiBacaLokasi() {
+        if (getContext() == null) return;
+        mLocationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
+
+        boolean gpsNyala = mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
+        boolean jaringanNyala = mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+
+        try {
+            if (ContextCompat.checkSelfPermission(requireContext(),
+                    Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+
+                if (jaringanNyala) {
+                    mLocationManager.requestLocationUpdates(
+                        LocationManager.NETWORK_PROVIDER, 30000, 500, lokasiPendengar);
+                }
+                if (gpsNyala && ContextCompat.checkSelfPermission(requireContext(),
+                        Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
+                    mLocationManager.requestLocationUpdates(
+                        LocationManager.GPS_PROVIDER, 30000, 500, lokasiPendengar);
+                }
+
+                Location lokasiTerakhir = null;
+                if (jaringanNyala) lokasiTerakhir = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+                if (lokasiTerakhir == null && gpsNyala) lokasiTerakhir = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+
+                if (lokasiTerakhir != null) {
+                    bacaNamaLokasi(lokasiTerakhir);
+                } else {
+                    lokasiTerbaca = "📍 Mendapatkan lokasi...";
+                    if (mChannelListAdapter != null) {
+                        mChannelListAdapter.setLokasiTeks(lokasiTerbaca);
+                    }
+                }
+            }
+        } catch (SecurityException e) {
+            Log.e(TAG, "Izin lokasi tidak tersedia", e);
+        }
+    }
+
+    private void bacaNamaLokasi(Location lokasi) {
+        if (getContext() == null) return;
+
+        android.location.Geocoder geocoder = new android.location.Geocoder(requireContext());
+        try {
+            java.util.List<android.location.Address> daftarAlamat =
+                geocoder.getFromLocation(lokasi.getLatitude(), lokasi.getLongitude(), 1);
+
+            if (daftarAlamat != null && !daftarAlamat.isEmpty()) {
+                android.location.Address alamat = daftarAlamat.get(0);
+                StringBuilder sb = new StringBuilder();
+                if (alamat.getSubLocality() != null) sb.append(alamat.getSubLocality()).append(", ");
+                if (alamat.getLocality() != null) sb.append(alamat.getLocality()).append(", ");
+                if (alamat.getSubAdminArea() != null) sb.append(alamat.getSubAdminArea()).append(", ");
+                if (alamat.getAdminArea() != null) sb.append(alamat.getAdminArea());
+
+                lokasiTerbaca = "📍 " + sb.toString().trim().replaceAll(", $", "");
+                Log.i(TAG, "✅ Lokasi: " + lokasiTerbaca);
+            } else {
+                lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
+            }
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal baca nama lokasi", e);
+            lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
+        }
+
+        if (mChannelListAdapter != null) {
+            mChannelListAdapter.setLokasiTeks(lokasiTerbaca);
+        }
+    }
+
+    private void hentikanBacaLokasi() {
+        if (mLocationManager != null) {
+            mLocationManager.removeUpdates(lokasiPendengar);
+        }
     }
 
     // ===========================================
@@ -293,6 +433,13 @@ public class ChannelListFragment extends HumlaServiceFragment
     }
 
     @Override
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        // ✅ MUNCULKAN PERTANYAAN IZIN LOKASI SAAT LAYAR SIAP!
+        mintaIzinLokasiOtomatis();
+    }
+
+    @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
         registerForContextMenu(mChannelView);
@@ -314,6 +461,7 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     @Override
     public void onDestroy() {
+        hentikanBacaLokasi();
         if (getActivity() != null) {
             SharedPreferences preferences =
                     PreferenceManager.getDefaultSharedPreferences(getActivity());
@@ -483,6 +631,11 @@ public class ChannelListFragment extends HumlaServiceFragment
         mChannelListAdapter.setOnUserClickListener(this);
         mChannelView.setAdapter(mChannelListAdapter);
         mChannelListAdapter.notifyDataSetChanged();
+
+        // Kirim lokasi yang sudah terbaca ke tampilan
+        if (lokasiTerbaca != null) {
+            mChannelListAdapter.setLokasiTeks(lokasiTerbaca);
+        }
     }
 
     public void scrollToChannel(int channelId) {
@@ -519,7 +672,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-        @Override
+    @Override
     public void onUserClick(IUser user) {
         ChatTargetProvider.ChatTarget target = mTargetProvider.getChatTarget();
         if (target != null && user.equals(target.getUser()) && mActionMode != null) {
@@ -537,7 +690,6 @@ public class ChannelListFragment extends HumlaServiceFragment
             mActionMode = ((AppCompatActivity) requireActivity()).startSupportActionMode(cb);
         }
     }
-
 
     @Override
     public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, String key) {
