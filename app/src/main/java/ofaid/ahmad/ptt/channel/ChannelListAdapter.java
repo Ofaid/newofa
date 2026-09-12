@@ -229,13 +229,17 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     uvh.mUserStatusView.setTextColor(0xFFBBBBBB);
                 }
             }
-
-            // ✅ LOKASI OTOMATIS GPS — TAMPIL DI BAWAH STATUS
-            if (uvh.mUserLokasi != null) {
+//Lokasi gps
+                 if (uvh.mUserLokasi != null) {
                 String lokasi = OfaLokasi.formatLokasiTampil(mContext);
-                uvh.mUserLokasi.setText(lokasi);
-                uvh.mUserLokasi.setVisibility(View.VISIBLE);
+                if (lokasi != null && !lokasi.trim().isEmpty()) {
+                    uvh.mUserLokasi.setText(lokasi);
+                    uvh.mUserLokasi.setVisibility(View.VISIBLE);
+                } else {
+                    uvh.mUserLokasi.setVisibility(View.GONE);
+                }
             }
+
 
             final int typefaceStyle;
             int selfSession = -1;
