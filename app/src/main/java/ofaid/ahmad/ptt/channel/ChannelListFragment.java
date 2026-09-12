@@ -114,7 +114,6 @@ public class ChannelListFragment extends HumlaServiceFragment
     private Settings mSettings;
 
     // ========== FUNGSI STATUS & ID OFA ==========
-
     private String getMyOfaId() {
         Context ctx = getContext();
         if (ctx == null) return null;
@@ -128,7 +127,6 @@ public class ChannelListFragment extends HumlaServiceFragment
             Log.w(TAG, "ID OFA belum tersedia — tidak bisa kirim status");
             return;
         }
-
         IHumlaService service = getService();
         if (service instanceof MumlaService) {
             ((MumlaService) service).kirimStatusDenganId(idOFA, statusTeks);
@@ -140,7 +138,6 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     private void tampilkanPilihStatus() {
         Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
-        // Nanti diaktifkan saat PilihStatusDialog siap
     }
 
     // ========== HENTIKAN BACA LOKASI — DIPERBAIKI ✅ ==========
@@ -153,19 +150,16 @@ public class ChannelListFragment extends HumlaServiceFragment
     // ========== MINTA IZIN LOKASI OTOMATIS ==========
     private void mintaIzinLokasiOtomatis() {
         if (getContext() == null) return;
-
         boolean sudahIzin =
             ContextCompat.checkSelfPermission(requireContext(),
                 Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED ||
             ContextCompat.checkSelfPermission(requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
-
         if (sudahIzin) {
             Log.i(TAG, "✅ Izin lokasi sudah ada — mulai baca lokasi");
             mulaiBacaLokasi();
             return;
         }
-
         requestPermissions(
             new String[]{
                 Manifest.permission.ACCESS_COARSE_LOCATION,
@@ -190,18 +184,15 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-    // ========== BACA NAMA LOKASI ==========
+    // ========== MULAI BACA LOKASI ==========
     private void mulaiBacaLokasi() {
         if (getContext() == null) return;
         mLocationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
-
         boolean gpsNyala = mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         boolean jaringanNyala = mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
-
         try {
             if (ContextCompat.checkSelfPermission(requireContext(),
                     Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
-
                 if (jaringanNyala) {
                     mLocationManager.requestLocationUpdates(
                         LocationManager.NETWORK_PROVIDER, 30000, 500, lokasiPendengar);
@@ -211,11 +202,9 @@ public class ChannelListFragment extends HumlaServiceFragment
                     mLocationManager.requestLocationUpdates(
                         LocationManager.GPS_PROVIDER, 30000, 500, lokasiPendengar);
                 }
-
                 Location lokasiTerakhir = null;
                 if (jaringanNyala) lokasiTerakhir = mLocationManager.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
                 if (lokasiTerakhir == null && gpsNyala) lokasiTerakhir = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
-
                 if (lokasiTerakhir != null) {
                     bacaNamaLokasi(lokasiTerakhir);
                 } else {
@@ -227,14 +216,13 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
+    // ========== BACA NAMA LOKASI & KIRIM KE SERVER ==========
     private void bacaNamaLokasi(Location lokasi) {
         if (getContext() == null) return;
-
         android.location.Geocoder geocoder = new android.location.Geocoder(requireContext());
         try {
             java.util.List<android.location.Address> daftarAlamat =
                 geocoder.getFromLocation(lokasi.getLatitude(), lokasi.getLongitude(), 1);
-
             if (daftarAlamat != null && !daftarAlamat.isEmpty()) {
                 android.location.Address alamat = daftarAlamat.get(0);
                 StringBuilder sb = new StringBuilder();
@@ -242,7 +230,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                 if (alamat.getLocality() != null) sb.append(alamat.getLocality()).append(", ");
                 if (alamat.getSubAdminArea() != null) sb.append(alamat.getSubAdminArea()).append(", ");
                 if (alamat.getAdminArea() != null) sb.append(alamat.getAdminArea());
-
                 lokasiTerbaca = "📍 " + sb.toString().trim().replaceAll(", $", "");
                 Log.i(TAG, "✅ Lokasi: " + lokasiTerbaca);
                 kirimLokasiKeServer(lokasiTerbaca);
@@ -258,19 +245,19 @@ public class ChannelListFragment extends HumlaServiceFragment
     }
 
     // =============================================
-    // ✅ FUNGSI KIRIM LOKASI KE SERVER
+    // ✅ KIRIM LOKASI KE SERVER — DIPERBAIKI!
     // =============================================
     private void kirimLokasiKeServer(String teksLokasi) {
         if (getService() == null || !getService().isConnected()) {
             Log.w(TAG, "Belum terhubung — lokasi belum dikirim");
             return;
         }
-        
         try {
             IHumlaSession sesi = getService().HumlaSession();
             IUser saya = sesi.getSessionUser();
             if (saya == null) return;
             
+            int sesiSaya = saya.getSession(); // ✅ ambil nomor sesi diri sendiri
             String keteranganLama = saya.getComment();
             String keteranganBaru;
             
@@ -282,20 +269,19 @@ public class ChannelListFragment extends HumlaServiceFragment
                 keteranganBaru = keteranganLama + "\n" + teksLokasi;
             }
             
-            sesi.setComment(keteranganBaru);
-            Log.i(TAG, "✅ Lokasi dikirim ke server: " + teksLokasi);
+            sesi.setUserComment(sesiSaya, keteranganBaru); // ✅ SESUAI METODE ASLI!
+            Log.i(TAG, "✅ Lokasi dikirim: " + teksLokasi);
             
         } catch (Exception e) {
             Log.e(TAG, "Gagal kirim lokasi", e);
         }
     }
 
+    // ========== PEMANTAU PERUBAHAN ==========
     private final IHumlaObserver mServiceObserver = new HumlaObserver() {
         @Override
         public void onDisconnected(HumlaException e) {
-            if (mChannelView != null) {
-                mChannelView.setAdapter(null);
-            }
+            if (mChannelView != null) mChannelView.setAdapter(null);
         }
 
         @Override
@@ -304,9 +290,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 mChannelListAdapter.updateChannels();
                 mChannelListAdapter.notifyDataSetChanged();
             }
-
             if (getService() == null || !getService().isConnected()) return;
-
             int selfSession;
             try {
                 selfSession = getService().HumlaSession().getSessionId();
@@ -314,7 +298,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                 Log.d(TAG, "exception in onUserJoinedChannel: " + e);
                 return;
             }
-
             if (user.getSession() == selfSession) {
                 scrollToChannel(newChannel.getId());
             }
@@ -364,16 +347,13 @@ public class ChannelListFragment extends HumlaServiceFragment
         @Override
         public void onUserStateUpdated(IUser user) {
             super.onUserStateUpdated(user);
-
             if (mChannelListAdapter != null && mChannelView != null && user != null) {
                 mChannelListAdapter.refreshUserStatus(user.getSession());
-
                 int posisi = mChannelListAdapter.getUserPositionBySession(user.getSession());
                 if (posisi != -1) {
                     mChannelView.getAdapter().notifyItemChanged(posisi);
                 }
             }
-
             if (getActivity() != null && !isDetached()) {
                 getActivity().supportInvalidateOptionsMenu();
             }
@@ -384,25 +364,19 @@ public class ChannelListFragment extends HumlaServiceFragment
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
-
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
-
                     String displayName = user.getName();
                     if (!displayName.equals(currentSpeakerName)) {
                         currentSpeakerName = displayName;
-                        if (tvSpeakerName != null) {
-                            tvSpeakerName.setText(displayName);
-                        }
+                        if (tvSpeakerName != null) tvSpeakerName.setText(displayName);
                     }
-
                     if (bannerActiveSpeaker != null &&
                         bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
                         bannerActiveSpeaker.setVisibility(View.VISIBLE);
                         bannerActiveSpeaker.setAlpha(1f);
                     }
-
                     bannerHideHandler.postDelayed(bannerHideRunnable, 2000);
                 });
             }
@@ -448,13 +422,10 @@ public class ChannelListFragment extends HumlaServiceFragment
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_channel_list, container, false);
-
         mChannelView = view.findViewById(R.id.channelUsers);
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
-
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
-
         return view;
     }
 
@@ -486,7 +457,7 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     @Override
     public void onDestroy() {
-        hentikanBacaLokasi();
+        hentikanBacaLokasi(); // ✅ dipanggil dengan benar
         if (getActivity() != null) {
             SharedPreferences preferences =
                     PreferenceManager.getDefaultSharedPreferences(getActivity());
@@ -516,7 +487,6 @@ public class ChannelListFragment extends HumlaServiceFragment
     @Override
     public void onPrepareOptionsMenu(Menu menu) {
         super.onPrepareOptionsMenu(menu);
-
         MenuItem muteItem = menu.findItem(R.id.menu_mute_button);
         MenuItem deafenItem = menu.findItem(R.id.menu_deafen_button);
         MenuItem statusItem = menu.findItem(R.id.menu_status_pilihan);
@@ -526,12 +496,10 @@ public class ChannelListFragment extends HumlaServiceFragment
             int foregroundColor = requireActivity().getTheme()
                     .obtainStyledAttributes(new int[]{android.R.attr.textColorPrimaryInverse})
                     .getColor(0, -1);
-
             IUser self = null;
             try {
                 self = session.getSessionUser();
             } catch (Exception ignored) {}
-
             if (self != null) {
                 muteItem.setIcon(self.isSelfMuted() ?
                         R.drawable.ic_action_microphone_muted :
@@ -546,44 +514,33 @@ public class ChannelListFragment extends HumlaServiceFragment
                     deafenItem.getIcon().mutate().setColorFilter(foregroundColor, PorterDuff.Mode.MULTIPLY);
                 }
             }
-
             MenuItem bluetoothItem = menu.findItem(R.id.menu_bluetooth);
             bluetoothItem.setChecked(session.usingBluetoothSco());
-
-            if (statusItem != null) {
-                statusItem.setVisible(true);
-            }
+            if (statusItem != null) statusItem.setVisible(true);
         } else {
-            if (statusItem != null) {
-                statusItem.setVisible(false);
-            }
+            if (statusItem != null) statusItem.setVisible(false);
         }
     }
 
     @Override
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         inflater.inflate(R.menu.fragment_channel_list, menu);
-
         MenuItem searchItem = menu.findItem(R.id.menu_search);
         SearchManager searchManager = (SearchManager)
                 requireActivity().getSystemService(Context.SEARCH_SERVICE);
         SearchView searchView = (SearchView) MenuItemCompat.getActionView(searchItem);
         searchView.setSearchableInfo(searchManager.getSearchableInfo(requireActivity().getComponentName()));
-
         searchView.setOnSuggestionListener(new SearchView.OnSuggestionListener() {
             @Override
             public boolean onSuggestionSelect(int position) { return false; }
-
             @Override
             public boolean onSuggestionClick(int position) {
                 if (getService() == null || !getService().isConnected()) return false;
-
                 CursorWrapper cursor = (CursorWrapper) searchView.getSuggestionsAdapter().getItem(position);
                 int typeColumn = cursor.getColumnIndex(SearchManager.SUGGEST_COLUMN_INTENT_EXTRA_DATA);
                 int dataIdColumn = cursor.getColumnIndex(SearchManager.SUGGEST_COLUMN_INTENT_DATA);
                 String itemType = cursor.getString(typeColumn);
                 int itemId = cursor.getInt(dataIdColumn);
-
                 IHumlaSession session = getService().HumlaSession();
                 if (ChannelSearchProvider.INTENT_DATA_CHANNEL.equals(itemType)) {
                     if (session.getSessionChannel().getId() != itemId) {
@@ -606,10 +563,8 @@ public class ChannelListFragment extends HumlaServiceFragment
         if (getService() == null || !getService().isConnected()) {
             return super.onOptionsItemSelected(item);
         }
-
         IHumlaSession session = getService().HumlaSession();
         int itemId = item.getItemId();
-
         if (itemId == R.id.menu_status_pilihan) {
             tampilkanPilihStatus();
             return true;
@@ -650,7 +605,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                 getChildFragmentManager(),
                 isShowingPinnedChannels(),
                 mSettings.shouldShowUserCount());
-
         mChannelListAdapter.attachRecyclerView(mChannelView);
         mChannelListAdapter.setOnChannelClickListener(this);
         mChannelListAdapter.setOnUserClickListener(this);
