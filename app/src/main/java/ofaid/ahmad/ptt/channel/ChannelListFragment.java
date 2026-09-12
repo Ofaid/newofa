@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Modif By Ofaid 2026*/
+ * Modif By Ofaid 2026
+ */
 
 package ofaid.ahmad.ptt.channel;
 
@@ -178,9 +179,6 @@ public class ChannelListFragment extends HumlaServiceFragment
             } else {
                 Log.i(TAG, "⚠️ Izin lokasi DITOLAK");
                 lokasiTerbaca = "📍 Izinkan lokasi agar terlihat teman-teman";
-                if (mChannelListAdapter != null) {
-                    mChannelListAdapter.setLokasiTeks(lokasiTerbaca);
-                }
             }
         }
     }
@@ -215,9 +213,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                     bacaNamaLokasi(lokasiTerakhir);
                 } else {
                     lokasiTerbaca = "📍 Mendapatkan lokasi...";
-                    if (mChannelListAdapter != null) {
-                        mChannelListAdapter.setLokasiTeks(lokasiTerbaca);
-                    }
                 }
             }
         } catch (SecurityException e) {
@@ -249,10 +244,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         } catch (Exception e) {
             Log.e(TAG, "Gagal baca nama lokasi", e);
             lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
-        }
-
-        if (mChannelListAdapter != null) {
-            mChannelListAdapter.setLokasiTeks(lokasiTerbaca);
         }
     }
 
@@ -435,7 +426,6 @@ public class ChannelListFragment extends HumlaServiceFragment
     @Override
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        // ✅ MUNCULKAN PERTANYAAN IZIN LOKASI SAAT LAYAR SIAP!
         mintaIzinLokasiOtomatis();
     }
 
@@ -631,11 +621,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         mChannelListAdapter.setOnUserClickListener(this);
         mChannelView.setAdapter(mChannelListAdapter);
         mChannelListAdapter.notifyDataSetChanged();
-
-        // Kirim lokasi yang sudah terbaca ke tampilan
-        if (lokasiTerbaca != null) {
-            mChannelListAdapter.setLokasiTeks(lokasiTerbaca);
-        }
     }
 
     public void scrollToChannel(int channelId) {
