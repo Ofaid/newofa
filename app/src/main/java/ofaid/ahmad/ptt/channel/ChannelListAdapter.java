@@ -205,40 +205,30 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     }
                 }
             });
+/*==============≠===================*/
+            //Lokasi GPS — BACA DARI DATA PENGGUNA, BUKAN DARI HP! ✅
+if (uvh.mUserLokasi != null) {
+    String keteranganPengguna = user.getComment();
+    String lokasiTampil = null;
 
-            uvh.mUserName.setText(user.getName());
-
-            if (uvh.mUserIdView != null) {
-                int uid = user.getUserId();
-                String namaUser = user.getName().trim().toLowerCase();
-                int gabungan = Math.abs((uid * 7591) + namaUser.hashCode());
-                String kode5 = String.format("%05X", gabungan % 0xFFFFF);
-                uvh.mUserIdView.setText("OFA‑" + kode5);
+    if (keteranganPengguna != null && !keteranganPengguna.trim().isEmpty()) {
+        String[] baris = keteranganPengguna.split("\\r?\\n");
+        for (String b : baris) {
+            if (b.trim().startsWith("📍")) {
+                lokasiTampil = b.trim();
+                break;
             }
+        }
+    }
 
-            if (uvh.mUserStatusView != null) {
-                int idPengguna = user.getSession();
-                String status = OfaUserStatus.dapatStatus(mContext, idPengguna);
-                uvh.mUserStatusView.setText(status);
+    if (lokasiTampil != null) {
+        uvh.mUserLokasi.setText(lokasiTampil);
+        uvh.mUserLokasi.setVisibility(View.VISIBLE);
+    } else {
+        uvh.mUserLokasi.setVisibility(View.GONE); // belum kirim = kosong
+    }
+}
 
-                if (status.contains("Sibuk") || status.contains("Jangan")) {
-                    uvh.mUserStatusView.setTextColor(0xFFFF5252);
-                } else if (status.contains("Siap") || status.contains("Tersedia")) {
-                    uvh.mUserStatusView.setTextColor(0xFF4CAF50);
-                } else {
-                    uvh.mUserStatusView.setTextColor(0xFFBBBBBB);
-                }
-            }
-//Lokasi gps
-                 if (uvh.mUserLokasi != null) {
-                String lokasi = OfaLokasi.formatLokasiTampil(mContext);
-                if (lokasi != null && !lokasi.trim().isEmpty()) {
-                    uvh.mUserLokasi.setText(lokasi);
-                    uvh.mUserLokasi.setVisibility(View.VISIBLE);
-                } else {
-                    uvh.mUserLokasi.setVisibility(View.GONE);
-                }
-            }
 
 
             final int typefaceStyle;
