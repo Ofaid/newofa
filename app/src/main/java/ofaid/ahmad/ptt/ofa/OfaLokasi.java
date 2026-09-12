@@ -17,18 +17,33 @@ public class OfaLokasi {
         if (context == null) return "Tidak diketahui";
 
         // Cek izin lokasi
-        if (ActivityCompat.checkSelfPermission(context,
+        boolean adaIzinKasar = ActivityCompat.checkSelfPermission(context,
                 Manifest.permission.ACCESS_COARSE_LOCATION)
-                != PackageManager.PERMISSION_GRANTED) {
-            return "Izin lokasi belum diberikan";
+                == PackageManager.PERMISSION_GRANTED;
+        
+        boolean adaIzinHalus = ActivityCompat.checkSelfPermission(context,
+                Manifest.permission.ACCESS_FINE_LOCATION)
+                == PackageManager.PERMISSION_GRANTED;
+
+        if (!adaIzinKasar && !adaIzinHalus) {
+            return "📍 Izinkan lokasi";
         }
 
-        // Ambil lokasi kasar = nama daerah saja, TIDAK posisi persis
-        LocationManager lm = (LocationManager)
-                context.getSystemService(Context.LOCATION_SERVICE);
-        Location lokasi = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        // Ambil lokasi
+        LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
+        Location lokasi = null;
 
-        if (lokasi == null) return "Tidak terdeteksi";
+        // Coba GPS dulu — lebih akurat
+        if (adaIzinHalus && lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
+            lokasi = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
+        }
+
+        // Kalau GPS tidak ada, pakai internet
+        if (lokasi == null && lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
+            lokasi = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
+        }
+
+        if (lokasi == null) return "📍 Nyalakan lokasi";
 
         // Ubah koordinat jadi nama tempat
         try {
@@ -39,7 +54,7 @@ public class OfaLokasi {
                     1);
 
             if (daftarAlamat == null || daftarAlamat.isEmpty())
-                return "Tidak diketahui";
+                return "📍 Tidak diketahui";
 
             Address a = daftarAlamat.get(0);
             StringBuilder hasil = new StringBuilder();
@@ -61,17 +76,17 @@ public class OfaLokasi {
                 hasil.append(prov.trim());
 
             if (hasil.length() == 0)
-                return "Tidak diketahui";
+                return "📍 Tidak diketahui";
 
             return hasil.toString();
         } catch (Exception e) {
-            return "Gagal baca lokasi";
+            return "📍 Tidak dapat dibaca";
         }
     }
 
     // Tampilkan siap pakai dengan ikon
     public static String formatLokasiTampil(Context context) {
         String daerah = getLokasiDaerah(context);
-        return "📍 " + daerah;
+        return daerah;
     }
 }
