@@ -1,5 +1,4 @@
-
-/* Di Buat Oleh Ofaid/Ahmad 12-9-2026
+/* Di Buat Oleh Ofaid/Ahmad 12-9-2026 */
 package ofaid.ahmad.ptt.ofa;
 
 import android.Manifest;
