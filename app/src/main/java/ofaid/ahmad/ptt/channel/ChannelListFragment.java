@@ -47,8 +47,6 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import se.lublin.humla.audio.AudioInput;
-import se.lublin.humla.audio.AudioInput.TingkatSuaraPendengar;
 import se.lublin.humla.IHumlaService;
 import se.lublin.humla.IHumlaSession;
 import se.lublin.humla.model.IChannel;
@@ -57,7 +55,6 @@ import se.lublin.humla.util.HumlaDisconnectedException;
 import se.lublin.humla.util.HumlaException;
 import se.lublin.humla.util.HumlaObserver;
 import se.lublin.humla.util.IHumlaObserver;
-
 import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.Settings;
 import ofaid.ahmad.ptt.db.DatabaseProvider;
@@ -92,32 +89,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                     currentSpeakerName = null;
                 })
                 .start();
-        }
-    };
-
-    // ==== INDIKATOR SUARA — 1 BATANG MENDATAR ====
-    private View mIndikatorSuara;
-    private final TingkatSuaraPendengar mPendengarSuara = new TingkatSuaraPendengar() {
-        @Override
-        public void padaPerubahanTingkat(int tingkat) {
-            if (mIndikatorSuara == null) return;
-            
-            // Diam → sembunyikan
-            if (tingkat <= 0) {
-                mIndikatorSuara.setVisibility(View.GONE);
-                return;
-            }
-            
-            // Bicara → tampilkan & ubah panjang
-            if (mIndikatorSuara.getVisibility() != View.VISIBLE) {
-                mIndikatorSuara.setVisibility(View.VISIBLE);
-            }
-            
-            // Panjang: 10dp (terkecil) → 60dp (terbesar)
-            int lebar = 10 + (tingkat * 50 / 100);
-            ViewGroup.LayoutParams lp = mIndikatorSuara.getLayoutParams();
-            lp.width = lebar;
-            mIndikatorSuara.setLayoutParams(lp);
         }
     };
 
@@ -169,7 +140,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
     }
 
-    // ========== HENTIKAN BACA LOKASI ==========
+    // ========== HENTIKAN BACA LOKASI — DIPERBAIKI ✅ ==========
     private void hentikanBacaLokasi() {
         if (mLocationManager != null) {
             mLocationManager.removeUpdates(lokasiPendengar);
@@ -273,6 +244,9 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
+    // =============================================
+    // ✅ KIRIM LOKASI KE SERVER — DIPERBAIKI!
+    // =============================================
     private void kirimLokasiKeServer(String teksLokasi) {
         if (getService() == null || !getService().isConnected()) {
             Log.w(TAG, "Belum terhubung — lokasi belum dikirim");
@@ -283,7 +257,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             IUser saya = sesi.getSessionUser();
             if (saya == null) return;
             
-            int sesiSaya = saya.getSession();
+            int sesiSaya = saya.getSession(); // ✅ ambil nomor sesi diri sendiri
             String keteranganLama = saya.getComment();
             String keteranganBaru;
             
@@ -295,7 +269,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 keteranganBaru = keteranganLama + "\n" + teksLokasi;
             }
             
-            sesi.setUserComment(sesiSaya, keteranganBaru);
+            sesi.setUserComment(sesiSaya, keteranganBaru); // ✅ SESUAI METODE ASLI!
             Log.i(TAG, "✅ Lokasi dikirim: " + teksLokasi);
             
         } catch (Exception e) {
@@ -448,31 +422,11 @@ public class ChannelListFragment extends HumlaServiceFragment
     public View onCreateView(LayoutInflater inflater, ViewGroup container,
                              Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_channel_list, container, false);
-        
-        // Cari semua view
         mChannelView = view.findViewById(R.id.channelUsers);
-        mIndikatorSuara = view.findViewById(R.id.indikatorSuara);
+        mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
-        
-        mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
-        
         return view;
-    }
-
-    @Override
-    public void onResume() {
-        super.onResume();
-        AudioInput.aturPendengar(mPendengarSuara);
-    }
-
-    @Override
-    public void onPause() {
-        super.onPause();
-        AudioInput.aturPendengar(null);
-        if (mIndikatorSuara != null) {
-            mIndikatorSuara.setVisibility(View.GONE);
-        }
     }
 
     @Override
@@ -503,7 +457,7 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     @Override
     public void onDestroy() {
-        hentikanBacaLokasi();
+        hentikanBacaLokasi(); // ✅ dipanggil dengan benar
         if (getActivity() != null) {
             SharedPreferences preferences =
                     PreferenceManager.getDefaultSharedPreferences(getActivity());
