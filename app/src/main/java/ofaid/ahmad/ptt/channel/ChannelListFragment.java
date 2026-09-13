@@ -65,6 +65,13 @@ import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnChannelClickListener;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnUserClickListener;
 
+import java.util.ArrayList;
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarDataSet;
+import com.github.mikephil.charting.data.BarEntry;
+
+
 public class ChannelListFragment extends HumlaServiceFragment
         implements OnChannelClickListener, OnUserClickListener,
                    SharedPreferences.OnSharedPreferenceChangeListener {
@@ -73,12 +80,11 @@ public class ChannelListFragment extends HumlaServiceFragment
     private static final int KODE_IZIN_LOKASI = 1001;
 
     // ==================================================
-    // ==== PENAMBAHAN BARU — BANNER PEMBICARA ====
+    // ==== BANNER PEMBICARA ====
     // ==================================================
     private FrameLayout bannerActiveSpeaker;
     private TextView tvSpeakerName;
     private String currentSpeakerName = null;
-
     private final Handler bannerHideHandler = new Handler(Looper.getMainLooper());
     private final Runnable bannerHideRunnable = () -> {
         if (bannerActiveSpeaker != null && bannerActiveSpeaker.getVisibility() == View.VISIBLE) {
@@ -95,44 +101,51 @@ public class ChannelListFragment extends HumlaServiceFragment
     };
 
     // ==================================================
-    // ==== PENAMBAHAN BARU — LOKASI OTOMATIS ====
+    // ==== VISUALIZER SUARA ====
     // ==================================================
-    private LocationManager mLocationManager;
-    private String lokasiTerbaca = null;
-    private final LocationListener lokasiPendengar = new LocationListener() {
-        @Override
-        public void onLocationChanged(@NonNull Location location) {
-            bacaNamaLokasi(location);
-        }
-        @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
-        @Override public void onProviderEnabled(@NonNull String provider) {}
-        @Override public void onProviderDisabled(@NonNull String provider) {}
-    };
-
-    // ==================================================
-    // ==== PENAMBAHAN BARU — VISUALIZER SUARA ====
-    // ==================================================
-        private View mVisualizerContainer;
+    private View mVisualizerContainer;
     private TextView mVisualizerStatus;
-    private Handler mVisualizerHandler = new Handler(Looper.getMainLooper());
+    private BarChart mVisSender;
+    private BarChart mVisReceiver;
+    private final Handler mVisualizerHandler = new Handler(Looper.getMainLooper());
     private boolean mVisualizerBerjalan = false;
     private int mVisualizerTingkat = 0;
 
     private void mulaiVisualizer() {
         if (mVisualizerBerjalan) return;
         mVisualizerBerjalan = true;
-        // ✅ TAMPILKAN SAAT MULAI BICARA
+        
         if (mVisualizerContainer != null) {
             mVisualizerContainer.setVisibility(View.VISIBLE);
             mVisualizerContainer.setAlpha(1f);
         }
+        
+        if (mVisSender != null) {
+            mVisSender.getDescription().setEnabled(false);
+            mVisSender.setNoDataText("");
+            mVisSender.setTouchEnabled(false);
+            mVisSender.getAxisLeft().setEnabled(false);
+            mVisSender.getAxisRight().setEnabled(false);
+            mVisSender.getXAxis().setEnabled(false);
+            mVisSender.getLegend().setEnabled(false);
+        }
+        if (mVisReceiver != null) {
+            mVisReceiver.getDescription().setEnabled(false);
+            mVisReceiver.setNoDataText("");
+            mVisReceiver.setTouchEnabled(false);
+            mVisReceiver.getAxisLeft().setEnabled(false);
+            mVisReceiver.getAxisRight().setEnabled(false);
+            mVisReceiver.getXAxis().setEnabled(false);
+            mVisReceiver.getLegend().setEnabled(false);
+        }
+        
         mVisualizerHandler.postDelayed(mVisualizerTugas, 100);
     }
 
     private void hentikanVisualizer() {
         mVisualizerBerjalan = false;
         mVisualizerHandler.removeCallbacks(mVisualizerTugas);
-        // ✅ SEMBUNYIKAN SAAT SELESAI
+        
         if (mVisualizerContainer != null) {
             mVisualizerContainer.setVisibility(View.GONE);
         }
@@ -146,47 +159,65 @@ public class ChannelListFragment extends HumlaServiceFragment
         public void run() {
             if (!mVisualizerBerjalan) return;
             mVisualizerTingkat = (mVisualizerTingkat + 1) % 4;
+            
             if (mVisualizerStatus != null) {
                 String[] tingkat = {"•", "••", "•••", "••••"};
                 mVisualizerStatus.setText("Bicara " + tingkat[mVisualizerTingkat]);
             }
+            
+            float nilai = 10f + (mVisualizerTingkat * 15f);
+            ArrayList<BarEntry> dataKirim = new ArrayList<>();
+            ArrayList<BarEntry> dataTerima = new ArrayList<>();
+            
+            for (int i = 0; i < 8; i++) {
+                float acak = nilai + (float)(Math.random() * 8f);
+                dataKirim.add(new BarEntry(i, acak));
+                dataTerima.add(new BarEntry(i, acak * 0.85f));
+            }
+            
+            BarDataSet setKirim = new BarDataSet(dataKirim, "");
+            setKirim.setColor(0xFF4CAF50);
+            setKirim.setDrawValues(false);
+            
+            BarDataSet setTerima = new BarDataSet(dataTerima, "");
+            setTerima.setColor(0xFF2196F3);
+            setTerima.setDrawValues(false);
+            
+            BarData dataBarKirim = new BarData(setKirim);
+            BarData dataBarTerima = new BarData(setTerima);
+            
+            if (mVisSender != null) {
+                mVisSender.setData(dataBarKirim);
+                mVisSender.invalidate();
+            }
+            if (mVisReceiver != null) {
+                mVisReceiver.setData(dataBarTerima);
+                mVisReceiver.invalidate();
+            }
+            
             if (mVisualizerContainer != null) {
                 float alpha = 0.4f + (mVisualizerTingkat * 0.15f);
                 mVisualizerContainer.setAlpha(alpha);
             }
+            
             mVisualizerHandler.postDelayed(this, 150);
         }
     };
 
-
     // ==================================================
-    // ==== PENAMBAHAN BARU — STATUS & ID OFA ====
+    // ==== LOKASI OTOMATIS ====
     // ==================================================
-    private String getMyOfaId() {
-        Context ctx = getContext();
-        if (ctx == null) return null;
-        return ctx.getSharedPreferences("ofa_identity_prefs", Context.MODE_PRIVATE)
-                .getString("ofa_id", null);
-    }
-
-    private void kirimStatusPengguna(String statusTeks) {
-        String idOFA = getMyOfaId();
-        if (idOFA == null || idOFA.trim().isEmpty()) {
-            Log.w(TAG, "ID OFA belum tersedia — tidak bisa kirim status");
-            return;
+    private LocationManager mLocationManager;
+    private String lokasiTerbaca = null;
+    private final LocationListener lokasiPendengar = new LocationListener() {
+        @Override
+        public void onLocationChanged(@NonNull Location location) {
+            bacaNamaLokasi(location);
         }
-        IHumlaService service = getService();
-        if (service instanceof MumlaService) {
-            ((MumlaService) service).kirimStatusDenganId(idOFA, statusTeks);
-            Log.i(TAG, "✅ Status dikirim: " + idOFA + " | " + statusTeks);
-        } else {
-            Log.w(TAG, "Belum terhubung ke layanan");
-        }
-    }
-
-    private void tampilkanPilihStatus() {
-        Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
-    }
+        @Override public void onStatusChanged(String provider, int status, Bundle extras) {}
+        @Override public void onProviderEnabled(@NonNull String provider) {}
+        @Override public void onProviderDisabled(@NonNull String provider) {}
+    };
 
     private void hentikanBacaLokasi() {
         if (mLocationManager != null) {
@@ -309,7 +340,35 @@ public class ChannelListFragment extends HumlaServiceFragment
             Log.e(TAG, "Gagal kirim lokasi", e);
         }
     }
-    // ==== AKHIR PENAMBAHAN BARU ====
+
+    // ==================================================
+    // ==== STATUS & ID OFA ====
+    // ==================================================
+    private String getMyOfaId() {
+        Context ctx = getContext();
+        if (ctx == null) return null;
+        return ctx.getSharedPreferences("ofa_identity_prefs", Context.MODE_PRIVATE)
+                .getString("ofa_id", null);
+    }
+
+    private void kirimStatusPengguna(String statusTeks) {
+        String idOFA = getMyOfaId();
+        if (idOFA == null || idOFA.trim().isEmpty()) {
+            Log.w(TAG, "ID OFA belum tersedia — tidak bisa kirim status");
+            return;
+        }
+        IHumlaService service = getService();
+        if (service instanceof MumlaService) {
+            ((MumlaService) service).kirimStatusDenganId(idOFA, statusTeks);
+            Log.i(TAG, "✅ Status dikirim: " + idOFA + " | " + statusTeks);
+        } else {
+            Log.w(TAG, "Belum terhubung ke layanan");
+        }
+    }
+
+    private void tampilkanPilihStatus() {
+        Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
+    }
 
     // ==================================================
     // ==== KOMPONEN UTAMA — ASLI TETAP UTUH ====
@@ -325,7 +384,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         @Override
         public void onDisconnected(HumlaException e) {
             if (mChannelView != null) mChannelView.setAdapter(null);
-            hentikanVisualizer(); // ✅ dipanggil saat putus
+            hentikanVisualizer();
         }
 
         @Override
@@ -390,7 +449,6 @@ public class ChannelListFragment extends HumlaServiceFragment
 
         @Override
         public void onUserStateUpdated(IUser user) {
-            super.onUserStateUpdated(user);
             if (mChannelListAdapter != null && mChannelView != null && user != null) {
                 mChannelListAdapter.refreshUserStatus(user.getSession());
                 int posisi = mChannelListAdapter.getUserPositionBySession(user.getSession());
@@ -405,12 +463,10 @@ public class ChannelListFragment extends HumlaServiceFragment
 
         @Override
         public void onUserTalkStateUpdated(IUser user) {
-            // ==== ASLI TETAP BERJALAN ====
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
             
-            // ==== TAMBAHAN: BANNER + VISUALIZER ====
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
@@ -426,7 +482,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                     }
                     bannerHideHandler.postDelayed(bannerHideRunnable, 2000);
                     
-                    // ==== VISUALIZER IKUT PEMBICARA ====
                     mulaiVisualizer();
                 });
             }
@@ -475,13 +530,13 @@ public class ChannelListFragment extends HumlaServiceFragment
         mChannelView = view.findViewById(R.id.channelUsers);
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
         
-        // ==== BANNER ====
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
         
-        // ==== VISUALIZER ====
         mVisualizerContainer = view.findViewById(R.id.visualizerContainer);
         mVisualizerStatus = view.findViewById(R.id.visualizerStatus);
+        mVisSender = view.findViewById(R.id.vis_sender);
+        mVisReceiver = view.findViewById(R.id.vis_receiver);
         
         return view;
     }
