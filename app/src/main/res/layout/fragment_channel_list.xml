@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- ✅ BANNER — TETAP DI ATAS, TINGGI TETAP, TIDAK DORONG! -->
+    <!-- ✅ BANNER — TETAP DI ATAS, TIDAK BERGERAK! -->
     <FrameLayout
         android:id="@+id/bannerActiveSpeaker"
         android:layout_width="match_parent"
@@ -28,13 +28,13 @@
             android:gravity="center_vertical" />
     </FrameLayout>
 
-    <!-- ✅ VISUALIZER — DI BAWAH BANNER, TETAP DIAM! -->
+    <!-- ✅ VISUALIZER — DI BAWAH BANNER, TIDAK DORONG! -->
     <LinearLayout
         android:id="@+id/visualizerPanel"
         android:layout_width="match_parent"
         android:layout_height="60dp"
         android:layout_gravity="top"
-        android:layout_marginTop="48dp"  <!-- ← Jarak pas di bawah banner -->
+        android:layout_marginTop="48dp"
         android:orientation="horizontal"
         android:background="#1AFFFFFF"
         android:padding="4dp"
@@ -71,12 +71,12 @@
             android:layout_marginStart="4dp"/>
     </LinearLayout>
 
-    <!-- ✅ DAFTAR CHANNEL — DI BAWAH, TETAP DIAM, TIDAK PERNAH BERGERAK! -->
+    <!-- ✅ DAFTAR PENGGUNA — TURUN SECUKUPNYA, TIDAK TERTUTUP! -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/channelUsers"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:paddingTop="116dp"  <!-- ← Sisakan tempat banner + visualizer -->
+        android:paddingTop="116dp"
         android:divider="@android:color/transparent"
         android:dividerHeight="0dp"
         android:fastScrollEnabled="true"
