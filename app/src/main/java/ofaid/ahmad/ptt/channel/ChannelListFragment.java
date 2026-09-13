@@ -65,13 +65,6 @@ import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnChannelClickListener;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnUserClickListener;
 
-import java.util.ArrayList;
-import com.github.mikephil.charting.charts.BarChart;
-import com.github.mikephil.charting.data.BarData;
-import com.github.mikephil.charting.data.BarDataSet;
-import com.github.mikephil.charting.data.BarEntry;
-
-
 public class ChannelListFragment extends HumlaServiceFragment
         implements OnChannelClickListener, OnUserClickListener,
                    SharedPreferences.OnSharedPreferenceChangeListener {
@@ -79,12 +72,11 @@ public class ChannelListFragment extends HumlaServiceFragment
     private static final String TAG = ChannelListFragment.class.getName();
     private static final int KODE_IZIN_LOKASI = 1001;
 
-    // ==================================================
-    // ==== BANNER PEMBICARA ====
-    // ==================================================
+    // --- BANNER INDIKATOR PEMBICARA ---
     private FrameLayout bannerActiveSpeaker;
     private TextView tvSpeakerName;
     private String currentSpeakerName = null;
+
     private final Handler bannerHideHandler = new Handler(Looper.getMainLooper());
     private final Runnable bannerHideRunnable = () -> {
         if (bannerActiveSpeaker != null && bannerActiveSpeaker.getVisibility() == View.VISIBLE) {
@@ -100,127 +92,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     };
 
-    // ==================================================
-    // ==== VISUALIZER SUARA ====
-    // ==================================================
-    private View mVisualizerContainer;
-    private TextView mVisualizerStatus;
-    private BarChart mVisSender;
-    private BarChart mVisReceiver;
-    private final Handler mVisualizerHandler = new Handler(Looper.getMainLooper());
-    private boolean mVisualizerBerjalan = false;
-    private int mVisualizerTingkat = 0;
-
-    private int getSesiSaya() {
-        try {
-            IHumlaSession sesi = getService() != null ? getService().HumlaSession() : null;
-            if (sesi != null && sesi.getSessionUser() != null) {
-                return sesi.getSessionUser().getSession();
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "Tidak dapat ambil sesi saya");
-        }
-        return -1;
-    }
-
-    private void mulaiVisualizer() {
-        if (mVisualizerBerjalan) return;
-        mVisualizerBerjalan = true;
-        
-        if (mVisualizerContainer != null) {
-            mVisualizerContainer.setVisibility(View.VISIBLE);
-            mVisualizerContainer.setAlpha(1f);
-        }
-        
-        if (mVisSender != null) {
-            mVisSender.getDescription().setEnabled(false);
-            mVisSender.setNoDataText("");
-            mVisSender.setTouchEnabled(false);
-            mVisSender.getAxisLeft().setEnabled(false);
-            mVisSender.getAxisRight().setEnabled(false);
-            mVisSender.getXAxis().setEnabled(false);
-            mVisSender.getLegend().setEnabled(false);
-        }
-        if (mVisReceiver != null) {
-            mVisReceiver.getDescription().setEnabled(false);
-            mVisReceiver.setNoDataText("");
-            mVisReceiver.setTouchEnabled(false);
-            mVisReceiver.getAxisLeft().setEnabled(false);
-            mVisReceiver.getAxisRight().setEnabled(false);
-            mVisReceiver.getXAxis().setEnabled(false);
-            mVisReceiver.getLegend().setEnabled(false);
-        }
-        
-        mVisualizerHandler.postDelayed(mVisualizerTugas, 100);
-    }
-
-    private void hentikanVisualizer() {
-        mVisualizerBerjalan = false;
-        mVisualizerHandler.removeCallbacks(mVisualizerTugas);
-        
-        if (mVisualizerContainer != null) {
-            mVisualizerContainer.setVisibility(View.GONE);
-        }
-        if (mVisualizerStatus != null) {
-            mVisualizerStatus.setText("Siap");
-        }
-        if (mVisSender != null) mVisSender.clearValues();
-        if (mVisReceiver != null) mVisReceiver.clearValues();
-    }
-
-    private final Runnable mVisualizerTugas = new Runnable() {
-        @Override
-        public void run() {
-            if (!mVisualizerBerjalan) return;
-            mVisualizerTingkat = (mVisualizerTingkat + 1) % 4;
-            
-            if (mVisualizerStatus != null) {
-                String[] tingkat = {"•", "••", "•••", "••••"};
-                mVisualizerStatus.setText("Bicara " + tingkat[mVisualizerTingkat]);
-            }
-            
-            float nilai = 10f + (mVisualizerTingkat * 15f);
-            ArrayList<BarEntry> dataKirim = new ArrayList<>();
-            ArrayList<BarEntry> dataTerima = new ArrayList<>();
-            
-            for (int i = 0; i < 8; i++) {
-                float acak = nilai + (float)(Math.random() * 8f);
-                dataKirim.add(new BarEntry(i, acak));
-                dataTerima.add(new BarEntry(i, acak * 0.85f));
-            }
-            
-            BarDataSet setKirim = new BarDataSet(dataKirim, "");
-            setKirim.setColor(0xFF4CAF50);
-            setKirim.setDrawValues(false);
-            
-            BarDataSet setTerima = new BarDataSet(dataTerima, "");
-            setTerima.setColor(0xFF2196F3);
-            setTerima.setDrawValues(false);
-            
-            BarData dataBarKirim = new BarData(setKirim);
-            BarData dataBarTerima = new BarData(setTerima);
-            
-            if (mVisSender != null) {
-                mVisSender.setData(dataBarKirim);
-                mVisSender.invalidate();
-            }
-            if (mVisReceiver != null) {
-                mVisReceiver.setData(dataBarTerima);
-                mVisReceiver.invalidate();
-            }
-            
-            if (mVisualizerContainer != null) {
-                float alpha = 0.4f + (mVisualizerTingkat * 0.15f);
-                mVisualizerContainer.setAlpha(alpha);
-            }
-            
-            mVisualizerHandler.postDelayed(this, 150);
-        }
-    };
-
-    // ==================================================
-    // ==== LOKASI OTOMATIS ====
-    // ==================================================
+    // --- LOKASI OTOMATIS ---
     private LocationManager mLocationManager;
     private String lokasiTerbaca = null;
     private final LocationListener lokasiPendengar = new LocationListener() {
@@ -233,12 +105,49 @@ public class ChannelListFragment extends HumlaServiceFragment
         @Override public void onProviderDisabled(@NonNull String provider) {}
     };
 
+    // --- KOMPONEN UTAMA ---
+    private RecyclerView mChannelView;
+    private ChannelListAdapter mChannelListAdapter;
+    private ChatTargetProvider mTargetProvider;
+    private DatabaseProvider mDatabaseProvider;
+    private ActionMode mActionMode;
+    private Settings mSettings;
+
+    // ========== FUNGSI STATUS & ID OFA ==========
+    private String getMyOfaId() {
+        Context ctx = getContext();
+        if (ctx == null) return null;
+        return ctx.getSharedPreferences("ofa_identity_prefs", Context.MODE_PRIVATE)
+                .getString("ofa_id", null);
+    }
+
+    private void kirimStatusPengguna(String statusTeks) {
+        String idOFA = getMyOfaId();
+        if (idOFA == null || idOFA.trim().isEmpty()) {
+            Log.w(TAG, "ID OFA belum tersedia — tidak bisa kirim status");
+            return;
+        }
+        IHumlaService service = getService();
+        if (service instanceof MumlaService) {
+            ((MumlaService) service).kirimStatusDenganId(idOFA, statusTeks);
+            Log.i(TAG, "✅ Status dikirim: " + idOFA + " | " + statusTeks);
+        } else {
+            Log.w(TAG, "Belum terhubung ke layanan");
+        }
+    }
+
+    private void tampilkanPilihStatus() {
+        Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
+    }
+
+    // ========== HENTIKAN BACA LOKASI — DIPERBAIKI ✅ ==========
     private void hentikanBacaLokasi() {
         if (mLocationManager != null) {
             mLocationManager.removeUpdates(lokasiPendengar);
         }
     }
 
+    // ========== MINTA IZIN LOKASI OTOMATIS ==========
     private void mintaIzinLokasiOtomatis() {
         if (getContext() == null) return;
         boolean sudahIzin =
@@ -251,10 +160,13 @@ public class ChannelListFragment extends HumlaServiceFragment
             mulaiBacaLokasi();
             return;
         }
-        requestPermissions(new String[]{
-            Manifest.permission.ACCESS_COARSE_LOCATION,
-            Manifest.permission.ACCESS_FINE_LOCATION
-        }, KODE_IZIN_LOKASI);
+        requestPermissions(
+            new String[]{
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.ACCESS_FINE_LOCATION
+            },
+            KODE_IZIN_LOKASI
+        );
     }
 
     @Override
@@ -272,6 +184,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
+    // ========== MULAI BACA LOKASI ==========
     private void mulaiBacaLokasi() {
         if (getContext() == null) return;
         mLocationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
@@ -303,6 +216,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
+    // ========== BACA NAMA LOKASI & KIRIM KE SERVER ==========
     private void bacaNamaLokasi(Location lokasi) {
         if (getContext() == null) return;
         android.location.Geocoder geocoder = new android.location.Geocoder(requireContext());
@@ -330,6 +244,9 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
+    // =============================================
+    // ✅ KIRIM LOKASI KE SERVER — DIPERBAIKI!
+    // =============================================
     private void kirimLokasiKeServer(String teksLokasi) {
         if (getService() == null || !getService().isConnected()) {
             Log.w(TAG, "Belum terhubung — lokasi belum dikirim");
@@ -339,66 +256,32 @@ public class ChannelListFragment extends HumlaServiceFragment
             IHumlaSession sesi = getService().HumlaSession();
             IUser saya = sesi.getSessionUser();
             if (saya == null) return;
-            int sesiSaya = saya.getSession();
+            
+            int sesiSaya = saya.getSession(); // ✅ ambil nomor sesi diri sendiri
             String keteranganLama = saya.getComment();
             String keteranganBaru;
-            if (keteranganLama == null || keteranganLama.trim().isEmpty() ||
-                keteranganLama.trim().startsWith("📍")) {
+            
+            if (keteranganLama == null || keteranganLama.trim().isEmpty()) {
+                keteranganBaru = teksLokasi;
+            } else if (keteranganLama.trim().startsWith("📍")) {
                 keteranganBaru = teksLokasi;
             } else {
                 keteranganBaru = keteranganLama + "\n" + teksLokasi;
             }
-            sesi.setUserComment(sesiSaya, keteranganBaru);
+            
+            sesi.setUserComment(sesiSaya, keteranganBaru); // ✅ SESUAI METODE ASLI!
             Log.i(TAG, "✅ Lokasi dikirim: " + teksLokasi);
+            
         } catch (Exception e) {
             Log.e(TAG, "Gagal kirim lokasi", e);
         }
     }
 
-    // ==================================================
-    // ==== STATUS & ID OFA ====
-    // ==================================================
-    private String getMyOfaId() {
-        Context ctx = getContext();
-        if (ctx == null) return null;
-        return ctx.getSharedPreferences("ofa_identity_prefs", Context.MODE_PRIVATE)
-                .getString("ofa_id", null);
-    }
-
-    private void kirimStatusPengguna(String statusTeks) {
-        String idOFA = getMyOfaId();
-        if (idOFA == null || idOFA.trim().isEmpty()) {
-            Log.w(TAG, "ID OFA belum tersedia — tidak bisa kirim status");
-            return;
-        }
-        IHumlaService service = getService();
-        if (service instanceof MumlaService) {
-            ((MumlaService) service).kirimStatusDenganId(idOFA, statusTeks);
-            Log.i(TAG, "✅ Status dikirim: " + idOFA + " | " + statusTeks);
-        } else {
-            Log.w(TAG, "Belum terhubung ke layanan");
-        }
-    }
-
-    private void tampilkanPilihStatus() {
-        Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
-    }
-
-    // ==================================================
-    // ==== KOMPONEN UTAMA — ASLI TETAP UTUH ====
-    // ==================================================
-    private RecyclerView mChannelView;
-    private ChannelListAdapter mChannelListAdapter;
-    private ChatTargetProvider mTargetProvider;
-    private DatabaseProvider mDatabaseProvider;
-    private ActionMode mActionMode;
-    private Settings mSettings;
-
+    // ========== PEMANTAU PERUBAHAN ==========
     private final IHumlaObserver mServiceObserver = new HumlaObserver() {
         @Override
         public void onDisconnected(HumlaException e) {
             if (mChannelView != null) mChannelView.setAdapter(null);
-            hentikanVisualizer();
         }
 
         @Override
@@ -463,6 +346,7 @@ public class ChannelListFragment extends HumlaServiceFragment
 
         @Override
         public void onUserStateUpdated(IUser user) {
+            super.onUserStateUpdated(user);
             if (mChannelListAdapter != null && mChannelView != null && user != null) {
                 mChannelListAdapter.refreshUserStatus(user.getSession());
                 int posisi = mChannelListAdapter.getUserPositionBySession(user.getSession());
@@ -480,11 +364,8 @@ public class ChannelListFragment extends HumlaServiceFragment
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
-            
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
-                    boolean sayaBicara = user.getSession() == getSesiSaya();
-                    
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
                     if (!displayName.equals(currentSpeakerName)) {
@@ -497,13 +378,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                         bannerActiveSpeaker.setAlpha(1f);
                     }
                     bannerHideHandler.postDelayed(bannerHideRunnable, 2000);
-                    
-                    // ==== KENDALIKAN VISUALIZER HANYA UNTUK SAYA ====
-                    if (sayaBicara) {
-                        mulaiVisualizer();
-                    } else {
-                        hentikanVisualizer();
-                    }
                 });
             }
         }
@@ -550,15 +424,8 @@ public class ChannelListFragment extends HumlaServiceFragment
         View view = inflater.inflate(R.layout.fragment_channel_list, container, false);
         mChannelView = view.findViewById(R.id.channelUsers);
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
-        
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
-        
-        mVisualizerContainer = view.findViewById(R.id.visualizerContainer);
-        mVisualizerStatus = view.findViewById(R.id.visualizerStatus);
-        mVisSender = view.findViewById(R.id.vis_sender);
-        mVisReceiver = view.findViewById(R.id.vis_receiver);
-        
         return view;
     }
 
@@ -590,8 +457,7 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     @Override
     public void onDestroy() {
-        hentikanBacaLokasi();
-        hentikanVisualizer();
+        hentikanBacaLokasi(); // ✅ dipanggil dengan benar
         if (getActivity() != null) {
             SharedPreferences preferences =
                     PreferenceManager.getDefaultSharedPreferences(getActivity());
