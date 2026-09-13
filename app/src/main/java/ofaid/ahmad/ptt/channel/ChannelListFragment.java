@@ -21,7 +21,10 @@ import android.graphics.PorterDuff;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
+import android.media.AudioFormat;
 import android.media.AudioManager;
+import android.media.AudioRecord;
+import android.media.MediaRecorder;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -35,6 +38,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -46,6 +50,11 @@ import androidx.core.view.MenuItemCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import com.github.mikephil.charting.charts.BarChart;
+import com.github.mikephil.charting.data.BarData;
+import com.github.mikephil.charting.data.BarEntry;
+import com.github.mikephil.charting.data.BarDataSet;
 
 import se.lublin.humla.IHumlaService;
 import se.lublin.humla.IHumlaSession;
@@ -65,12 +74,32 @@ import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnChannelClickListener;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnUserClickListener;
 
+import java.util.ArrayList;
+import java.util.List;
+
 public class ChannelListFragment extends HumlaServiceFragment
         implements OnChannelClickListener, OnUserClickListener,
                    SharedPreferences.OnSharedPreferenceChangeListener {
 
     private static final String TAG = ChannelListFragment.class.getName();
     private static final int KODE_IZIN_LOKASI = 1001;
+
+    // === VISUALIZER ===
+    private static final int JUMLAH_BATANG_VISUAL = 16;
+    private static final int WARNA_KIRIM = 0xFF4CAF50;   // Hijau = kamu bicara
+    private static final int WARNA_TERIMA = 0xFF2196F3;  // Biru = mereka bicara
+    private static final int SAMPLING_RATE = 44100;
+    private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;
+    private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
+
+    private LinearLayout mVisualizerPanel;
+    private BarChart mVisKirim;
+    private BarChart mVisTerima;
+    private Handler mVisualHandler;
+    private boolean mVisualBerjalan = false;
+    private AudioRecord mPerekamSuara;
+    private int mUkuranBufferSuara;
+    // ==================
 
     // --- BANNER INDIKATOR PEMBICARA ---
     private FrameLayout bannerActiveSpeaker;
@@ -87,6 +116,10 @@ public class ChannelListFragment extends HumlaServiceFragment
                     bannerActiveSpeaker.setVisibility(View.GONE);
                     tvSpeakerName.setText("");
                     currentSpeakerName = null;
+                    // Sembunyikan visualizer saat diam
+                    if (mVisualizerPanel != null) {
+                        mVisualizerPanel.setVisibility(View.GONE);
+                    }
                 })
                 .start();
         }
@@ -140,6 +173,147 @@ public class ChannelListFragment extends HumlaServiceFragment
         Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
     }
 
+    // ========== VISUALIZER — PENGATURAN ==========
+    private void hitungUkuranBufferSuara() {
+        int ukuranMin = AudioRecord.getMinBufferSize(SAMPLING_RATE, CHANNEL_CONFIG, AUDIO_FORMAT);
+        mUkuranBufferSuara = Math.max(1024, ukuranMin);
+        mVisualHandler = new Handler(Looper.getMainLooper());
+    }
+
+    private void aturGrafik(BarChart grafik, int warna) {
+        if (grafik == null) return;
+        grafik.setDrawBarShadow(false);
+        grafik.setDrawValueAboveBar(false);
+        grafik.getDescription().setEnabled(false);
+        grafik.setTouchEnabled(false);
+        grafik.setDragEnabled(false);
+        grafik.setScaleEnabled(false);
+        grafik.setPinchZoom(false);
+        grafik.getAxisLeft().setEnabled(false);
+        grafik.getAxisRight().setEnabled(false);
+        grafik.getXAxis().setEnabled(false);
+        grafik.getLegend().setEnabled(false);
+        grafik.setExtraOffsets(2, 2, 2, 2);
+        grafik.setMaxVisibleValueCount(JUMLAH_BATANG_VISUAL);
+        
+        List<BarEntry> kosong = new ArrayList<>();
+        for (int i = 0; i < JUMLAH_BATANG_VISUAL; i++) {
+            kosong.add(new BarEntry(i, 0f));
+        }
+        BarDataSet set = new BarDataSet(kosong, "");
+        set.setColor(warna);
+        set.setDrawValues(false);
+        BarData data = new BarData(set);
+        data.setBarWidth(0.6f);
+        grafik.setData(data);
+        grafik.invalidate();
+    }
+
+    private void mulaiVisualizerKirim() {
+        if (mVisKirim == null || mVisualBerjalan) return;
+        mVisualBerjalan = true;
+        
+        // Tampilkan panel visualizer
+        if (mVisualizerPanel != null) {
+            mVisualizerPanel.setVisibility(View.VISIBLE);
+        }
+        
+        if (AudioRecord.getMinBufferSize(SAMPLING_RATE, CHANNEL_CONFIG, AUDIO_FORMAT) > 0) {
+            try {
+                mPerekamSuara = new AudioRecord(
+                    MediaRecorder.AudioSource.MIC,
+                    SAMPLING_RATE,
+                    CHANNEL_CONFIG,
+                    AUDIO_FORMAT,
+                    mUkuranBufferSuara
+                );
+                mPerekamSuara.startRecording();
+                mVisualHandler.post(mPembaruanVisual);
+            } catch (Exception e) {
+                Log.e(TAG, "Gagal mulai perekam visualizer", e);
+                mVisualBerjalan = false;
+            }
+        }
+    }
+
+    private void hentikanVisualizerKirim() {
+        mVisualBerjalan = false;
+        if (mVisualHandler != null) {
+            mVisualHandler.removeCallbacks(mPembaruanVisual);
+        }
+        if (mPerekamSuara != null) {
+            try {
+                mPerekamSuara.stop();
+                mPerekamSuara.release();
+            } catch (Exception e) { }
+            mPerekamSuara = null;
+        }
+        if (mVisKirim != null) aturGrafik(mVisKirim, WARNA_KIRIM);
+    }
+
+    private final Runnable mPembaruanVisual = new Runnable() {
+        @Override
+        public void run() {
+            if (!mVisualBerjalan || mPerekamSuara == null) return;
+            
+            short[] buffer = new short[mUkuranBufferSuara];
+            int dibaca = mPerekamSuara.read(buffer, 0, buffer.length);
+            
+            if (dibaca > 0) {
+                int[] tingkat = hitungTingkatSuara(buffer, dibaca);
+                perbaruiGrafik(mVisKirim, tingkat, WARNA_KIRIM);
+            }
+            
+            if (mVisualBerjalan) {
+                mVisualHandler.postDelayed(this, 50);
+            }
+        }
+    };
+
+    private int[] hitungTingkatSuara(short[] buffer, int panjang) {
+        int[] hasil = new int[JUMLAH_BATANG_VISUAL];
+        int perBagian = panjang / JUMLAH_BATANG_VISUAL;
+        if (perBagian < 1) perBagian = 1;
+
+        for (int b = 0; b < JUMLAH_BATANG_VISUAL; b++) {
+            int total = 0;
+            int mulai = b * perBagian;
+            int akhir = Math.min(mulai + perBagian, panjang);
+            for (int i = mulai; i < akhir; i++) {
+                total += Math.abs(buffer[i]);
+            }
+            hasil[b] = Math.min(100, total / perBagian / 8);
+        }
+        return hasil;
+    }
+
+    private void perbaruiGrafik(BarChart grafik, int[] nilai, int warna) {
+        if (grafik == null) return;
+        List<BarEntry> daftar = new ArrayList<>();
+        for (int i = 0; i < nilai.length; i++) {
+            daftar.add(new BarEntry(i, nilai[i] / 8.0f));
+        }
+        BarDataSet set = new BarDataSet(daftar, "");
+        set.setColor(warna);
+        set.setDrawValues(false);
+        BarData data = new BarData(set);
+        data.setBarWidth(0.6f);
+        grafik.setData(data);
+        grafik.invalidate();
+    }
+
+    private void perbaruiVisualTerima(IUser user) {
+        if (mVisTerima == null) return;
+        // Nanti disambungkan ke data suara masuk
+        // Sementara tampilkan indikator
+        int[] tingkat = new int[JUMLAH_BATANG_VISUAL];
+        for (int i = 0; i < tingkat.length; i++) {
+            tingkat[i] = (int)(Math.random() * 40 + 10);
+        }
+        perbaruiGrafik(mVisTerima, tingkat, WARNA_TERIMA);
+    }
+    // ==========================================
+
     // ========== HENTIKAN BACA LOKASI — DIPERBAIKI ✅ ==========
     private void hentikanBacaLokasi() {
         if (mLocationManager != null) {
@@ -147,7 +321,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-    // ========== MINTA IZIN LOKASI OTOMATIS ==========
+    // ========== MULAI BACA LOKASI ==========
     private void mintaIzinLokasiOtomatis() {
         if (getContext() == null) return;
         boolean sudahIzin =
@@ -184,7 +358,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-    // ========== MULAI BACA LOKASI ==========
     private void mulaiBacaLokasi() {
         if (getContext() == null) return;
         mLocationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
@@ -244,9 +417,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-    // =============================================
-    // ✅ KIRIM LOKASI KE SERVER — DIPERBAIKI!
-    // =============================================
     private void kirimLokasiKeServer(String teksLokasi) {
         if (getService() == null || !getService().isConnected()) {
             Log.w(TAG, "Belum terhubung — lokasi belum dikirim");
@@ -257,7 +427,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             IUser saya = sesi.getSessionUser();
             if (saya == null) return;
             
-            int sesiSaya = saya.getSession(); // ✅ ambil nomor sesi diri sendiri
+            int sesiSaya = saya.getSession();
             String keteranganLama = saya.getComment();
             String keteranganBaru;
             
@@ -269,7 +439,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 keteranganBaru = keteranganLama + "\n" + teksLokasi;
             }
             
-            sesi.setUserComment(sesiSaya, keteranganBaru); // ✅ SESUAI METODE ASLI!
+            sesi.setUserComment(sesiSaya, keteranganBaru);
             Log.i(TAG, "✅ Lokasi dikirim: " + teksLokasi);
             
         } catch (Exception e) {
@@ -282,6 +452,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         @Override
         public void onDisconnected(HumlaException e) {
             if (mChannelView != null) mChannelView.setAdapter(null);
+            hentikanVisualizerKirim();
         }
 
         @Override
@@ -368,6 +539,31 @@ public class ChannelListFragment extends HumlaServiceFragment
                 getActivity().runOnUiThread(() -> {
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
+                    
+                    // === VISUALIZER KIRIM/TERIMA ===
+                    try {
+                        int selfSession = getService().HumlaSession().getSessionId();
+                        if (user.getSession() == selfSession) {
+                            // Saya yang bicara → mulai visualizer kirim
+                            if (user.getTalkState() != IUser.TalkState.PASSIVE) {
+                                mulaiVisualizerKirim();
+                            } else {
+                                hentikanVisualizerKirim();
+                            }
+                        } else {
+                            // Orang lain bicara → perbarui visualizer terima
+                            if (user.getTalkState() != IUser.TalkState.PASSIVE) {
+                                if (mVisualizerPanel != null) {
+                                    mVisualizerPanel.setVisibility(View.VISIBLE);
+                                }
+                                perbaruiVisualTerima(user);
+                            }
+                        }
+                    } catch (Exception e) {
+                        Log.d(TAG, "Cek sesi visualizer gagal", e);
+                    }
+                    // ==============================
+                    
                     if (!displayName.equals(currentSpeakerName)) {
                         currentSpeakerName = displayName;
                         if (tvSpeakerName != null) tvSpeakerName.setText(displayName);
@@ -396,6 +592,7 @@ public class ChannelListFragment extends HumlaServiceFragment
     public void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setHasOptionsMenu(true);
+        hitungUkuranBufferSuara();
     }
 
     @Override
@@ -424,8 +621,21 @@ public class ChannelListFragment extends HumlaServiceFragment
         View view = inflater.inflate(R.layout.fragment_channel_list, container, false);
         mChannelView = view.findViewById(R.id.channelUsers);
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
+        
+        // === VISUALIZER — HUBUNGKAN ID ===
+        mVisualizerPanel = view.findViewById(R.id.visualizerPanel);
+        mVisKirim = view.findViewById(R.id.vis_sender);
+        mVisTerima = view.findViewById(R.id.vis_receiver);
+        
+        if (mVisKirim != null && mVisTerima != null) {
+            aturGrafik(mVisKirim, WARNA_KIRIM);
+            aturGrafik(mVisTerima, WARNA_TERIMA);
+        }
+        // =================================
+        
         return view;
     }
 
@@ -457,7 +667,8 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     @Override
     public void onDestroy() {
-        hentikanBacaLokasi(); // ✅ dipanggil dengan benar
+        hentikanVisualizerKirim();
+        hentikanBacaLokasi();
         if (getActivity() != null) {
             SharedPreferences preferences =
                     PreferenceManager.getDefaultSharedPreferences(getActivity());
