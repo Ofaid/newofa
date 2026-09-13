@@ -3,19 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- ✅ DAFTAR CHANNEL — DI BAWAH, TETAP DIAM, TIDAK PERNAH BERGERAK! -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/channelUsers"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingTop="0dp"
-        android:divider="@android:color/transparent"
-        android:dividerHeight="0dp"
-        android:fastScrollEnabled="true"
-        android:choiceMode="singleChoice"
-        android:clipToPadding="false"/>
-
-    <!-- ✅ BANNER — TUMPUK DI ATAS, TIDAK MENGGESER SIAPA PUN! -->
+    <!-- ✅ BANNER — TETAP DI ATAS, TINGGI TETAP, TIDAK DORONG! -->
     <FrameLayout
         android:id="@+id/bannerActiveSpeaker"
         android:layout_width="match_parent"
@@ -38,7 +26,61 @@
             android:textStyle="bold"
             android:drawablePadding="8dp"
             android:gravity="center_vertical" />
-
     </FrameLayout>
+
+    <!-- ✅ VISUALIZER — DI BAWAH BANNER, TETAP DIAM! -->
+    <LinearLayout
+        android:id="@+id/visualizerPanel"
+        android:layout_width="match_parent"
+        android:layout_height="60dp"
+        android:layout_gravity="top"
+        android:layout_marginTop="48dp"  <!-- ← Jarak pas di bawah banner -->
+        android:orientation="horizontal"
+        android:background="#1AFFFFFF"
+        android:padding="4dp"
+        android:visibility="gone">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="🎤"
+            android:textSize="18sp"
+            android:gravity="center"
+            android:padding="4dp"/>
+
+        <com.github.mikephil.charting.charts.BarChart
+            android:id="@+id/vis_sender"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginEnd="4dp"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="match_parent"
+            android:text="👂"
+            android:textSize="18sp"
+            android:gravity="center"
+            android:padding="4dp"/>
+
+        <com.github.mikephil.charting.charts.BarChart
+            android:id="@+id/vis_receiver"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:layout_marginStart="4dp"/>
+    </LinearLayout>
+
+    <!-- ✅ DAFTAR CHANNEL — DI BAWAH, TETAP DIAM, TIDAK PERNAH BERGERAK! -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/channelUsers"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="116dp"  <!-- ← Sisakan tempat banner + visualizer -->
+        android:divider="@android:color/transparent"
+        android:dividerHeight="0dp"
+        android:fastScrollEnabled="true"
+        android:choiceMode="singleChoice"
+        android:clipToPadding="false"/>
 
 </FrameLayout>
