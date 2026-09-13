@@ -28,6 +28,7 @@ import se.lublin.humla.protocol.AudioHandler;
 
 /**
  * Created by andrew on 23/08/13.
+ * Modif Ofaid 2026 — Tambah pembaca tingkat suara
  */
 public class AudioInput implements Runnable {
     private static final String TAG = AudioInput.class.getName();
@@ -43,6 +44,29 @@ public class AudioInput implements Runnable {
 
     private Thread mRecordThread;
     private boolean mRecording;
+
+    // ==================================================
+    // ==== TAMBAH: PENDENGAR TINGKAT SUARA — OFAID ====
+    // ==================================================
+    public interface TingkatSuaraPendengar {
+        void padaPerubahanTingkat(int tingkat);
+    }
+    private static TingkatSuaraPendengar sPendengar;
+
+    public static void aturPendengar(TingkatSuaraPendengar pendengar) {
+        sPendengar = pendengar;
+    }
+
+    private int hitungTingkatSuara(short[] buffer, int panjang) {
+        long jumlah = 0;
+        for (int i = 0; i < panjang; i++) {
+            jumlah += Math.abs(buffer[i]);
+        }
+        int rataRata = (int) (jumlah / panjang);
+        int hasil = rataRata / 300; // Sesuaikan angka ini kalau terlalu sensitif
+        return Math.min(hasil, 100);
+    }
+    // ==================================================
 
     public AudioInput(AudioInputListener listener, int audioSource, int targetSampleRate,
                       String echoCancellationMethod)
@@ -199,6 +223,12 @@ public class AudioInput implements Runnable {
         while(mRecording) {
             int shortsRead = mAudioRecord.read(mAudioBuffer, 0, mFrameSize);
             if(shortsRead > 0) {
+                // ==== TAMBAH: Kirim tingkat suara ke tampilan ====
+                int tingkat = hitungTingkatSuara(mAudioBuffer, shortsRead);
+                if (sPendengar != null) {
+                    sPendengar.padaPerubahanTingkat(tingkat);
+                }
+                // ==================================================
                 mListener.onAudioInputReceived(mAudioBuffer, mFrameSize);
             } else {
                 Log.e(TAG, "Error fetching audio! AudioRecord error " + shortsRead);
