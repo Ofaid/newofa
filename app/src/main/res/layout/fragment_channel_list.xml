@@ -3,7 +3,19 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- ✅ BANNER PEMBICARA AKTIF — TINGGI TETAP, TIDAK DORONG! -->
+    <!-- ✅ DAFTAR CHANNEL — DI BAWAH, TETAP DIAM, TIDAK PERNAH BERGERAK! -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/channelUsers"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:paddingTop="0dp"
+        android:divider="@android:color/transparent"
+        android:dividerHeight="0dp"
+        android:fastScrollEnabled="true"
+        android:choiceMode="singleChoice"
+        android:clipToPadding="false"/>
+
+    <!-- ✅ BANNER — TUMPUK DI ATAS, TIDAK MENGGESER SIAPA PUN! -->
     <FrameLayout
         android:id="@+id/bannerActiveSpeaker"
         android:layout_width="match_parent"
@@ -26,64 +38,7 @@
             android:textStyle="bold"
             android:drawablePadding="8dp"
             android:gravity="center_vertical" />
+
     </FrameLayout>
-
-    <!-- ✅ VISUALIZER — DI BAWAH BANNER, TIDAK DORONG! -->
-      <!-- ✅ VISUALIZER — ID SESUAI KODE JAVA! -->
-    <LinearLayout
-        android:id="@+id/visualizerContainer"
-        android:layout_width="match_parent"
-        android:layout_height="60dp"
-        android:layout_gravity="top"
-        android:layout_marginTop="48dp"
-        android:orientation="horizontal"
-        android:background="#1AFFFFFF"
-        android:padding="4dp"
-        android:visibility="visible">
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="🎤"
-            android:textSize="18sp"
-            android:gravity="center"
-            android:padding="4dp"/>
-
-        <com.github.mikephil.charting.charts.BarChart
-            android:id="@+id/vis_sender"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginEnd="4dp"/>
-
-        <TextView
-            android:id="@+id/visualizerStatus"
-            android:layout_width="wrap_content"
-            android:layout_height="match_parent"
-            android:text="Siap"
-            android:textSize="14sp"
-            android:gravity="center"
-            android:padding="4dp"/>
-
-        <com.github.mikephil.charting.charts.BarChart
-            android:id="@+id/vis_receiver"
-            android:layout_width="0dp"
-            android:layout_height="match_parent"
-            android:layout_weight="1"
-            android:layout_marginStart="4dp"/>
-    </LinearLayout>
-
-
-    <!-- ✅ DAFTAR PENGGUNA — PADAT TEPAT, TIDAK TERTUTUP! -->
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/channelUsers"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:paddingTop="116dp"
-        android:divider="@android:color/transparent"
-        android:dividerHeight="0dp"
-        android:fastScrollEnabled="true"
-        android:choiceMode="singleChoice"
-        android:clipToPadding="false"/>
 
 </FrameLayout>
