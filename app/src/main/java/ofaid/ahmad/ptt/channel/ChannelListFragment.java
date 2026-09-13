@@ -76,6 +76,7 @@ import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnChannelClickListener;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnUserClickListener;
+import se.lublin.humla.model.TalkState;
 
 public class ChannelListFragment extends HumlaServiceFragment
         implements OnChannelClickListener, OnUserClickListener,
@@ -410,13 +411,15 @@ public class ChannelListFragment extends HumlaServiceFragment
                     try {
                         int selfSession = getService().HumlaSession().getSessionId();
                         if (user.getSession() == selfSession) {
-                            if (user.isTalking()) {
+                            // ✅ DIPERBAIKI — pakai getTalkState()
+                            if (user.getTalkState() == TalkState.TALKING) {
                                 mulaiVisualizerKirim();
                             } else {
                                 hentikanVisualizerKirim();
                             }
                         } else {
-                            if (user.isTalking() && mVisualizerPanel != null) {
+                            // ✅ DIPERBAIKI — pakai getTalkState()
+                            if (user.getTalkState() == TalkState.TALKING && mVisualizerPanel != null) {
                                 mVisualizerPanel.setVisibility(View.VISIBLE);
                                 perbaruiVisualTerima(user);
                             }
