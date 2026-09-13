@@ -1,3 +1,4 @@
+
 /*
  * Copyright (C) 2014 Andrew Comminos
  * Modif By Ofaid 2026
@@ -525,58 +526,57 @@ public class ChannelListFragment extends HumlaServiceFragment
                 getActivity().supportInvalidateOptionsMenu();
             }
         }
-
-        @Override
-        public void onUserTalkStateUpdated(IUser user) {
-            if (mChannelListAdapter != null && mChannelView != null) {
-                mChannelListAdapter.updateUserStates(user, mChannelView);
-            }
-            if (getActivity() != null && !isDetached()) {
-                getActivity().runOnUiThread(() -> {
-                    bannerHideHandler.removeCallbacks(bannerHideRunnable);
-                    String displayName = user.getName();
-                    
-                    // === VISUALIZER — DIPERBAIKI ✅ ===
-                    try {
-                        int selfSession = getService().HumlaSession().getSessionId();
-                        // Pakai angka langsung: 0 = PASSIVE, 1 = TALKING
-                        int state = user.getTalkState();
-                        
-                        if (user.getSession() == selfSession) {
-                            // Saya yang bicara
-                            if (state != 0) {
-                                mulaiVisualizerKirim();
-                            } else {
-                                hentikanVisualizerKirim();
-                            }
-                        } else {
-                            // Orang lain bicara
-                            if (state != 0) {
-                                if (mVisualizerPanel != null) {
-                                    mVisualizerPanel.setVisibility(View.VISIBLE);
-                                }
-                                perbaruiVisualTerima(user);
-                            }
+/*=========================*/
+  @Override
+public void onUserTalkStateUpdated(IUser user) {
+    if (mChannelListAdapter != null && mChannelView != null) {
+        mChannelListAdapter.updateUserStates(user, mChannelView);
+    }
+    if (getActivity() != null && !isDetached()) {
+        getActivity().runOnUiThread(() -> {
+            bannerHideHandler.removeCallbacks(bannerHideRunnable);
+            String displayName = user.getName();
+            
+            // ✅ DIPERBAIKI — SESUAI TIPE ASLI HUMLA
+            try {
+                int selfSession = getService().HumlaSession().getSessionId();
+                
+                // Langsung bandingkan dengan enum — TANPA UBAH KE INT!
+                if (user.getSession() == selfSession) {
+                    // Saya yang bicara
+                    if (user.getTalkState() != IUser.TalkState.PASSIVE) {
+                        mulaiVisualizerKirim();
+                    } else {
+                        hentikanVisualizerKirim();
+                    }
+                } else {
+                    // Orang lain bicara
+                    if (user.getTalkState() != IUser.TalkState.PASSIVE) {
+                        if (mVisualizerPanel != null) {
+                            mVisualizerPanel.setVisibility(View.VISIBLE);
                         }
-                    } catch (Exception e) {
-                        Log.d(TAG, "Cek sesi visualizer gagal", e);
+                        perbaruiVisualTerima(user);
                     }
-                    // ================================
-                    
-                    if (!displayName.equals(currentSpeakerName)) {
-                        currentSpeakerName = displayName;
-                        if (tvSpeakerName != null) tvSpeakerName.setText(displayName);
-                    }
-                    if (bannerActiveSpeaker != null &&
-                        bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
-                        bannerActiveSpeaker.setVisibility(View.VISIBLE);
-                        bannerActiveSpeaker.setAlpha(1f);
-                    }
-                    bannerHideHandler.postDelayed(bannerHideRunnable, 2000);
-                });
+                }
+            } catch (Exception e) {
+                Log.d(TAG, "Cek sesi visualizer gagal", e);
             }
-        }
-    };
+            // ============================================
+            
+            if (!displayName.equals(currentSpeakerName)) {
+                currentSpeakerName = displayName;
+                if (tvSpeakerName != null) tvSpeakerName.setText(displayName);
+            }
+            if (bannerActiveSpeaker != null &&
+                bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
+                bannerActiveSpeaker.setVisibility(View.VISIBLE);
+                bannerActiveSpeaker.setAlpha(1f);
+            }
+            bannerHideHandler.postDelayed(bannerHideRunnable, 2000);
+        });
+    }
+}
+
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
