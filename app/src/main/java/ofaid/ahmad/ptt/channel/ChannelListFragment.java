@@ -111,6 +111,18 @@ public class ChannelListFragment extends HumlaServiceFragment
     private boolean mVisualizerBerjalan = false;
     private int mVisualizerTingkat = 0;
 
+    private int getSesiSaya() {
+        try {
+            IHumlaSession sesi = getService() != null ? getService().HumlaSession() : null;
+            if (sesi != null && sesi.getSessionUser() != null) {
+                return sesi.getSessionUser().getSession();
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "Tidak dapat ambil sesi saya");
+        }
+        return -1;
+    }
+
     private void mulaiVisualizer() {
         if (mVisualizerBerjalan) return;
         mVisualizerBerjalan = true;
@@ -152,6 +164,8 @@ public class ChannelListFragment extends HumlaServiceFragment
         if (mVisualizerStatus != null) {
             mVisualizerStatus.setText("Siap");
         }
+        if (mVisSender != null) mVisSender.clearValues();
+        if (mVisReceiver != null) mVisReceiver.clearValues();
     }
 
     private final Runnable mVisualizerTugas = new Runnable() {
@@ -469,6 +483,8 @@ public class ChannelListFragment extends HumlaServiceFragment
             
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
+                    boolean sayaBicara = user.getSession() == getSesiSaya();
+                    
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
                     if (!displayName.equals(currentSpeakerName)) {
@@ -482,7 +498,12 @@ public class ChannelListFragment extends HumlaServiceFragment
                     }
                     bannerHideHandler.postDelayed(bannerHideRunnable, 2000);
                     
-                    mulaiVisualizer();
+                    // ==== KENDALIKAN VISUALIZER HANYA UNTUK SAYA ====
+                    if (sayaBicara) {
+                        mulaiVisualizer();
+                    } else {
+                        hentikanVisualizer();
+                    }
                 });
             }
         }
