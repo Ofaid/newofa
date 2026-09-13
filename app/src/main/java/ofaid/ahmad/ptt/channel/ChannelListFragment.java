@@ -86,8 +86,8 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     // === VISUALIZER ===
     private static final int JUMLAH_BATANG_VISUAL = 16;
-    private static final int WARNA_KIRIM = 0xFF4CAF50;   // Hijau = kamu bicara
-    private static final int WARNA_TERIMA = 0xFF2196F3;  // Biru = mereka bicara
+    private static final int WARNA_KIRIM = 0xFF4CAF50;
+    private static final int WARNA_TERIMA = 0xFF2196F3;
     private static final int SAMPLING_RATE = 44100;
     private static final int CHANNEL_CONFIG = AudioFormat.CHANNEL_IN_MONO;
     private static final int AUDIO_FORMAT = AudioFormat.ENCODING_PCM_16BIT;
@@ -116,7 +116,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                     bannerActiveSpeaker.setVisibility(View.GONE);
                     tvSpeakerName.setText("");
                     currentSpeakerName = null;
-                    // Sembunyikan visualizer saat diam
                     if (mVisualizerPanel != null) {
                         mVisualizerPanel.setVisibility(View.GONE);
                     }
@@ -213,7 +212,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         if (mVisKirim == null || mVisualBerjalan) return;
         mVisualBerjalan = true;
         
-        // Tampilkan panel visualizer
         if (mVisualizerPanel != null) {
             mVisualizerPanel.setVisibility(View.VISIBLE);
         }
@@ -304,8 +302,6 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     private void perbaruiVisualTerima(IUser user) {
         if (mVisTerima == null) return;
-        // Nanti disambungkan ke data suara masuk
-        // Sementara tampilkan indikator
         int[] tingkat = new int[JUMLAH_BATANG_VISUAL];
         for (int i = 0; i < tingkat.length; i++) {
             tingkat[i] = (int)(Math.random() * 40 + 10);
@@ -314,7 +310,7 @@ public class ChannelListFragment extends HumlaServiceFragment
     }
     // ==========================================
 
-    // ========== HENTIKAN BACA LOKASI — DIPERBAIKI ✅ ==========
+    // ========== HENTIKAN BACA LOKASI ==========
     private void hentikanBacaLokasi() {
         if (mLocationManager != null) {
             mLocationManager.removeUpdates(lokasiPendengar);
@@ -540,19 +536,22 @@ public class ChannelListFragment extends HumlaServiceFragment
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
                     
-                    // === VISUALIZER KIRIM/TERIMA ===
+                    // === VISUALIZER — DIPERBAIKI ✅ ===
                     try {
                         int selfSession = getService().HumlaSession().getSessionId();
+                        // Pakai angka langsung: 0 = PASSIVE, 1 = TALKING
+                        int state = user.getTalkState();
+                        
                         if (user.getSession() == selfSession) {
-                            // Saya yang bicara → mulai visualizer kirim
-                            if (user.getTalkState() != IUser.TalkState.PASSIVE) {
+                            // Saya yang bicara
+                            if (state != 0) {
                                 mulaiVisualizerKirim();
                             } else {
                                 hentikanVisualizerKirim();
                             }
                         } else {
-                            // Orang lain bicara → perbarui visualizer terima
-                            if (user.getTalkState() != IUser.TalkState.PASSIVE) {
+                            // Orang lain bicara
+                            if (state != 0) {
                                 if (mVisualizerPanel != null) {
                                     mVisualizerPanel.setVisibility(View.VISIBLE);
                                 }
@@ -562,7 +561,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                     } catch (Exception e) {
                         Log.d(TAG, "Cek sesi visualizer gagal", e);
                     }
-                    // ==============================
+                    // ================================
                     
                     if (!displayName.equals(currentSpeakerName)) {
                         currentSpeakerName = displayName;
@@ -625,7 +624,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
         
-        // === VISUALIZER — HUBUNGKAN ID ===
         mVisualizerPanel = view.findViewById(R.id.visualizerPanel);
         mVisKirim = view.findViewById(R.id.vis_sender);
         mVisTerima = view.findViewById(R.id.vis_receiver);
@@ -634,7 +632,6 @@ public class ChannelListFragment extends HumlaServiceFragment
             aturGrafik(mVisKirim, WARNA_KIRIM);
             aturGrafik(mVisTerima, WARNA_TERIMA);
         }
-        // =================================
         
         return view;
     }
