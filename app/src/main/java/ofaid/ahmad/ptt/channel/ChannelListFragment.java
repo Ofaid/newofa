@@ -409,11 +409,14 @@ public class ChannelListFragment extends HumlaServiceFragment
                     String displayName = user.getName();
                     try {
                         int selfSession = getService().HumlaSession().getSessionId();
-                        if (user.getSession() == selfSession) {  
-                         if (user.getTalkState() != 0) mulaiVisualizerKirim();
-                            else hentikanVisualizerKirim();
+                        if (user.getSession() == selfSession) {
+                            if (user.isTalking()) {
+                                mulaiVisualizerKirim();
+                            } else {
+                                hentikanVisualizerKirim();
+                            }
                         } else {
-                      if (user.getTalkState() != 0 && mVisualizerPanel != null) {
+                            if (user.isTalking() && mVisualizerPanel != null) {
                                 mVisualizerPanel.setVisibility(View.VISIBLE);
                                 perbaruiVisualTerima(user);
                             }
