@@ -112,7 +112,7 @@ public class ChannelListFragment extends HumlaServiceFragment
     // ==================================================
     // ==== PENAMBAHAN BARU — VISUALIZER SUARA ====
     // ==================================================
-    private View mVisualizerContainer;
+        private View mVisualizerContainer;
     private TextView mVisualizerStatus;
     private Handler mVisualizerHandler = new Handler(Looper.getMainLooper());
     private boolean mVisualizerBerjalan = false;
@@ -121,17 +121,23 @@ public class ChannelListFragment extends HumlaServiceFragment
     private void mulaiVisualizer() {
         if (mVisualizerBerjalan) return;
         mVisualizerBerjalan = true;
+        // ✅ TAMPILKAN SAAT MULAI BICARA
+        if (mVisualizerContainer != null) {
+            mVisualizerContainer.setVisibility(View.VISIBLE);
+            mVisualizerContainer.setAlpha(1f);
+        }
         mVisualizerHandler.postDelayed(mVisualizerTugas, 100);
     }
 
     private void hentikanVisualizer() {
         mVisualizerBerjalan = false;
         mVisualizerHandler.removeCallbacks(mVisualizerTugas);
+        // ✅ SEMBUNYIKAN SAAT SELESAI
+        if (mVisualizerContainer != null) {
+            mVisualizerContainer.setVisibility(View.GONE);
+        }
         if (mVisualizerStatus != null) {
             mVisualizerStatus.setText("Siap");
-        }
-        if (mVisualizerContainer != null) {
-            mVisualizerContainer.setAlpha(0.3f);
         }
     }
 
@@ -151,6 +157,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             mVisualizerHandler.postDelayed(this, 150);
         }
     };
+
 
     // ==================================================
     // ==== PENAMBAHAN BARU — STATUS & ID OFA ====
