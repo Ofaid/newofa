@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- ✅ BANNER — TETAP DI ATAS, TIDAK BERGERAK! -->
+    <!-- ✅ BANNER PEMBICARA AKTIF — TINGGI TETAP, TIDAK DORONG! -->
     <FrameLayout
         android:id="@+id/bannerActiveSpeaker"
         android:layout_width="match_parent"
@@ -71,7 +71,7 @@
             android:layout_marginStart="4dp"/>
     </LinearLayout>
 
-    <!-- ✅ DAFTAR PENGGUNA — TURUN SECUKUPNYA, TIDAK TERTUTUP! -->
+    <!-- ✅ DAFTAR PENGGUNA — PADAT TEPAT, TIDAK TERTUTUP! -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/channelUsers"
         android:layout_width="match_parent"
