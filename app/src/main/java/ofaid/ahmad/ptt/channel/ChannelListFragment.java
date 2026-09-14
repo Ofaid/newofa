@@ -221,7 +221,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-    // ========== BACA NAMA LOKASI & KIRIM KE SERVER ==========
+     // ========== BACA NAMA LOKASI & KIRIM KE SERVER ==========
     private void bacaNamaLokasi(Location lokasi) {
         if (getContext() == null) return;
         android.location.Geocoder geocoder = new android.location.Geocoder(requireContext());
@@ -231,11 +231,23 @@ public class ChannelListFragment extends HumlaServiceFragment
             if (daftarAlamat != null && !daftarAlamat.isEmpty()) {
                 android.location.Address alamat = daftarAlamat.get(0);
                 StringBuilder sb = new StringBuilder();
-                if (alamat.getSubLocality() != null) sb.append(alamat.getSubLocality()).append(", ");
-                if (alamat.getLocality() != null) sb.append(alamat.getLocality()).append(", ");
-                if (alamat.getSubAdminArea() != null) sb.append(alamat.getSubAdminArea()).append(", ");
-                if (alamat.getAdminArea() != null) sb.append(alamat.getAdminArea());
-                lokasiTerbaca = "📍 " + sb.toString().trim().replaceAll(", $", "");
+                
+                // ✅ FORMAT PENDEK — TITIK PEMISAH, TANPA KATA TAMBAHAN
+                String desa = alamat.getSubLocality();
+                String kec  = alamat.getLocality();
+                String kab  = alamat.getSubAdminArea();
+                String prov = alamat.getAdminArea();
+                
+                if (desa != null && !desa.trim().isEmpty())
+                    sb.append(desa.trim()).append(". ");
+                if (kec != null && !kec.trim().isEmpty())
+                    sb.append(kec.trim()).append(". ");
+                else if (kab != null && !kab.trim().isEmpty())
+                    sb.append(kab.trim()).append(". ");
+                if (prov != null && !prov.trim().isEmpty())
+                    sb.append(prov.trim());
+                
+                lokasiTerbaca = "📍 " + sb.toString().trim().replaceAll("\\. $", "");
                 Log.i(TAG, "✅ Lokasi: " + lokasiTerbaca);
                 kirimLokasiKeServer(lokasiTerbaca);
             } else {
@@ -278,7 +290,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             Log.e(TAG, "Gagal kirim lokasi", e);
         }
     }
-
+/*=========================*/
     private final IHumlaObserver mServiceObserver = new HumlaObserver() {
         @Override
         public void onDisconnected(HumlaException e) {
