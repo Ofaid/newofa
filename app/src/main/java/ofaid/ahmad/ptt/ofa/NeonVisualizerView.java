@@ -17,8 +17,8 @@ public class NeonVisualizerView extends View {
 
     public NeonVisualizerView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        // 💚 HIJAU TUA MENYALA + EFEK GLOW
-        neonPaint.setColor(Color.parseColor("#009933"));
+        // 💚 HIJAU MENYALA — terlihat di latar apapun
+        neonPaint.setColor(Color.parseColor("#00FF41"));
         neonPaint.setStyle(Paint.Style.FILL);
         neonPaint.setAntiAlias(true);
         neonPaint.setMaskFilter(new BlurMaskFilter(10, BlurMaskFilter.Blur.OUTER));
@@ -28,12 +28,13 @@ public class NeonVisualizerView extends View {
         }
     }
 
+    // Sumber suara: kita sendiri atau teman
     public void setAudioLevel(float normalizedLevel) {
-        // Geser ke KIRI — data baru masuk di KANAN
-        for (int i = 0; i < BARS_COUNT - 1; i++) {
-            barLevels[i] = barLevels[i + 1];
+        // Masuk dari KIRI → geser ke KANAN
+        for (int i = BARS_COUNT - 1; i > 0; i--) {
+            barLevels[i] = barLevels[i - 1];
         }
-        barLevels[BARS_COUNT - 1] = normalizedLevel;
+        barLevels[0] = normalizedLevel; // Data baru di KIRI
         invalidate();
     }
 
@@ -46,16 +47,13 @@ public class NeonVisualizerView extends View {
         float totalGapWidth = (BARS_COUNT - 1) * gapRatio;
         barWidth = viewWidth / (BARS_COUNT + totalGapWidth);
 
-        // ✅ DIBALIK: Gambar dari KIRI ke KANAN + turun dari ATAS ke BAWAH
+        // Turun dari ATAS, KIRI → KANAN
         for (int i = 0; i < BARS_COUNT; i++) {
-            // Indeks dibalik — yang baru masuk tampil di KIRI
-            int idx = BARS_COUNT - 1 - i;
-            float level = barLevels[idx];
+            float level = barLevels[i];
             float barHeight = viewHeight * level;
 
             float left = i * (barWidth + (barWidth * gapRatio));
             float right = left + barWidth;
-            // ✅ Batang turun dari ATAS, bukan naik dari bawah
             float top = 0;
             float bottom = barHeight;
 
