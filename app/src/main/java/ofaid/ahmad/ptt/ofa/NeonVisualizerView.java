@@ -9,7 +9,7 @@ import android.util.AttributeSet;
 import android.view.View;
 
 public class NeonVisualizerView extends View {
-    private static final int BARS_COUNT = 16;
+    private static final int BARS_COUNT = 10;
     private final Paint neonPaint = new Paint();
     private float[] barLevels = new float[BARS_COUNT];
     private float barWidth;
