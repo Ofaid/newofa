@@ -60,6 +60,7 @@ import ofaid.ahmad.ptt.Settings;
 import ofaid.ahmad.ptt.db.DatabaseProvider;
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
+import ofaid.ahmad.ptt.ofa.NeonVisualizerView;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnChannelClickListener;
@@ -91,6 +92,10 @@ public class ChannelListFragment extends HumlaServiceFragment
                 .start();
         }
     };
+
+    // ✅ === VISUALIZER MICROFON ===
+    private NeonVisualizerView mVisualNeon;
+    private BroadcastReceiver mPenerimaLevel;
 
     // --- LOKASI OTOMATIS ---
     private LocationManager mLocationManager;
@@ -140,7 +145,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
     }
 
-    // ========== HENTIKAN BACA LOKASI — DIPERBAIKI ✅ ==========
+    // ========== HENTIKAN BACA LOKASI ==========
     private void hentikanBacaLokasi() {
         if (mLocationManager != null) {
             mLocationManager.removeUpdates(lokasiPendengar);
@@ -244,9 +249,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-    // =============================================
-    // ✅ KIRIM LOKASI KE SERVER — DIPERBAIKI!
-    // =============================================
     private void kirimLokasiKeServer(String teksLokasi) {
         if (getService() == null || !getService().isConnected()) {
             Log.w(TAG, "Belum terhubung — lokasi belum dikirim");
@@ -257,7 +259,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             IUser saya = sesi.getSessionUser();
             if (saya == null) return;
             
-            int sesiSaya = saya.getSession(); // ✅ ambil nomor sesi diri sendiri
+            int sesiSaya = saya.getSession();
             String keteranganLama = saya.getComment();
             String keteranganBaru;
             
@@ -269,7 +271,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 keteranganBaru = keteranganLama + "\n" + teksLokasi;
             }
             
-            sesi.setUserComment(sesiSaya, keteranganBaru); // ✅ SESUAI METODE ASLI!
+            sesi.setUserComment(sesiSaya, keteranganBaru);
             Log.i(TAG, "✅ Lokasi dikirim: " + teksLokasi);
             
         } catch (Exception e) {
@@ -277,7 +279,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-    // ========== PEMANTAU PERUBAHAN ==========
     private final IHumlaObserver mServiceObserver = new HumlaObserver() {
         @Override
         public void onDisconnected(HumlaException e) {
@@ -426,6 +427,10 @@ public class ChannelListFragment extends HumlaServiceFragment
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
+        
+        // ✅ HUBUNGKAN VISUALIZER
+        mVisualNeon = view.findViewById(R.id.neonVisualizer);
+        
         return view;
     }
 
@@ -433,6 +438,32 @@ public class ChannelListFragment extends HumlaServiceFragment
     public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
         mintaIzinLokasiOtomatis();
+        
+        // ✅ SIAPKAN PENERIMA DATA SUARA
+        mPenerimaLevel = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if ("ofaid.ahmad.ptt.LEVEL_SUARA".equals(intent.getAction())) {
+                    float level = intent.getFloatExtra("level", 0f);
+                    if (mVisualNeon != null) {
+                        mVisualNeon.setAudioLevel(level);
+                    }
+                }
+            }
+        };
+        
+        IntentFilter filter = new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA");
+        requireContext().registerReceiver(mPenerimaLevel, filter);
+    }
+
+    @Override
+    public void onDestroyView() {
+        super.onDestroyView();
+        // ✅ BERSIH-BERSIH PENERIMA
+        if (mPenerimaLevel != null) {
+            requireContext().unregisterReceiver(mPenerimaLevel);
+            mPenerimaLevel = null;
+        }
     }
 
     @Override
@@ -457,7 +488,7 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     @Override
     public void onDestroy() {
-        hentikanBacaLokasi(); // ✅ dipanggil dengan benar
+        hentikanBacaLokasi();
         if (getActivity() != null) {
             SharedPreferences preferences =
                     PreferenceManager.getDefaultSharedPreferences(getActivity());
