@@ -213,7 +213,8 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             if (uvh.mUserName != null) {
                 uvh.mUserName.setText(user.getName());
                 uvh.mUserName.setVisibility(View.VISIBLE);
-                uvh.mUserName.setTextColor(Color.BLACK);
+                uvh.mUserName.setTextColor(Color.parseColor("#006622"));
+
             }
 
             // =============================================
@@ -225,7 +226,10 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 int gabungan = Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000;
                 uvh.mUserIdView.setText("OFA-" + gabungan);
                 uvh.mUserIdView.setVisibility(View.VISIBLE);
-                uvh.mUserIdView.setTextColor(0xFF607D8B); // warna abu-biru lembut
+                /*uvh.mUserIdView.setTextColor(0xFF607D8B); // warna abu-biru lembut*/
+
+uvh.mUserIdView.setTextColor(0xFF00CCFF);
+
             }
 
             // =============================================
@@ -428,7 +432,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                                     uvh.mUserStatusView.setText(status);
                                     if (status.contains("Sibuk") || status.contains("Jangan")) {
                                         uvh.mUserStatusView.setTextColor(0xFFFF5252);
-                                    } else if (status.contains("Siap") || status.contains("Tersedia")) {
+                                    } else if (status.contains("status") || status.contains("Next-Fiture")) {
                                         uvh.mUserStatusView.setTextColor(0xFF4CAF50);
                                     } else {
                                         uvh.mUserStatusView.setTextColor(0xFFBBBBBB);
