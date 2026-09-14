@@ -1,4 +1,4 @@
-/* Di Buat Oleh Ofaid/Ahmad 12-9-2026 */
+/* Di Buat Oleh Ofaid/Ahmad 12-9-2026 — DIPERSINGKAT 14-9-2026 */
 package ofaid.ahmad.ptt.ofa;
 
 import android.Manifest;
@@ -17,11 +17,9 @@ public class OfaLokasi {
     public static String getLokasiDaerah(Context context) {
         if (context == null) return "Tidak diketahui";
 
-        // Cek izin lokasi
         boolean adaIzinKasar = ActivityCompat.checkSelfPermission(context,
                 Manifest.permission.ACCESS_COARSE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED;
-        
         boolean adaIzinHalus = ActivityCompat.checkSelfPermission(context,
                 Manifest.permission.ACCESS_FINE_LOCATION)
                 == PackageManager.PERMISSION_GRANTED;
@@ -30,29 +28,21 @@ public class OfaLokasi {
             return "📍 Izinkan lokasi";
         }
 
-        // Ambil lokasi
         LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         Location lokasi = null;
 
-        // Coba GPS dulu — lebih akurat
         if (adaIzinHalus && lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             lokasi = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         }
-
-        // Kalau GPS tidak ada, pakai internet
         if (lokasi == null && lm.isProviderEnabled(LocationManager.NETWORK_PROVIDER)) {
             lokasi = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
         }
-
         if (lokasi == null) return "📍 Nyalakan lokasi";
 
-        // Ubah koordinat jadi nama tempat — FORMAT PENDEK
         try {
             Geocoder gcd = new Geocoder(context, new Locale("id", "ID"));
             List<Address> daftarAlamat = gcd.getFromLocation(
-                    lokasi.getLatitude(),
-                    lokasi.getLongitude(),
-                    1);
+                    lokasi.getLatitude(), lokasi.getLongitude(), 1);
 
             if (daftarAlamat == null || daftarAlamat.isEmpty())
                 return "📍 Tidak diketahui";
@@ -60,13 +50,12 @@ public class OfaLokasi {
             Address a = daftarAlamat.get(0);
             StringBuilder hasil = new StringBuilder();
 
-            // Ambil isinya SAJA — TANPA kata "Desa/Kecamatan/Kabupaten"
-            String desa = a.getSubLocality();    // Desa
-            String kec  = a.getLocality();        // Kecamatan / Kota
-            String kab  = a.getSubAdminArea();    // Kabupaten
-            String prov = a.getAdminArea();       // Provinsi
+            // ✅ HANYA NAMA TEMPAT — TANPA KATA "KECAMATAN/KABUPATEN"
+            String desa = a.getSubLocality();     // Penyabangan
+            String kec  = a.getLocality();         // Gerokgak
+            String kab  = a.getSubAdminArea();     // Buleleng
+            String prov = a.getAdminArea();        // Bali
 
-            // Susun pendek: Desa. Kec. Kab. Prov
             if (desa != null && !desa.trim().isEmpty())
                 hasil.append(desa.trim()).append(". ");
 
@@ -87,7 +76,6 @@ public class OfaLokasi {
         }
     }
 
-    // Tampil siap pakai
     public static String formatLokasiTampil(Context context) {
         return getLokasiDaerah(context);
     }
