@@ -31,7 +31,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="@drawable/bg_tombol_biru"
-            android:src="@android:drawable/ic_action_microphone"
+            android:src="@android:drawable/ic_action_microphone_dark"
             android:tint="#FFFFFF"
             android:contentDescription="Mikrofon" />
 
