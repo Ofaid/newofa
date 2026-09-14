@@ -503,7 +503,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             mPenerimaTemanBicara = null;
         }
     }
-
+}
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
@@ -741,3 +741,4 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 }
+
