@@ -352,16 +352,16 @@ public class ChannelListFragment extends HumlaServiceFragment
                 getActivity().supportInvalidateOptionsMenu();
             }
         }
-
-        @Override
+/*===================================*/
+            @Override
         public void onUserTalkStateUpdated(IUser user) {
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
             
+            // Kirim status bicara ke visualizer
             if (getService() != null && getService().isConnected()
-             && user.getTalkState() != TalkState.PASSIVE
- {
+                && user.getTalkState() != TalkState.PASSIVE) {
                 try {
                     int sesiSaya = getService().HumlaSession().getSessionId();
                     boolean sayaYangBicara = (user.getSession() == sesiSaya);
@@ -375,6 +375,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                     Log.e(TAG, "Gagal kirim status bicara", e);
                 }
             }
+            /*==========================*/
 
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
@@ -393,7 +394,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 });
             }
         }
-    };
+
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
