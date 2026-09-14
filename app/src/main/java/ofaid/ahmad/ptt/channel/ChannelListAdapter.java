@@ -63,6 +63,15 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     private final FragmentManager mFragmentManager;
     private RecyclerView mAttachedRecyclerView;
 
+    // === LOKASI SAYA ===
+    private String lokasiSaya;
+
+    // === FUNGSI DIPANGGIL DARI ChannelListFragment ===
+    public void setLokasiSaya(String lokasiTeks) {
+        this.lokasiSaya = lokasiTeks;
+        notifyDataSetChanged();
+    }
+
     public ChannelListAdapter(Context context, IHumlaService service, MumlaDatabase database,
                               FragmentManager fragmentManager, boolean showPinnedOnly,
                               boolean showChannelUserCount) throws RemoteException {
@@ -208,28 +217,23 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             });
 
             // =============================================
-            // ✅ TAMPILKAN NAMA — DIPASTIKAN TERLIHAT!
+            // ✅ TAMPILKAN NAMA
             // =============================================
             if (uvh.mUserName != null) {
                 uvh.mUserName.setText(user.getName());
                 uvh.mUserName.setVisibility(View.VISIBLE);
                 uvh.mUserName.setTextColor(Color.parseColor("#FF9900"));
-
             }
 
             // =============================================
-            // ✅ TAMPILKAN ID PENGGUNA — DIKEMBALIKAN!
+            // ✅ TAMPILKAN ID PENGGUNA
             // =============================================
             if (uvh.mUserIdView != null) {
                 int uid = user.getUserId();
-                // Buat kode tampilan OFA
                 int gabungan = Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000;
                 uvh.mUserIdView.setText("OFA-" + gabungan);
                 uvh.mUserIdView.setVisibility(View.VISIBLE);
-                /*uvh.mUserIdView.setTextColor(0xFF607D8B); // warna abu-biru lembut*/
-
-uvh.mUserIdView.setTextColor(0xFF00CCFF);
-
+                uvh.mUserIdView.setTextColor(0xFF00CCFF);
             }
 
             // =============================================
@@ -249,37 +253,56 @@ uvh.mUserIdView.setTextColor(0xFF00CCFF);
             }
 
             // =============================================
-            // ✅ TAMPILKAN LOKASI GPS
+            // ✅ TAMPILKAN LOKASI — DARI KOMENTAR SERVER
             // =============================================
             if (uvh.mUserLokasi != null) {
-                String keteranganPengguna = user.getComment();
+                String keterangan = user.getComment();
                 String lokasiTampil = null;
 
-                if (keteranganPengguna != null && !keteranganPengguna.trim().isEmpty()) {
-                    String[] baris = keteranganPengguna.split("\\r?\\n");
+                if (keterangan != null && !keterangan.trim().isEmpty()) {
+                    String[] baris = keterangan.split("\\r?\\n");
                     for (String b : baris) {
-                        if (b.trim().startsWith("📍")) {
-                            lokasiTampil = b.trim();
+                        String bersih = b.trim();
+                        if (bersih.contains(". ") && !bersih.startsWith("📍")) {
+                            // Format: Kabupaten. Provinsi
+                            lokasiTampil = bersih;
+                            break;
+                        }
+                        if (bersih.startsWith("📍")) {
+                            lokasiTampil = bersih;
                             break;
                         }
                     }
                 }
 
+                // ✅ Khusus untuk diri sendiri — tampilkan langsung
+                int sesiSaya = -1;
+                try {
+                    if (mService != null && mService.isConnected()) {
+                        sesiSaya = mService.HumlaSession().getSessionId();
+                    }
+                } catch (Exception ignored) {}
+
+                if (lokasiSaya != null && user.getSession() == sesiSaya) {
+                    lokasiTampil = lokasiSaya;
+                }
+
                 if (lokasiTampil != null) {
                     uvh.mUserLokasi.setText(lokasiTampil);
-
-          uvh.mUserLokasi.setTextColor(0xFFFF9900);
-
- uvh.mUserLokasi.setVisibility(View.VISIBLE);
+                    uvh.mUserLokasi.setTextColor(0xFFFF9900);
+                    uvh.mUserLokasi.setVisibility(View.VISIBLE);
                 } else {
                     uvh.mUserLokasi.setVisibility(View.GONE);
                 }
             }
 
+            // =============================================
+            // ✅ TEBAL NAMA UNTUK DIRI SENDIRI
+            // =============================================
             final int typefaceStyle;
             int selfSession = -1;
             try {
-                if (mService != null) {
+                if (mService != null && mService.isConnected()) {
                     selfSession = mService.HumlaSession().getSessionId();
                 }
             } catch (HumlaDisconnectedException|IllegalStateException e) {
@@ -294,6 +317,10 @@ uvh.mUserIdView.setTextColor(0xFF00CCFF);
             if (uvh.mUserName != null) {
                 uvh.mUserName.setTypeface(null, typefaceStyle);
             }
+
+            // =============================================
+            // ✅ IKON BICARA
+            // =============================================
             uvh.mUserTalkHighlight.setImageDrawable(getTalkStateDrawable(user));
 
             DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
@@ -441,10 +468,6 @@ uvh.mUserIdView.setTextColor(0xFF00CCFF);
                                         uvh.mUserStatusView.setTextColor(0xFFBBBBBB);
                                     }
                                 }
-                                // ✅ Segarkan ID juga
-                                if (uvh.mUserIdView != null) {
-                                    // ID tetap, tidak perlu diubah
-                                }
                             }
                         }
                         return;
@@ -525,6 +548,9 @@ uvh.mUserIdView.setTextColor(0xFF00CCFF);
         }
     }
 
+    // =============================================
+    // ✅ PEMEGANG TAMPILAN
+    // =============================================
     private static class UserViewHolder extends RecyclerView.ViewHolder {
         public LinearLayout mUserHolder;
         public TextView mUserName;
