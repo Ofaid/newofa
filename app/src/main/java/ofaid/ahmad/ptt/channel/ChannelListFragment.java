@@ -93,9 +93,10 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     };
 
-    // ✅ === VISUALIZER MICROFON ===
+    // ✅ === VISUALIZER ===
     private NeonVisualizerView mVisualNeon;
-    private BroadcastReceiver mPenerimaLevel;
+    private BroadcastReceiver mPenerimaLevelSuara;
+    private BroadcastReceiver mPenerimaTemanBicara;
 
     // --- LOKASI OTOMATIS ---
     private LocationManager mLocationManager;
@@ -365,6 +366,24 @@ public class ChannelListFragment extends HumlaServiceFragment
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
+            
+            // ✅ KIRIM DATA SUARA TEMAN KE VISUALIZER
+            if (user.isTalking() && getService() != null && getService().isConnected()) {
+                try {
+                    int sesiSaya = getService().HumlaSession().getSessionId();
+                    boolean sayaYangBicara = (user.getSession() == sesiSaya);
+                    
+                    // Kirim level suara — nanti diganti nilai asli dari audio
+                    float level = 0.6f;
+                    Intent kirim = new Intent("ofaid.ahmad.ptt.LEVEL_TEMAN_BICARA");
+                    kirim.putExtra("level", level);
+                    kirim.putExtra("is_me", sayaYangBicara);
+                    requireContext().sendBroadcast(kirim);
+                } catch (Exception e) {
+                    Log.e(TAG, "Gagal kirim status bicara", e);
+                }
+            }
+
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
@@ -439,8 +458,8 @@ public class ChannelListFragment extends HumlaServiceFragment
         super.onViewCreated(view, savedInstanceState);
         mintaIzinLokasiOtomatis();
         
-        // ✅ SIAPKAN PENERIMA DATA SUARA
-        mPenerimaLevel = new BroadcastReceiver() {
+        // ✅ PENERIMA SUARA KITA SENDIRI
+        mPenerimaLevelSuara = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if ("ofaid.ahmad.ptt.LEVEL_SUARA".equals(intent.getAction())) {
@@ -451,18 +470,36 @@ public class ChannelListFragment extends HumlaServiceFragment
                 }
             }
         };
-        
-        IntentFilter filter = new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA");
-        requireContext().registerReceiver(mPenerimaLevel, filter);
+        IntentFilter filterKita = new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA");
+        requireContext().registerReceiver(mPenerimaLevelSuara, filterKita);
+
+        // ✅ PENERIMA SUARA TEMAN
+        mPenerimaTemanBicara = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if ("ofaid.ahmad.ptt.LEVEL_TEMAN_BICARA".equals(intent.getAction())) {
+                    float level = intent.getFloatExtra("level", 0f);
+                    if (mVisualNeon != null) {
+                        mVisualNeon.setAudioLevel(level);
+                    }
+                }
+            }
+        };
+        IntentFilter filterTeman = new IntentFilter("ofaid.ahmad.ptt.LEVEL_TEMAN_BICARA");
+        requireContext().registerReceiver(mPenerimaTemanBicara, filterTeman);
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
         // ✅ BERSIH-BERSIH PENERIMA
-        if (mPenerimaLevel != null) {
-            requireContext().unregisterReceiver(mPenerimaLevel);
-            mPenerimaLevel = null;
+        if (mPenerimaLevelSuara != null) {
+            requireContext().unregisterReceiver(mPenerimaLevelSuara);
+            mPenerimaLevelSuara = null;
+        }
+        if (mPenerimaTemanBicara != null) {
+            requireContext().unregisterReceiver(mPenerimaTemanBicara);
+            mPenerimaTemanBicara = null;
         }
     }
 
