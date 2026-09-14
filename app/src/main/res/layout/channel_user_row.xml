@@ -4,22 +4,27 @@
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="horizontal"
-    android:paddingVertical="10dp"
-    android:paddingHorizontal="12dp"
-    android:gravity="top"
+    android:paddingVertical="14dp"           <!-- ✅ Lebih lega atas-bawah -->
+    android:paddingStart="16dp"             <!-- ✅ JAUH dari tepi kiri -->
+    android:paddingLeft="16dp"
+    android:paddingEnd="16dp"               <!-- ✅ JAUH dari tepi kanan -->
+    android:paddingRight="16dp"
+    android:gravity="center_vertical"
     android:clickable="true"
     android:focusable="true">
 
-    <!-- Ikon Mikrofon / Avatar — Kiri -->
+    <!-- ✅ Ikon Mikrofon / Avatar — JAUH dari tepi kiri -->
     <ImageView
         android:id="@+id/user_row_talk_highlight"
         android:layout_width="40dp"
         android:layout_height="40dp"
+        android:layout_marginEnd="14dp"      <!-- ✅ Jarak ke teks lebih lega -->
+        android:layout_marginRight="14dp"
+        android:padding="4dp"                  <!-- ✅ Isi tidak nempel pinggir bulatan -->
         android:scaleType="fitCenter"
-        android:layout_marginEnd="12dp"
         android:background="@drawable/avatar_neon_frame"/>
 
-    <!-- Wadah Semua Teks — Kanan Ikon -->
+    <!-- Wadah Semua Teks -->
     <LinearLayout
         android:layout_width="0dp"
         android:layout_height="wrap_content"
@@ -42,7 +47,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="3dp"
             android:gravity="center_vertical">
 
             <TextView
@@ -59,7 +64,7 @@
                 android:text=" — "
                 android:textSize="12sp"
                 android:textColor="?android:attr/textColorSecondary"
-                android:layout_marginHorizontal="2dp" />
+                android:layout_marginHorizontal="3dp" />
 
             <TextView
                 android:id="@+id/user_row_status"
@@ -79,19 +84,20 @@
             android:layout_height="wrap_content"
             android:textSize="11sp"
             android:textColor="#666666"
-            android:layout_marginTop="2dp"
+            android:layout_marginTop="4dp"       <!-- ✅ Jarak ke atas lebih jelas -->
             android:visibility="gone" />
 
     </LinearLayout>
 
-    <!-- Tombol Menu — Pojok Kanan -->
+    <!-- ✅ Tombol Menu — JAUH dari tepi kanan! -->
     <ImageView
         android:id="@+id/user_row_more"
-        android:layout_width="24dp"
-        android:layout_height="24dp"
+        android:layout_width="30dp"            <!-- ✅ Sedikit lebih besar, mudah disentuh -->
+        android:layout_height="28dp"
+        android:layout_marginStart="12dp"      <!-- ✅ Jarak dari teks lebih lega -->
+        android:layout_marginLeft="12dp"
+        android:padding="6dp"                   <!-- ✅ Ruang sentuh lebih luas -->
         android:scaleType="centerInside"
-        android:padding="4dp"
-        android:layout_marginStart="8dp"
         android:src="@android:drawable/ic_menu_more"
         android:tint="?android:attr/textColorSecondary" />
 
