@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- ✅ DAFTAR CHANNEL — DI BAWAH, TETAP DIAM, TIDAK PERNAH BERGERAK! -->
+    <!-- ✅ DAFTAR CHANNEL — DI BAWAH, TETAP DIAM SELAMANYA! -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/channelUsers"
         android:layout_width="match_parent"
@@ -15,12 +15,21 @@
         android:choiceMode="singleChoice"
         android:clipToPadding="false"/>
 
-    <!-- ✅ BANNER — TUMPUK DI ATAS, TIDAK MENGGESER SIAPA PUN! -->
+    <!-- ✅ VISUALIZER — PALING ATAS, TETAP, TIDAK DORONG SIAPA PUN! -->
+    <ofaid.ahmad.ptt.ofa.NeonVisualizerView
+        android:id="@+id/neonVisualizer"
+        android:layout_width="match_parent"
+        android:layout_height="40dp"
+        android:layout_gravity="top"
+        android:background="#000000"/>
+
+    <!-- ✅ BANNER NAMA — DI BAWAH VISUALIZER, TETAP DI ATAS DAFTAR! -->
     <FrameLayout
         android:id="@+id/bannerActiveSpeaker"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
+        android:layout_marginTop="40dp"
         android:background="#D32F2F"
         android:paddingTop="4dp"
         android:paddingBottom="4dp"
@@ -38,13 +47,6 @@
             android:textStyle="bold"
             android:drawablePadding="8dp"
             android:gravity="center_vertical" />
-
-<ofaid.ahmad.ptt.ofa.NeonVisualizerView
-    android:id="@+id/neonVisualizer"
-    android:layout_width="match_parent"
-    android:layout_height="40dp"
-    android:layout_marginTop="4dp"/>
-
 
     </FrameLayout>
 
