@@ -141,6 +141,4 @@ dependencies {
 
     // ✅ GIF — SUDAH PASANG, TETAP AMAN
     implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.25'
-// Visualizer — Bagan batang bergerak
-     implementation 'com.github.PhilJay:MPAndroidChart:v3.1.0'
 }
