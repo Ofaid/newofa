@@ -47,6 +47,7 @@ import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import se.lublin.humla.model.TalkState;
 import se.lublin.humla.IHumlaService;
 import se.lublin.humla.IHumlaSession;
 import se.lublin.humla.model.IChannel;
@@ -361,19 +362,19 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         }
 
-        @Override
+            @Override
         public void onUserTalkStateUpdated(IUser user) {
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
             
-            // ✅ KIRIM DATA SUARA TEMAN KE VISUALIZER
-            if (user.isTalking() && getService() != null && getService().isConnected()) {
+            // ✅ KIRIM DATA SUARA TEMAN KE VISUALIZER — DIPERBAIKI
+            if (getService() != null && getService().isConnected()
+                && user.getTalkState() != TalkState.TALKING_NONE) {
                 try {
                     int sesiSaya = getService().HumlaSession().getSessionId();
                     boolean sayaYangBicara = (user.getSession() == sesiSaya);
                     
-                    // Kirim level suara — nanti diganti nilai asli dari audio
                     float level = 0.6f;
                     Intent kirim = new Intent("ofaid.ahmad.ptt.LEVEL_TEMAN_BICARA");
                     kirim.putExtra("level", level);
@@ -397,11 +398,11 @@ public class ChannelListFragment extends HumlaServiceFragment
                         bannerActiveSpeaker.setVisibility(View.VISIBLE);
                         bannerActiveSpeaker.setAlpha(1f);
                     }
-                    bannerHideHandler.postDelayed(bannerHideRunnable, 2000);
+                    bannerHideHandler.postDelayed(bannerHideRunnable, 500);
                 });
             }
         }
-    };
+
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
