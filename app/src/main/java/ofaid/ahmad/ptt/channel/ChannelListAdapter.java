@@ -268,7 +268,8 @@ uvh.mUserIdView.setTextColor(0xFF00CCFF);
                 if (lokasiTampil != null) {
                     /*uvh.mUserLokasi.setText(lokasiTampil);*/
 
-          uvh.mUserLokasi.setTextColor(0xFFFFF700);
+          uvh.mUserLokasi.setTextColor(0xFFFF9900);
+
  uvh.mUserLokasi.setVisibility(View.VISIBLE);
                 } else {
                     uvh.mUserLokasi.setVisibility(View.GONE);
