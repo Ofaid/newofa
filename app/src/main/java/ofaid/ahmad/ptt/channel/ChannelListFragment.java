@@ -59,8 +59,6 @@ import se.lublin.humla.util.IHumlaObserver;
 import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.Settings;
 import ofaid.ahmad.ptt.db.DatabaseProvider;
-import ofaid.ahmad.ptt.ofa.OfaIdentity;
-import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.ofa.NeonVisualizerView;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 import ofaid.ahmad.ptt.service.MumlaService;
@@ -126,15 +124,13 @@ public class ChannelListFragment extends HumlaServiceFragment
     private void kirimStatusPengguna(String statusTeks) {
         String idOFA = getMyOfaId();
         if (idOFA == null || idOFA.trim().isEmpty()) {
-            Log.w(TAG, "ID OFA belum tersedia — tidak bisa kirim status");
+            Log.w(TAG, "ID OFA belum tersedia");
             return;
         }
         IHumlaService service = getService();
         if (service instanceof MumlaService) {
             ((MumlaService) service).kirimStatusDenganId(idOFA, statusTeks);
-            Log.i(TAG, "✅ Status dikirim: " + idOFA + " | " + statusTeks);
-        } else {
-            Log.w(TAG, "Belum terhubung ke layanan");
+            Log.i(TAG, "Status dikirim: " + idOFA + " | " + statusTeks);
         }
     }
 
@@ -156,7 +152,6 @@ public class ChannelListFragment extends HumlaServiceFragment
             ContextCompat.checkSelfPermission(requireContext(),
                 Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED;
         if (sudahIzin) {
-            Log.i(TAG, "✅ Izin lokasi sudah ada — mulai baca lokasi");
             mulaiBacaLokasi();
             return;
         }
@@ -175,10 +170,8 @@ public class ChannelListFragment extends HumlaServiceFragment
         super.onRequestPermissionsResult(kode, izin, hasil);
         if (kode == KODE_IZIN_LOKASI) {
             if (hasil.length > 0 && hasil[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.i(TAG, "✅ Izin lokasi DITERIMA");
                 mulaiBacaLokasi();
             } else {
-                Log.i(TAG, "⚠️ Izin lokasi DITOLAK");
                 lokasiTerbaca = "📍 Izinkan lokasi agar terlihat teman-teman";
             }
         }
@@ -206,8 +199,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                 if (lokasiTerakhir == null && gpsNyala) lokasiTerakhir = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if (lokasiTerakhir != null) {
                     bacaNamaLokasi(lokasiTerakhir);
-                } else {
-                    lokasiTerbaca = "📍 Mendapatkan lokasi...";
                 }
             }
         } catch (SecurityException e) {
@@ -229,33 +220,26 @@ public class ChannelListFragment extends HumlaServiceFragment
                 if (alamat.getSubAdminArea() != null) sb.append(alamat.getSubAdminArea()).append(", ");
                 if (alamat.getAdminArea() != null) sb.append(alamat.getAdminArea());
                 lokasiTerbaca = "📍 " + sb.toString().trim().replaceAll(", $", "");
-                Log.i(TAG, "✅ Lokasi: " + lokasiTerbaca);
                 kirimLokasiKeServer(lokasiTerbaca);
             } else {
                 lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
                 kirimLokasiKeServer(lokasiTerbaca);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Gagal baca nama lokasi", e);
             lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
             kirimLokasiKeServer(lokasiTerbaca);
         }
     }
 
     private void kirimLokasiKeServer(String teksLokasi) {
-        if (getService() == null || !getService().isConnected()) {
-            Log.w(TAG, "Belum terhubung — lokasi belum dikirim");
-            return;
-        }
+        if (getService() == null || !getService().isConnected()) return;
         try {
             IHumlaSession sesi = getService().HumlaSession();
             IUser saya = sesi.getSessionUser();
             if (saya == null) return;
-            
             int sesiSaya = saya.getSession();
             String keteranganLama = saya.getComment();
             String keteranganBaru;
-            
             if (keteranganLama == null || keteranganLama.trim().isEmpty()) {
                 keteranganBaru = teksLokasi;
             } else if (keteranganLama.trim().startsWith("📍")) {
@@ -263,10 +247,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             } else {
                 keteranganBaru = keteranganLama + "\n" + teksLokasi;
             }
-            
             sesi.setUserComment(sesiSaya, keteranganBaru);
-            Log.i(TAG, "✅ Lokasi dikirim: " + teksLokasi);
-            
         } catch (Exception e) {
             Log.e(TAG, "Gagal kirim lokasi", e);
         }
@@ -289,7 +270,6 @@ public class ChannelListFragment extends HumlaServiceFragment
             try {
                 selfSession = getService().HumlaSession().getSessionId();
             } catch (HumlaDisconnectedException | IllegalStateException e) {
-                Log.d(TAG, "exception in onUserJoinedChannel: " + e);
                 return;
             }
             if (user.getSession() == selfSession) {
@@ -331,7 +311,6 @@ public class ChannelListFragment extends HumlaServiceFragment
 
         @Override
         public void onUserRemoved(IUser user, String reason) {
-            if (getService() == null || !getService().isConnected()) return;
             if (mChannelListAdapter != null) {
                 mChannelListAdapter.updateChannels();
                 mChannelListAdapter.notifyDataSetChanged();
@@ -352,20 +331,18 @@ public class ChannelListFragment extends HumlaServiceFragment
                 getActivity().supportInvalidateOptionsMenu();
             }
         }
-/*===================================*/
-            @Override
+
+        @Override
         public void onUserTalkStateUpdated(IUser user) {
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
             
-            // Kirim status bicara ke visualizer
             if (getService() != null && getService().isConnected()
                 && user.getTalkState() != TalkState.PASSIVE) {
                 try {
                     int sesiSaya = getService().HumlaSession().getSessionId();
                     boolean sayaYangBicara = (user.getSession() == sesiSaya);
-                    
                     float level = 0.6f;
                     Intent kirim = new Intent("ofaid.ahmad.ptt.LEVEL_TEMAN_BICARA");
                     kirim.putExtra("level", level);
@@ -375,7 +352,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                     Log.e(TAG, "Gagal kirim status bicara", e);
                 }
             }
-            /*==========================*/
 
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
@@ -394,7 +370,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 });
             }
         }
-
+    };
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
@@ -417,14 +393,12 @@ public class ChannelListFragment extends HumlaServiceFragment
         try {
             mTargetProvider = (ChatTargetProvider) getParentFragment();
         } catch (ClassCastException e) {
-            throw new ClassCastException(getParentFragment().toString() +
-                    " must implement ChatTargetProvider");
+            throw new ClassCastException(getParentFragment().toString() + " must implement ChatTargetProvider");
         }
         try {
             mDatabaseProvider = (DatabaseProvider) activity;
         } catch (ClassCastException e) {
-            throw new ClassCastException(activity.toString() +
-                    " must implement DatabaseProvider");
+            throw new ClassCastException(activity.toString() + " must implement DatabaseProvider");
         }
         mSettings = Settings.getInstance(activity);
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(activity);
@@ -432,8 +406,7 @@ public class ChannelListFragment extends HumlaServiceFragment
     }
 
     @Override
-    public View onCreateView(LayoutInflater inflater, ViewGroup container,
-                             Bundle savedInstanceState) {
+    public View onCreateView(LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.fragment_channel_list, container, false);
         mChannelView = view.findViewById(R.id.channelUsers);
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
@@ -459,8 +432,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 }
             }
         };
-        IntentFilter filterKita = new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA");
-        requireContext().registerReceiver(mPenerimaLevelSuara, filterKita);
+        requireContext().registerReceiver(mPenerimaLevelSuara, new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA"));
 
         mPenerimaTemanBicara = new BroadcastReceiver() {
             @Override
@@ -473,8 +445,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 }
             }
         };
-        IntentFilter filterTeman = new IntentFilter("ofaid.ahmad.ptt.LEVEL_TEMAN_BICARA");
-        requireContext().registerReceiver(mPenerimaTemanBicara, filterTeman);
+        requireContext().registerReceiver(mPenerimaTemanBicara, new IntentFilter("ofaid.ahmad.ptt.LEVEL_TEMAN_BICARA"));
     }
 
     @Override
@@ -514,8 +485,7 @@ public class ChannelListFragment extends HumlaServiceFragment
     public void onDestroy() {
         hentikanBacaLokasi();
         if (getActivity() != null) {
-            SharedPreferences preferences =
-                    PreferenceManager.getDefaultSharedPreferences(getActivity());
+            SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(getActivity());
             preferences.unregisterOnSharedPreferenceChangeListener(this);
         }
         super.onDestroy();
@@ -557,11 +527,9 @@ public class ChannelListFragment extends HumlaServiceFragment
             } catch (Exception ignored) {}
             if (self != null) {
                 muteItem.setIcon(self.isSelfMuted() ?
-                        R.drawable.ic_action_microphone_muted :
-                        R.drawable.ic_action_microphone);
+                        R.drawable.ic_action_microphone_muted : R.drawable.ic_action_microphone);
                 deafenItem.setIcon(self.isSelfDeafened() ?
-                        R.drawable.ic_action_audio_muted :
-                        R.drawable.ic_action_audio);
+                        R.drawable.ic_action_audio_muted : R.drawable.ic_action_audio);
                 if (muteItem.getIcon() != null) {
                     muteItem.getIcon().mutate().setColorFilter(foregroundColor, PorterDuff.Mode.MULTIPLY);
                 }
@@ -581,8 +549,7 @@ public class ChannelListFragment extends HumlaServiceFragment
     public void onCreateOptionsMenu(Menu menu, MenuInflater inflater) {
         inflater.inflate(R.menu.fragment_channel_list, menu);
         MenuItem searchItem = menu.findItem(R.id.menu_search);
-        SearchManager searchManager = (SearchManager)
-                requireActivity().getSystemService(Context.SEARCH_SERVICE);
+        SearchManager searchManager = (SearchManager) requireActivity().getSystemService(Context.SEARCH_SERVICE);
         SearchView searchView = (SearchView) MenuItemCompat.getActionView(searchItem);
         searchView.setSearchableInfo(searchManager.getSearchableInfo(requireActivity().getComponentName()));
         searchView.setOnSuggestionListener(new SearchView.OnSuggestionListener() {
@@ -641,8 +608,6 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
             requireActivity().supportInvalidateOptionsMenu();
             return true;
-        } else if (itemId == R.id.menu_search) {
-            return false;
         } else if (itemId == R.id.menu_bluetooth) {
             item.setChecked(!item.isChecked());
             if (item.isChecked()) session.enableBluetoothSco();
@@ -654,11 +619,8 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     private void setupChannelList() throws RemoteException {
         mChannelListAdapter = new ChannelListAdapter(
-                requireActivity(),
-                getService(),
-                mDatabaseProvider.getDatabase(),
-                getChildFragmentManager(),
-                isShowingPinnedChannels(),
+                requireActivity(), getService(), mDatabaseProvider.getDatabase(),
+                getChildFragmentManager(), isShowingPinnedChannels(),
                 mSettings.shouldShowUserCount());
         mChannelListAdapter.attachRecyclerView(mChannelView);
         mChannelListAdapter.setOnChannelClickListener(this);
@@ -689,8 +651,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             mActionMode.finish();
         } else {
             ActionMode.Callback cb = new ChatTargetActionModeCallback(
-                    mTargetProvider,
-                    new ChatTargetProvider.ChatTarget(channel)) {
+                    mTargetProvider, new ChatTargetProvider.ChatTarget(channel)) {
                 @Override
                 public void onDestroyActionMode(ActionMode actionMode) {
                     super.onDestroyActionMode(actionMode);
@@ -708,8 +669,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             mActionMode.finish();
         } else {
             ActionMode.Callback cb = new ChatTargetActionModeCallback(
-                    mTargetProvider,
-                    new ChatTargetProvider.ChatTarget(user)) {
+                    mTargetProvider, new ChatTargetProvider.ChatTarget(user)) {
                 @Override
                 public void onDestroyActionMode(ActionMode actionMode) {
                     super.onDestroyActionMode(actionMode);
