@@ -213,7 +213,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             if (uvh.mUserName != null) {
                 uvh.mUserName.setText(user.getName());
                 uvh.mUserName.setVisibility(View.VISIBLE);
-                uvh.mUserName.setTextColor(Color.parseColor("#006622"));
+                uvh.mUserName.setTextColor(Color.parseColor("#7FFF00"));
 
             }
 
@@ -266,8 +266,10 @@ uvh.mUserIdView.setTextColor(0xFF00CCFF);
                 }
 
                 if (lokasiTampil != null) {
-                    uvh.mUserLokasi.setText(lokasiTampil);
-                    uvh.mUserLokasi.setVisibility(View.VISIBLE);
+                    /*uvh.mUserLokasi.setText(lokasiTampil);*/
+
+          uvh.mUserLokasi.setTextColor(0xFFFFF700);
+ uvh.mUserLokasi.setVisibility(View.VISIBLE);
                 } else {
                     uvh.mUserLokasi.setVisibility(View.GONE);
                 }
