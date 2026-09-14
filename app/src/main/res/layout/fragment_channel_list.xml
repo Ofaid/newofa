@@ -25,16 +25,15 @@
         android:paddingHorizontal="8dp"
         android:paddingTop="4dp">
 
-        <!-- 🔘 TOMBOL KIRI -->
-        <ImageButton
-            android:id="@+id/btnKiri"
-            android:layout_width="40dp"
-            android:layout_height="40dp"
-            android:background="@drawable/bg_tombol_biru"
-            android:src="@android:drawable/ic_action_microphone_dark"
-            android:tint="#FFFFFF"
-            android:contentDescription="Mikrofon" />
-
+      <!-- 🔘 TOMBOL KIRI → IKON DARI PROYEKMU SENDIRI -->
+ <ImageButton
+     android:id="@+id/btnKiri"
+     android:layout_width="40dp"
+     android:layout_height="40dp"
+     android:background="@drawable/bg_tombol_biru"
+     android:src="@drawable/ic_action_microphone"
+android:tint="#FFFFFF"
+     android:contentDescription="Mikrofon" />
         <!-- 📊 VISUALIZER DI TENGAH -->
         <ofaid.ahmad.ptt.ofa.NeonVisualizerView
             android:id="@+id/neonVisualizer"
