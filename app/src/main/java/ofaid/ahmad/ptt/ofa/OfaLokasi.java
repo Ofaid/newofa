@@ -1,4 +1,4 @@
-/* Di Buat Oleh Ofaid/Ahmad 12-9-2026 */
+/* Di Buat Oleh Ofaid/Ahmad 14-9-2026 */
 package ofaid.ahmad.ptt.ofa;
 
 import android.Manifest;
@@ -15,7 +15,7 @@ import java.util.Locale;
 public class OfaLokasi {
 
     public static String getLokasiDaerah(Context context) {
-        if (context == null) return "Tidak diketahui";
+        if (context == null) return null;
 
         // Cek izin lokasi
         boolean adaIzinKasar = ActivityCompat.checkSelfPermission(context,
@@ -27,14 +27,14 @@ public class OfaLokasi {
                 == PackageManager.PERMISSION_GRANTED;
 
         if (!adaIzinKasar && !adaIzinHalus) {
-            return "📍 Izinkan lokasi";
+            return null; // belum izin = tidak tampil apa-apa
         }
 
         // Ambil lokasi
         LocationManager lm = (LocationManager) context.getSystemService(Context.LOCATION_SERVICE);
         Location lokasi = null;
 
-        // Coba GPS dulu — lebih akurat
+        // Coba GPS dulu
         if (adaIzinHalus && lm.isProviderEnabled(LocationManager.GPS_PROVIDER)) {
             lokasi = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER);
         }
@@ -44,9 +44,9 @@ public class OfaLokasi {
             lokasi = lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER);
         }
 
-        if (lokasi == null) return "📍 Nyalakan lokasi";
+        if (lokasi == null) return null;
 
-        // Ubah koordinat jadi nama tempat
+        // Ubah koordinat jadi nama tempat — FORMAT PENDEK
         try {
             Geocoder gcd = new Geocoder(context, new Locale("id", "ID"));
             List<Address> daftarAlamat = gcd.getFromLocation(
@@ -55,39 +55,39 @@ public class OfaLokasi {
                     1);
 
             if (daftarAlamat == null || daftarAlamat.isEmpty())
-                return "📍 Tidak diketahui";
+                return null;
 
             Address a = daftarAlamat.get(0);
             StringBuilder hasil = new StringBuilder();
 
-            String desa = a.getSubLocality();   // Desa / Kelurahan
-            String kota = a.getLocality();       // Kota / Kabupaten
-            String kab  = a.getSubAdminArea();   // Cadangan kalau kota kosong
-            String prov = a.getAdminArea();      // Provinsi
+            // === FORMAT BARU: NAMA SAJA, DIPISAH TITIK ===
+            String desa = a.getSubLocality();    // Desa
+            String kec  = a.getLocality();        // Kecamatan
+            String kab  = a.getSubAdminArea();    // Kabupaten
+            String prov = a.getAdminArea();       // Provinsi
 
             if (desa != null && !desa.trim().isEmpty())
-                hasil.append(desa.trim()).append(", ");
+                hasil.append(desa.trim()).append(". ");
 
-            if (kota != null && !kota.trim().isEmpty())
-                hasil.append(kota.trim()).append(", ");
-            else if (kab != null && !kab.trim().isEmpty())
-                hasil.append(kab.trim()).append(", ");
+            if (kec != null && !kec.trim().isEmpty())
+                hasil.append(kec.trim()).append(". ");
+
+            if (kab != null && !kab.trim().isEmpty())
+                hasil.append(kab.trim()).append(". ");
 
             if (prov != null && !prov.trim().isEmpty())
                 hasil.append(prov.trim());
 
             if (hasil.length() == 0)
-                return "📍 Tidak diketahui";
+                return null;
 
-            return hasil.toString();
+            return hasil.toString().trim();
         } catch (Exception e) {
-            return "📍 Tidak dapat dibaca";
+            return null;
         }
     }
 
-    // Tampilkan siap pakai dengan ikon
     public static String formatLokasiTampil(Context context) {
-        String daerah = getLokasiDaerah(context);
-        return daerah;
+        return getLokasiDaerah(context);
     }
 }
