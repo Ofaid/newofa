@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- ✅ DAFTAR CHANNEL — DI BAWAH, TETAP DIAM SELAMANYA! -->
+    <!-- ✅ DAFTAR CHANNEL — DI BAWAH, TETAP DIAM! -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/channelUsers"
         android:layout_width="match_parent"
@@ -15,21 +15,54 @@
         android:choiceMode="singleChoice"
         android:clipToPadding="false"/>
 
-    <!-- ✅ VISUALIZER — PALING ATAS, TETAP, TIDAK DORONG SIAPA PUN! -->
-    <ofaid.ahmad.ptt.ofa.NeonVisualizerView
-        android:id="@+id/neonVisualizer"
+    <!-- ✅ BARIS ATAS: TOMBOL KIRI + VISUALIZER + TOMBOL KANAN -->
+    <LinearLayout
         android:layout_width="match_parent"
-        android:layout_height="40dp"
+        android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:background="#000000"/>
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:paddingHorizontal="8dp"
+        android:paddingTop="4dp">
 
-    <!-- ✅ BANNER NAMA — DI BAWAH VISUALIZER, TETAP DI ATAS DAFTAR! -->
+        <!-- 🔘 TOMBOL KIRI -->
+        <ImageButton
+            android:id="@+id/btnKiri"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_tombol_biru"
+            android:src="@android:drawable/ic_menu_microphone"
+            android:tint="#FFFFFF"
+            android:contentDescription="Mikrofon" />
+
+        <!-- 📊 VISUALIZER DI TENGAH -->
+        <ofaid.ahmad.ptt.ofa.NeonVisualizerView
+            android:id="@+id/neonVisualizer"
+            android:layout_width="0dp"
+            android:layout_height="40dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="8dp"
+            android:background="#000000"/>
+
+        <!-- 🔘 TOMBOL KANAN -->
+        <ImageButton
+            android:id="@+id/btnKanan"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_tombol_biru"
+            android:src="@android:drawable/ic_menu_preferences"
+            android:tint="#FFFFFF"
+            android:contentDescription="Pengaturan" />
+
+    </LinearLayout>
+
+    <!-- ✅ BANNER NAMA — DI BAWAH BARIS ATAS -->
     <FrameLayout
         android:id="@+id/bannerActiveSpeaker"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_gravity="top"
-        android:layout_marginTop="40dp"
+        android:layout_marginTop="52dp"
         android:background="#D32F2F"
         android:paddingTop="4dp"
         android:paddingBottom="4dp"
