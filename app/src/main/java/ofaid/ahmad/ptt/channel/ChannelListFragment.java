@@ -360,7 +360,8 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
             
             if (getService() != null && getService().isConnected()
-                && user.getTalkState() != TalkState.TALKING_NONE) {
+             && user.getTalkState() != TalkState.PASSIVE
+ {
                 try {
                     int sesiSaya = getService().HumlaSession().getSessionId();
                     boolean sayaYangBicara = (user.getSession() == sesiSaya);
