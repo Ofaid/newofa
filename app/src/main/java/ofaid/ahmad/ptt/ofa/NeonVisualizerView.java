@@ -5,7 +5,6 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.Paint;
-import android.graphics.BlurMaskFilter;
 import android.util.AttributeSet;
 import android.view.View;
 
@@ -16,18 +15,20 @@ public class NeonVisualizerView extends View {
     private float barWidth;
     private final float gapRatio = 0.15f;
     
-    // 🔧 SENSITIVITAS — naikkan nilai ini biar makin peka
-    private static final float FAKTOR_PENGKUAT = 2.5f;   // 2.5x lebih kuat
-    private static final float BATAS_TERENDAH = 0.08f;    // ambil suara kecil sekalipun
-    private static final float LANCAR = 0.7f;             // haluskan gerakan
+    // 🔧 SENSITIVITAS DINAJKAN — tangkap suara kecil sekalipun
+    private static final float FAKTOR_PENGKUAT = 4.0f;    // 4x lebih kuat
+    private static final float BATAS_TERENDAH = 0.03f;   // tangkap suara lembut
+    private static final float LANCAR = 0.75f;           // halus tapi cepat respons
 
     public NeonVisualizerView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        // 💚 putih MENYALA — terlihat di latar apapun
-        neonPaint.setColor(Color.parseColor("#FFFFFF"));
+        
+        // 💙 BIRU LAUT TEGAS — TIDAK BURAM, TIDAK BLUR
+        neonPaint.setColor(Color.parseColor("#00CCFF"));
         neonPaint.setStyle(Paint.Style.FILL);
         neonPaint.setAntiAlias(true);
-        neonPaint.setMaskFilter(new BlurMaskFilter(10, BlurMaskFilter.Blur.OUTER));
+        // ❌ HAPUS BlurMaskFilter — biar TEGAS & JELAS
+        // neonPaint.setMaskFilter(new BlurMaskFilter(10, BlurMaskFilter.Blur.OUTER));
 
         for (int i = 0; i < BARS_COUNT; i++) {
             barLevels[i] = 0f;
@@ -38,17 +39,17 @@ public class NeonVisualizerView extends View {
         // ✅ PERKUAT SUARA
         float levelTerkuat = normalizedLevel * FAKTOR_PENGKUAT;
         
-        // Jangan biarkan melebihi batas tertinggi
+        // Jangan melebihi batas
         if (levelTerkuat > 1.0f) levelTerkuat = 1.0f;
         
-        // Abaikan kalau terlalu kecil
+        // Hanya tampilkan jika melewati batas minimal
         if (levelTerkuat < BATAS_TERENDAH) {
             levelTerkuat = 0f;
         }
 
         // ✅ Geser: masuk dari KIRI → ke KANAN
         for (int i = BARS_COUNT - 1; i > 0; i--) {
-            barLevels[i] = barLevels[i - 1] * LANCAR; // turun perlahan
+            barLevels[i] = barLevels[i - 1] * LANCAR;
         }
         barLevels[0] = levelTerkuat;
         invalidate();
@@ -63,15 +64,15 @@ public class NeonVisualizerView extends View {
         float totalGapWidth = (BARS_COUNT - 1) * gapRatio;
         barWidth = viewWidth / (BARS_COUNT + totalGapWidth);
 
-        // ✅ Turun dari ATAS, KIRI → KANAN
+        // ✅ Batang naik dari BAWAH ke ATAS — terlihat jelas
         for (int i = 0; i < BARS_COUNT; i++) {
             float level = barLevels[i];
             float barHeight = viewHeight * level;
 
             float left = i * (barWidth + (barWidth * gapRatio));
             float right = left + barWidth;
-            float top = 0;
-            float bottom = barHeight;
+            float top = viewHeight - barHeight;  // naik dari bawah
+            float bottom = viewHeight;
 
             canvas.drawRect(left, top, right, bottom, neonPaint);
         }
