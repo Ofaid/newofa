@@ -221,45 +221,46 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-     // ========== BACA NAMA LOKASI & KIRIM KE SERVER ==========
+        // ========== LOKASI — HANYA KABUPATEN + PROVINSI SAJA ==========
+    // Desa, Kecamatan, nama kecil = SEMUA DIHAPUS — JAGA PRIVASI 🔒
     private void bacaNamaLokasi(Location lokasi) {
         if (getContext() == null) return;
         android.location.Geocoder geocoder = new android.location.Geocoder(requireContext());
         try {
             java.util.List<android.location.Address> daftarAlamat =
                 geocoder.getFromLocation(lokasi.getLatitude(), lokasi.getLongitude(), 1);
+            
             if (daftarAlamat != null && !daftarAlamat.isEmpty()) {
                 android.location.Address alamat = daftarAlamat.get(0);
                 StringBuilder sb = new StringBuilder();
                 
-                // ✅ FORMAT PENDEK — TITIK PEMISAH, TANPA KATA TAMBAHAN
-                String desa = alamat.getSubLocality();
-                String kec  = alamat.getLocality();
-                String kab  = alamat.getSubAdminArea();
-                String prov = alamat.getAdminArea();
+                // ✅ HANYA INI YANG DIAMBIL — TIDAK ADA YANG LAIN!
+                String kab  = alamat.getSubAdminArea();   // ← Kabupaten: Buleleng
+                String prov = alamat.getAdminArea();      // ← Provinsi: Bali
                 
-                if (desa != null && !desa.trim().isEmpty())
-                    sb.append(desa.trim()).append(". ");
-                if (kec != null && !kec.trim().isEmpty())
-                    sb.append(kec.trim()).append(". ");
-                else if (kab != null && !kab.trim().isEmpty())
-                    sb.append(kab.trim()).append(". ");
-                if (prov != null && !prov.trim().isEmpty())
+                // Susun: Kabupaten. Provinsi
+                if (kab != null && !kab.trim().isEmpty()) {
+                    sb.append(kab.trim());
+                }
+                if (prov != null && !prov.trim().isEmpty()) {
+                    if (sb.length() > 0) sb.append(". ");
                     sb.append(prov.trim());
+                }
                 
-                lokasiTerbaca = "📍 " + sb.toString().trim().replaceAll("\\. $", "");
+                lokasiTerbaca = sb.toString();
                 Log.i(TAG, "✅ Lokasi: " + lokasiTerbaca);
                 kirimLokasiKeServer(lokasiTerbaca);
             } else {
-                lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
+                lokasiTerbaca = "Tidak diketahui";
                 kirimLokasiKeServer(lokasiTerbaca);
             }
         } catch (Exception e) {
-            Log.e(TAG, "Gagal baca nama lokasi", e);
-            lokasiTerbaca = String.format("📍 %.4f, %.4f", lokasi.getLatitude(), lokasi.getLongitude());
+            Log.e(TAG, "Gagal baca lokasi", e);
+            lokasiTerbaca = "Tidak diketahui";
             kirimLokasiKeServer(lokasiTerbaca);
         }
     }
+
 
     private void kirimLokasiKeServer(String teksLokasi) {
         if (getService() == null || !getService().isConnected()) {
