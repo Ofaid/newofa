@@ -34,14 +34,16 @@
      android:src="@drawable/ic_action_microphone"
 android:tint="#FFFFFF"
      android:contentDescription="Mikrofon" />
-        <!-- 📊 VISUALIZER DI TENGAH -->
-        <ofaid.ahmad.ptt.ofa.NeonVisualizerView
-            android:id="@+id/neonVisualizer"
-            android:layout_width="0dp"
-            android:layout_height="40dp"
-            android:layout_weight="1"
-            android:layout_marginHorizontal="8dp"
-            android:background="#000000"/>
+       <!-- 📊 VISUALIZER DI TENGAH — OFA 1 BATANG MENDATAR -->
+<ofaid.ahmad.ptt.ofa.OfaVisualizer
+    android:id="@+id/ofa_visualizer"
+    android:layout_width="72dp"
+    android:layout_height="24dp"
+    android:layout_gravity="center_horizontal"
+    android:layout_marginTop="4dp"
+    android:layout_marginBottom="4dp"
+    android:layout_marginHorizontal="8dp"
+    android:background="#000000"/>
 
         <!-- 🔘 TOMBOL KANAN -->
         <ImageButton
