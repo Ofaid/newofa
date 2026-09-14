@@ -17,10 +17,11 @@ public class NeonVisualizerView extends View {
 
     public NeonVisualizerView(Context context, AttributeSet attrs) {
         super(context, attrs);
-        neonPaint.setColor(Color.CYAN);
+        // 💚 HIJAU TUA MENYALA + EFEK GLOW
+        neonPaint.setColor(Color.parseColor("#009933"));
         neonPaint.setStyle(Paint.Style.FILL);
         neonPaint.setAntiAlias(true);
-        neonPaint.setMaskFilter(new BlurMaskFilter(12, BlurMaskFilter.Blur.OUTER));
+        neonPaint.setMaskFilter(new BlurMaskFilter(10, BlurMaskFilter.Blur.OUTER));
 
         for (int i = 0; i < BARS_COUNT; i++) {
             barLevels[i] = 0f;
@@ -28,6 +29,7 @@ public class NeonVisualizerView extends View {
     }
 
     public void setAudioLevel(float normalizedLevel) {
+        // Geser ke KIRI — data baru masuk di KANAN
         for (int i = 0; i < BARS_COUNT - 1; i++) {
             barLevels[i] = barLevels[i + 1];
         }
@@ -44,14 +46,18 @@ public class NeonVisualizerView extends View {
         float totalGapWidth = (BARS_COUNT - 1) * gapRatio;
         barWidth = viewWidth / (BARS_COUNT + totalGapWidth);
 
+        // ✅ DIBALIK: Gambar dari KIRI ke KANAN + turun dari ATAS ke BAWAH
         for (int i = 0; i < BARS_COUNT; i++) {
-            float level = barLevels[i];
+            // Indeks dibalik — yang baru masuk tampil di KIRI
+            int idx = BARS_COUNT - 1 - i;
+            float level = barLevels[idx];
             float barHeight = viewHeight * level;
 
             float left = i * (barWidth + (barWidth * gapRatio));
-            float top = viewHeight - barHeight;
             float right = left + barWidth;
-            float bottom = viewHeight;
+            // ✅ Batang turun dari ATAS, bukan naik dari bawah
+            float top = 0;
+            float bottom = barHeight;
 
             canvas.drawRect(left, top, right, bottom, neonPaint);
         }
