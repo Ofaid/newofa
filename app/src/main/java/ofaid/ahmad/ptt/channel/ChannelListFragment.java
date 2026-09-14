@@ -74,7 +74,6 @@ public class ChannelListFragment extends HumlaServiceFragment
     private static final String TAG = ChannelListFragment.class.getName();
     private static final int KODE_IZIN_LOKASI = 1001;
 
-    // --- BANNER INDIKATOR PEMBICARA ---
     private FrameLayout bannerActiveSpeaker;
     private TextView tvSpeakerName;
     private String currentSpeakerName = null;
@@ -94,12 +93,10 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     };
 
-    // ✅ === VISUALIZER ===
     private NeonVisualizerView mVisualNeon;
     private BroadcastReceiver mPenerimaLevelSuara;
     private BroadcastReceiver mPenerimaTemanBicara;
 
-    // --- LOKASI OTOMATIS ---
     private LocationManager mLocationManager;
     private String lokasiTerbaca = null;
     private final LocationListener lokasiPendengar = new LocationListener() {
@@ -112,7 +109,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         @Override public void onProviderDisabled(@NonNull String provider) {}
     };
 
-    // --- KOMPONEN UTAMA ---
     private RecyclerView mChannelView;
     private ChannelListAdapter mChannelListAdapter;
     private ChatTargetProvider mTargetProvider;
@@ -120,7 +116,6 @@ public class ChannelListFragment extends HumlaServiceFragment
     private ActionMode mActionMode;
     private Settings mSettings;
 
-    // ========== FUNGSI STATUS & ID OFA ==========
     private String getMyOfaId() {
         Context ctx = getContext();
         if (ctx == null) return null;
@@ -147,14 +142,12 @@ public class ChannelListFragment extends HumlaServiceFragment
         Log.i(TAG, "Tombol Status ditekan — ID: " + getMyOfaId());
     }
 
-    // ========== HENTIKAN BACA LOKASI ==========
     private void hentikanBacaLokasi() {
         if (mLocationManager != null) {
             mLocationManager.removeUpdates(lokasiPendengar);
         }
     }
 
-    // ========== MINTA IZIN LOKASI OTOMATIS ==========
     private void mintaIzinLokasiOtomatis() {
         if (getContext() == null) return;
         boolean sudahIzin =
@@ -191,7 +184,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-    // ========== MULAI BACA LOKASI ==========
     private void mulaiBacaLokasi() {
         if (getContext() == null) return;
         mLocationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
@@ -223,7 +215,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 
-    // ========== BACA NAMA LOKASI & KIRIM KE SERVER ==========
     private void bacaNamaLokasi(Location lokasi) {
         if (getContext() == null) return;
         android.location.Geocoder geocoder = new android.location.Geocoder(requireContext());
@@ -362,13 +353,12 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         }
 
-            @Override
+        @Override
         public void onUserTalkStateUpdated(IUser user) {
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
             
-            // ✅ KIRIM DATA SUARA TEMAN KE VISUALIZER — DIPERBAIKI
             if (getService() != null && getService().isConnected()
                 && user.getTalkState() != TalkState.TALKING_NONE) {
                 try {
@@ -402,7 +392,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 });
             }
         }
-
+    };
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
@@ -447,10 +437,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
-        
-        // ✅ HUBUNGKAN VISUALIZER
         mVisualNeon = view.findViewById(R.id.neonVisualizer);
-        
         return view;
     }
 
@@ -459,7 +446,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         super.onViewCreated(view, savedInstanceState);
         mintaIzinLokasiOtomatis();
         
-        // ✅ PENERIMA SUARA KITA SENDIRI
         mPenerimaLevelSuara = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -474,7 +460,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         IntentFilter filterKita = new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA");
         requireContext().registerReceiver(mPenerimaLevelSuara, filterKita);
 
-        // ✅ PENERIMA SUARA TEMAN
         mPenerimaTemanBicara = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -493,7 +478,6 @@ public class ChannelListFragment extends HumlaServiceFragment
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        // ✅ BERSIH-BERSIH PENERIMA
         if (mPenerimaLevelSuara != null) {
             requireContext().unregisterReceiver(mPenerimaLevelSuara);
             mPenerimaLevelSuara = null;
@@ -503,7 +487,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             mPenerimaTemanBicara = null;
         }
     }
-}
+
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
@@ -741,4 +725,3 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     }
 }
-
