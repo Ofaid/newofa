@@ -18,6 +18,8 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.database.CursorWrapper;
 import android.graphics.PorterDuff;
+import android.location.Address;
+import android.location.Geocoder;
 import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
@@ -46,6 +48,9 @@ import androidx.core.view.MenuItemCompat;
 import androidx.preference.PreferenceManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
+
+import java.util.List;
+import java.util.Locale;
 
 import se.lublin.humla.IHumlaService;
 import se.lublin.humla.IHumlaSession;
@@ -100,6 +105,8 @@ public class ChannelListFragment extends HumlaServiceFragment
     // --- LOKASI OTOMATIS ---
     private LocationManager mLocationManager;
     private String lokasiTerbaca = null;
+    private ChannelListAdapter mChannelListAdapter;
+
     private final LocationListener lokasiPendengar = new LocationListener() {
         @Override
         public void onLocationChanged(@NonNull Location location) {
@@ -112,7 +119,6 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     // --- KOMPONEN UTAMA ---
     private RecyclerView mChannelView;
-    private ChannelListAdapter mChannelListAdapter;
     private ChatTargetProvider mTargetProvider;
     private DatabaseProvider mDatabaseProvider;
     private ActionMode mActionMode;
@@ -185,6 +191,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             } else {
                 Log.i(TAG, "⚠️ Izin lokasi DITOLAK");
                 lokasiTerbaca = "📍 Izinkan lokasi agar terlihat teman-teman";
+                perbaruiTampilanLokasi();
             }
         }
     }
@@ -195,6 +202,10 @@ public class ChannelListFragment extends HumlaServiceFragment
         mLocationManager = (LocationManager) requireContext().getSystemService(Context.LOCATION_SERVICE);
         boolean gpsNyala = mLocationManager.isProviderEnabled(LocationManager.GPS_PROVIDER);
         boolean jaringanNyala = mLocationManager.isProviderEnabled(LocationManager.NETWORK_PROVIDER);
+        
+        lokasiTerbaca = "📍 Mendapatkan lokasi...";
+        perbaruiTampilanLokasi();
+        
         try {
             if (ContextCompat.checkSelfPermission(requireContext(),
                     Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED) {
@@ -212,56 +223,69 @@ public class ChannelListFragment extends HumlaServiceFragment
                 if (lokasiTerakhir == null && gpsNyala) lokasiTerakhir = mLocationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER);
                 if (lokasiTerakhir != null) {
                     bacaNamaLokasi(lokasiTerakhir);
-                } else {
-                    lokasiTerbaca = "📍 Mendapatkan lokasi...";
                 }
             }
         } catch (SecurityException e) {
             Log.e(TAG, "Izin lokasi tidak tersedia", e);
+            lokasiTerbaca = "Tidak diketahui";
+            perbaruiTampilanLokasi();
         }
     }
 
-        // ========== LOKASI — HANYA KABUPATEN + PROVINSI SAJA ==========
-    // Desa, Kecamatan, nama kecil = SEMUA DIHAPUS — JAGA PRIVASI 🔒
+    // ========== BACA NAMA LOKASI — HANYA KABUPATEN + PROVINSI ==========
     private void bacaNamaLokasi(Location lokasi) {
         if (getContext() == null) return;
-        android.location.Geocoder geocoder = new android.location.Geocoder(requireContext());
-        try {
-            java.util.List<android.location.Address> daftarAlamat =
-                geocoder.getFromLocation(lokasi.getLatitude(), lokasi.getLongitude(), 1);
+        
+        new Thread(() -> {
+            String hasil = "Tidak diketahui";
+            try {
+                Geocoder geocoder = new Geocoder(requireContext(), Locale.getDefault());
+                List<Address> daftarAlamat = geocoder.getFromLocation(
+                    lokasi.getLatitude(),
+                    lokasi.getLongitude(),
+                    1
+                );
+
+                if (daftarAlamat != null && !daftarAlamat.isEmpty()) {
+                    Address alamat = daftarAlamat.get(0);
+                    
+                    String kab = alamat.getSubAdminArea();   // Kabupaten
+                    String prov = alamat.getAdminArea();      // Provinsi
+
+                    StringBuilder sb = new StringBuilder();
+                    if (kab != null && !kab.trim().isEmpty()) {
+                        sb.append(kab.trim());
+                    }
+                    if (prov != null && !prov.trim().isEmpty()) {
+                        if (sb.length() > 0) sb.append(". ");
+                        sb.append(prov.trim());
+                    }
+                    if (sb.length() > 0) {
+                        hasil = sb.toString();
+                    }
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Gagal baca nama lokasi", e);
+            }
             
-            if (daftarAlamat != null && !daftarAlamat.isEmpty()) {
-                android.location.Address alamat = daftarAlamat.get(0);
-                StringBuilder sb = new StringBuilder();
-                
-                // ✅ HANYA INI YANG DIAMBIL — TIDAK ADA YANG LAIN!
-                String kab  = alamat.getSubAdminArea();   // ← Kabupaten: Buleleng
-                String prov = alamat.getAdminArea();      // ← Provinsi: Bali
-                
-                // Susun: Kabupaten. Provinsi
-                if (kab != null && !kab.trim().isEmpty()) {
-                    sb.append(kab.trim());
-                }
-                if (prov != null && !prov.trim().isEmpty()) {
-                    if (sb.length() > 0) sb.append(". ");
-                    sb.append(prov.trim());
-                }
-                
-                lokasiTerbaca = sb.toString();
+            String lokasiAkhir = hasil;
+            new Handler(Looper.getMainLooper()).post(() -> {
+                lokasiTerbaca = lokasiAkhir;
                 Log.i(TAG, "✅ Lokasi: " + lokasiTerbaca);
                 kirimLokasiKeServer(lokasiTerbaca);
-            } else {
-                lokasiTerbaca = "Tidak diketahui";
-                kirimLokasiKeServer(lokasiTerbaca);
-            }
-        } catch (Exception e) {
-            Log.e(TAG, "Gagal baca lokasi", e);
-            lokasiTerbaca = "Tidak diketahui";
-            kirimLokasiKeServer(lokasiTerbaca);
+                perbaruiTampilanLokasi();
+            });
+        }).start();
+    }
+
+    // ========== PERBARUI TAMPILAN ==========
+    private void perbaruiTampilanLokasi() {
+        if (mChannelListAdapter != null && lokasiTerbaca != null) {
+            mChannelListAdapter.setLokasiSaya(lokasiTerbaca);
         }
     }
 
-
+    // ========== KIRIM LOKASI KE SERVER ==========
     private void kirimLokasiKeServer(String teksLokasi) {
         if (getService() == null || !getService().isConnected()) {
             Log.w(TAG, "Belum terhubung — lokasi belum dikirim");
@@ -278,20 +302,21 @@ public class ChannelListFragment extends HumlaServiceFragment
             
             if (keteranganLama == null || keteranganLama.trim().isEmpty()) {
                 keteranganBaru = teksLokasi;
-            } else if (keteranganLama.trim().startsWith("📍")) {
+            } else if (keteranganLama.trim().matches(".*[A-Za-z ]+\\. [A-Za-z ]+")) {
                 keteranganBaru = teksLokasi;
             } else {
                 keteranganBaru = keteranganLama + "\n" + teksLokasi;
             }
             
             sesi.setUserComment(sesiSaya, keteranganBaru);
-            Log.i(TAG, "✅ Lokasi dikirim: " + teksLokasi);
+            Log.i(TAG, "✅ Lokasi dikirim ke server: " + teksLokasi);
             
         } catch (Exception e) {
             Log.e(TAG, "Gagal kirim lokasi", e);
         }
     }
-/*=========================*/
+
+/*========================= PEMANTAU =========================*/
     private final IHumlaObserver mServiceObserver = new HumlaObserver() {
         @Override
         public void onDisconnected(HumlaException e) {
@@ -314,6 +339,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
             if (user.getSession() == selfSession) {
                 scrollToChannel(newChannel.getId());
+                perbaruiTampilanLokasi();
             }
         }
 
@@ -441,9 +467,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
         /*===========Visulizer-Microphone=========*/
-        // ✅ HUBUNGKAN VISUALIZER
         mVisualNeon = view.findViewById(R.id.neonVisualizer);
-        
         return view;
     }
 
@@ -452,7 +476,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         super.onViewCreated(view, savedInstanceState);
         mintaIzinLokasiOtomatis();
         
-        // ✅ SIAPKAN PENERIMA DATA SUARA
         mPenerimaLevel = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -472,13 +495,12 @@ public class ChannelListFragment extends HumlaServiceFragment
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        // ✅ BERSIH-BERSIH PENERIMA
         if (mPenerimaLevel != null) {
             requireContext().unregisterReceiver(mPenerimaLevel);
             mPenerimaLevel = null;
         }
     }
-/*=======================*/
+
     @Override
     public void onActivityCreated(Bundle savedInstanceState) {
         super.onActivityCreated(savedInstanceState);
@@ -522,6 +544,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 setupChannelList();
             } else {
                 mChannelListAdapter.setService(service);
+                perbaruiTampilanLokasi();
             }
         } catch (RemoteException e) {
             e.printStackTrace();
@@ -654,6 +677,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         mChannelListAdapter.setOnUserClickListener(this);
         mChannelView.setAdapter(mChannelListAdapter);
         mChannelListAdapter.notifyDataSetChanged();
+        perbaruiTampilanLokasi();
     }
 
     public void scrollToChannel(int channelId) {
