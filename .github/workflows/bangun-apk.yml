@@ -42,6 +42,9 @@ jobs:
 
       - name: Siapkan Android SDK
         uses: android-actions/setup-android@v3
+        with:
+          no-cache: true
+          accept-licenses: true
 
       - name: Pasang NDK
         run: |
@@ -67,5 +70,5 @@ jobs:
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
-          name: OFA-APK
+          name: Ofaid-APK
           path: "**/*.apk"
