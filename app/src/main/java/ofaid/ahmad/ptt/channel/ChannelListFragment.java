@@ -325,45 +325,42 @@ public class ChannelListFragment extends HumlaServiceFragment
                 getActivity().supportInvalidateOptionsMenu();
             }
         }
-
-        @Override
-        public void onUserTalkStateUpdated(IUser user) {
-            if (mChannelListAdapter != null && mChannelView != null) {
-                mChannelListAdapter.updateUserStates(user, mChannelView);
-            }
-            if (getActivity() != null && !isDetached()) {
-                getActivity().runOnUiThread(() -> {
-                    // =============================================
-                    // ✅ TAMBAH: MONITOR — PAKAI JALUR ASLI ADA
-                    // =============================================
-                    boolean sedangBicara = mChannelListAdapter.isUserTalking(user.getSession());
-                    // Tingkat sesuai status bicara — bisa disesuaikan nanti
-                    float levelMonitor = sedangBicara ? 0.85f : 0f;
-                    
-                    // Kirim ke tampilan kalau dibutuhkan
-                    // (hilangkan komentar kalau pakai tampilan monitor)
-                    // if (mVisualMonitor != null) {
-                    //     mVisualMonitor.setAudioLevel(levelMonitor);
-                    // }
-                    // ============= AKHIR TAMBAHAN ===============
-                    
-                    // === BANNER — TETAP ASLI ===
-                    bannerHideHandler.removeCallbacks(bannerHideRunnable);
-                    String displayName = user.getName();
-                    if (!displayName.equals(currentSpeakerName)) {
-                        currentSpeakerName = displayName;
-                        if (tvSpeakerName != null) tvSpeakerName.setText(displayName);
-                    }
-                    if (bannerActiveSpeaker != null &&
-                        bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
-                        bannerActiveSpeaker.setVisibility(View.VISIBLE);
-                        bannerActiveSpeaker.setAlpha(1f);
-                    }
-                    bannerHideHandler.postDelayed(bannerHideRunnable, 500);
-                });
-            }
+/*======================*/
+       @Override
+    public void onUserTalkStateUpdated(IUser user) {
+        if (mChannelListAdapter != null && mChannelView != null) {
+            mChannelListAdapter.updateUserStates(user, mChannelView);
         }
-    };
+        if (getActivity() != null && !isDetached()) {
+            getActivity().runOnUiThread(() -> {
+                // =============================================
+                // ✅ MONITOR — PAKAI isUserTalking DARI ADAPTER
+                // =============================================
+                boolean sedangBicara = mChannelListAdapter.isUserTalking(user.getSession());
+                float levelMonitor = sedangBicara ? 0.85f : 0f;
+
+                // Kalau nanti sudah pasang tampilan monitor, buka komentar di bawah:
+                // if (mVisualMonitor != null) {
+                //     mVisualMonitor.setAudioLevel(levelMonitor);
+                // }
+                // ============= AKHIR TAMBAHAN ================
+
+                // === BANNER — TETAP ASLI, TIDAK DIUBAH ===
+                bannerHideHandler.removeCallbacks(bannerHideRunnable);
+                String displayName = user.getName();
+                if (!displayName.equals(currentSpeakerName)) {
+                    currentSpeakerName = displayName;
+                    if (tvSpeakerName != null) tvSpeakerName.setText(displayName);
+                }
+                if (bannerActiveSpeaker != null &&
+                    bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
+                    bannerActiveSpeaker.setVisibility(View.VISIBLE);
+                    bannerActiveSpeaker.setAlpha(1f);
+                }
+                bannerHideHandler.postDelayed(bannerHideRunnable, 500);
+            });
+        }
+    }
 
 /*=======================*/
 
