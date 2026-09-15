@@ -326,26 +326,20 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         }
 /*======================*/
-       @Override
+     @Override
     public void onUserTalkStateUpdated(IUser user) {
         if (mChannelListAdapter != null && mChannelView != null) {
             mChannelListAdapter.updateUserStates(user, mChannelView);
         }
         if (getActivity() != null && !isDetached()) {
             getActivity().runOnUiThread(() -> {
-                // =============================================
-                // ✅ MONITOR — PAKAI isUserTalking DARI ADAPTER
-                // =============================================
                 boolean sedangBicara = mChannelListAdapter.isUserTalking(user.getSession());
                 float levelMonitor = sedangBicara ? 0.85f : 0f;
 
-                // Kalau nanti sudah pasang tampilan monitor, buka komentar di bawah:
                 // if (mVisualMonitor != null) {
                 //     mVisualMonitor.setAudioLevel(levelMonitor);
                 // }
-                // ============= AKHIR TAMBAHAN ================
 
-                // === BANNER — TETAP ASLI, TIDAK DIUBAH ===
                 bannerHideHandler.removeCallbacks(bannerHideRunnable);
                 String displayName = user.getName();
                 if (!displayName.equals(currentSpeakerName)) {
@@ -360,7 +354,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 bannerHideHandler.postDelayed(bannerHideRunnable, 500);
             });
         }
-    }
+    } // ✅ KURUNG INI WAJIB ADA — TUTUP FUNGSI onUserTalkStateUpdated!
 
 /*=======================*/
 
