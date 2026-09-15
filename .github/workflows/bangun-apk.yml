@@ -40,36 +40,28 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # ✅ Pasang alat SDK dengan perintah yang diperbaiki
-      - name: Pasang Android SDK Tools
+      # ✅ KEMBALI KE CARA ASLI — biarkan alat bekerja sendiri
+      - name: Siapkan Android SDK
+        uses: android-actions/setup-android@v3
+
+      # ✅ Cek jalur mana yang ada, pakai yang benar
+      - name: Cek & Pasang NDK
         run: |
-          ANDROID_SDK_ROOT="$HOME/android-sdk"
-          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
-          cd "$ANDROID_SDK_ROOT/cmdline-tools"
-          
-          # Unduh dari alamat resmi
-          wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-12667192_latest.zip
-          
-          # Periksa apakah unduhan berhasil
-          if [ ! -f tools.zip ]; then
-            echo "Gagal mengunduh alat!"
+          if [ -d "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" ]; then
+            SDK_BIN="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin"
+          elif [ -d "$ANDROID_SDK_ROOT/cmdline-tools/16.0/bin" ]; then
+            SDK_BIN="$ANDROID_SDK_ROOT/cmdline-tools/16.0/bin"
+          elif [ -d "$ANDROID_SDK_ROOT/cmdline-tools/12.0/bin" ]; then
+            SDK_BIN="$ANDROID_SDK_ROOT/cmdline-tools/12.0/bin"
+          else
+            echo "Tidak ketemu jalur sdkmanager!"
+            ls -la "$ANDROID_SDK_ROOT/cmdline-tools/"
             exit 1
           fi
           
-          unzip -q tools.zip
-          rm tools.zip
-          
-          # Sesuaikan nama folder agar dikenali
-          if [ -d cmdline-tools ]; then
-            mv cmdline-tools latest
-          fi
-          
-          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
-        shell: bash
-
-      - name: Pasang NDK
-        run: |
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
+          echo "Menggunakan: $SDK_BIN"
+          $SDK_BIN/sdkmanager --install "ndk;25.1.8937393"
+          echo "SDK_BIN=$SDK_BIN" >> $GITHUB_ENV
 
       - name: Tulis lokasi SDK & NDK
         run: |
