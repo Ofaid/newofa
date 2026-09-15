@@ -319,7 +319,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         }
 
-        @Override
+          @Override
         public void onUserTalkStateUpdated(IUser user) {
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
@@ -328,6 +328,11 @@ public class ChannelListFragment extends HumlaServiceFragment
                 getActivity().runOnUiThread(() -> {
                     boolean sedangBicara = mChannelListAdapter.isUserTalking(user.getSession());
                     float levelMonitor = sedangBicara ? 0.85f : 0f;
+
+                    // ✅ TAMBAHKAN INI — MONITOR ORANG LAIN BICARA
+                    if (mVisualNeon != null) {
+                        mVisualNeon.setAudioLevel(levelMonitor);
+                    }
 
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
@@ -345,6 +350,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         }
     };
+
 /*=======================*/
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
