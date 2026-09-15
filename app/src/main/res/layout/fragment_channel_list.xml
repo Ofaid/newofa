@@ -45,12 +45,7 @@ android:tint="#FFFFFF"
             android:layout_marginHorizontal="8dp"
 />
         <!-- 📊 Ofa VISUALIZER  -->
-        <ofaid.ahmad.ptt.ofa.OfaVisualizerView
-            android:id="@+id/ofaVisualizer"
-            android:layout_width="0dp"
-            android:layout_height="25dp"
-            android:layout_weight="1"
-            android:layout_marginHorizontal="8dp"/>
+   
 
         <!-- 🔘 TOMBOL KANAN -->
         <ImageButton
