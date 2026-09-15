@@ -35,10 +35,22 @@
 android:tint="#FFFFFF"
      android:contentDescription="Mikrofon" />
         <!-- 📊 VISUALIZER DI TENGAH -->
-     <ofaid.ahmad.ptt.ofa.NeonVisualizerView
-    android:id="@+id/neonVisualizer"
-    android:layout_width="match_parent"
-    android:layout_height="30dp" />
+   android:contentDescription="Mikrofon" />
+        <!-- 📊 VISUALIZER DI TENGAH -->
+        <ofaid.ahmad.ptt.ofa.NeonVisualizerView
+            android:id="@+id/neonVisualizer"
+            android:layout_width="0dp"
+            android:layout_height="25dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="8dp"
+/>
+        <!-- 📊 Ofa VISUALIZER  -->
+        <ofaid.ahmad.ptt.ofa.OfaVisualizerView
+            android:id="@+id/ofaVisualizer"
+            android:layout_width="0dp"
+            android:layout_height="25dp"
+            android:layout_weight="1"
+            android:layout_marginHorizontal="8dp"/>
 
         <!-- 🔘 TOMBOL KANAN -->
         <ImageButton
