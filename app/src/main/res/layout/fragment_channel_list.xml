@@ -35,7 +35,7 @@
 android:tint="#FFFFFF"
      android:contentDescription="Mikrofon" />
         <!-- 📊 VISUALIZER DI TENGAH -->
-     <ofaid.ahmad.ptt.channel.NeonVisualizerView
+     <ofaid.ahmad.ptt.ofa.NeonVisualizerView
     android:id="@+id/neonVisualizer"
     android:layout_width="match_parent"
     android:layout_height="30dp" />
