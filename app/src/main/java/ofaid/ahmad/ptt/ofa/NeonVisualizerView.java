@@ -1,4 +1,4 @@
-package ofaid.ahmad.ptt.channel;
+package ofaid.ahmad.ptt.ofa;
 
 import android.content.Context;
 import android.graphics.Canvas;
