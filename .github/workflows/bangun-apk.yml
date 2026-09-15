@@ -43,8 +43,8 @@ jobs:
       - name: Siapkan Android SDK
         uses: android-actions/setup-android@v3
         with:
-          no-cache: true
-          accept-licenses: true
+          cmdline-tools-version: '12.0'
+          accept-android-sdk-licenses: true
 
       - name: Pasang NDK
         run: |
