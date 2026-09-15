@@ -63,10 +63,8 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     private final FragmentManager mFragmentManager;
     private RecyclerView mAttachedRecyclerView;
 
-    // === LOKASI SAYA ===
     private String lokasiSaya;
 
-    // === FUNGSI DIPANGGIL DARI ChannelListFragment ===
     public void setLokasiSaya(String lokasiTeks) {
         this.lokasiSaya = lokasiTeks;
         notifyDataSetChanged();
@@ -216,18 +214,12 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 }
             });
 
-            // =============================================
-            // ✅ TAMPILKAN NAMA
-            // =============================================
             if (uvh.mUserName != null) {
                 uvh.mUserName.setText(user.getName());
                 uvh.mUserName.setVisibility(View.VISIBLE);
                 uvh.mUserName.setTextColor(Color.parseColor("#FF9900"));
             }
 
-            // =============================================
-            // ✅ TAMPILKAN ID PENGGUNA
-            // =============================================
             if (uvh.mUserIdView != null) {
                 int uid = user.getUserId();
                 int gabungan = Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000;
@@ -236,9 +228,6 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 uvh.mUserIdView.setTextColor(0xFF00CCFF);
             }
 
-            // =============================================
-            // ✅ TAMPILKAN STATUS
-            // =============================================
             if (uvh.mUserStatusView != null) {
                 String status = OfaUserStatus.dapatStatus(mContext, user.getSession());
                 uvh.mUserStatusView.setText(status);
@@ -252,9 +241,6 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 }
             }
 
-            // =============================================
-            // ✅ TAMPILKAN LOKASI — DARI KOMENTAR SERVER
-            // =============================================
             if (uvh.mUserLokasi != null) {
                 String keterangan = user.getComment();
                 String lokasiTampil = null;
@@ -264,7 +250,6 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     for (String b : baris) {
                         String bersih = b.trim();
                         if (bersih.contains(". ") && !bersih.startsWith("📍")) {
-                            // Format: Kabupaten. Provinsi
                             lokasiTampil = bersih;
                             break;
                         }
@@ -275,7 +260,6 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     }
                 }
 
-                // ✅ Khusus untuk diri sendiri — tampilkan langsung
                 int sesiSaya = -1;
                 try {
                     if (mService != null && mService.isConnected()) {
@@ -296,9 +280,6 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 }
             }
 
-            // =============================================
-            // ✅ TEBAL NAMA UNTUK DIRI SENDIRI
-            // =============================================
             final int typefaceStyle;
             int selfSession = -1;
             try {
@@ -318,9 +299,6 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 uvh.mUserName.setTypeface(null, typefaceStyle);
             }
 
-            // =============================================
-            // ✅ IKON BICARA
-            // =============================================
             uvh.mUserTalkHighlight.setImageDrawable(getTalkStateDrawable(user));
 
             DisplayMetrics metrics = mContext.getResources().getDisplayMetrics();
@@ -420,8 +398,8 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         return res.getDrawable(R.drawable.outline_circle_talking_off);
     }
 
-    public int getUserPosition(int session) {
-        long itemId = session | USER_ID_MASK;
+    public int getUserPosition(int sessionId) {
+        long itemId = sessionId | USER_ID_MASK;
         for (int i = 0; i < mNodes.size(); i++) {
             try {
                 if (mNodes.get(i).getId() == itemId) return i;
@@ -429,42 +407,6 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
         return -1;
     }
-
-    public int getUserPositionBySession(int sessionId) {
-        if (sessionId <= 0) return -1;
-        long targetItemId = USER_ID_MASK | sessionId;
-        for (int i = 0; i < mNodes.size(); i++) {
-            Node node = mNodes.get(i);
-            if (node.isUser()) {
-                try {
-                    if (node.getId() == targetItemId) return i;
-                } catch (RemoteException e) { e.printStackTrace(); }
-            }
-        }
-        return -1;
-    }
-    
-       // === UNTUK VISUALIZER MONITOR ===
-    public boolean isUserTalking(int sessionId) {
-        if (sessionId <= 0 || mService == null || !mService.isConnected()) {
-            return false;
-        }
-        try {
-            IHumlaSession sesi = mService.HumlaSession();
-            for (IUser user : sesi.getSessionChannel().getUsers()) {
-                if (user.getSession() == sessionId) {
-                    se.lublin.humla.model.TalkState state = user.getTalkState();
-                    return state == se.lublin.humla.model.TalkState.TALKING
-                        || state == se.lublin.humla.model.TalkState.SHOUTING
-                        || state == se.lublin.humla.model.TalkState.WHISPERING;
-                }
-            }
-        } catch (Exception e) {
-            Log.d(TAG, "Cek status bicara gagal", e);
-        }
-        return false;
-    }
-/*============================*/
 
     public void refreshUserStatus(int sessionId) {
         if (sessionId <= 0) return;
@@ -570,9 +512,6 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
     }
 
-    // =============================================
-    // ✅ PEMEGANG TAMPILAN
-    // =============================================
     private static class UserViewHolder extends RecyclerView.ViewHolder {
         public LinearLayout mUserHolder;
         public TextView mUserName;
