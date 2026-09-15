@@ -66,7 +66,6 @@ import ofaid.ahmad.ptt.db.DatabaseProvider;
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.ofa.NeonVisualizerView;
-// === HAPUS: OfaVisualizerView dihilangkan ===
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnChannelClickListener;
@@ -79,7 +78,6 @@ public class ChannelListFragment extends HumlaServiceFragment
     private static final String TAG = ChannelListFragment.class.getName();
     private static final int KODE_IZIN_LOKASI = 1001;
 
-    // --- BANNER INDIKATOR PEMBICARA ---
     private FrameLayout bannerActiveSpeaker;
     private TextView tvSpeakerName;
     private String currentSpeakerName = null;
@@ -99,12 +97,9 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     };
 
-    // --- VISUALIZER ---
     private NeonVisualizerView mVisualNeon;
-    // === HAPUS: OfaVisualizerView dihilangkan ===
     private BroadcastReceiver mPenerimaLevel;
 
-    // --- LOKASI OTOMATIS ---
     private LocationManager mLocationManager;
     private String lokasiTerbaca = null;
     private ChannelListAdapter mChannelListAdapter;
@@ -119,14 +114,12 @@ public class ChannelListFragment extends HumlaServiceFragment
         @Override public void onProviderDisabled(@NonNull String provider) {}
     };
 
-    // --- KOMPONEN UTAMA ---
     private RecyclerView mChannelView;
     private ChatTargetProvider mTargetProvider;
     private DatabaseProvider mDatabaseProvider;
     private ActionMode mActionMode;
     private Settings mSettings;
 
-    // ========== FUNGSI STATUS & ID OFA ==========
     private String getMyOfaId() {
         Context ctx = getContext();
         if (ctx == null) return null;
@@ -325,7 +318,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                 getActivity().supportInvalidateOptionsMenu();
             }
         }
-/*======================*/
+
         @Override
         public void onUserTalkStateUpdated(IUser user) {
             if (mChannelListAdapter != null && mChannelView != null) {
@@ -335,10 +328,6 @@ public class ChannelListFragment extends HumlaServiceFragment
                 getActivity().runOnUiThread(() -> {
                     boolean sedangBicara = mChannelListAdapter.isUserTalking(user.getSession());
                     float levelMonitor = sedangBicara ? 0.85f : 0f;
-
-                    // if (mVisualMonitor != null) {
-                    //     mVisualMonitor.setAudioLevel(levelMonitor);
-                    // }
 
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
@@ -355,17 +344,15 @@ public class ChannelListFragment extends HumlaServiceFragment
                 });
             }
         }
-
+    };
 /*=======================*/
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-         if (getActivity() != null) getActivity().supportInvalidateOptionsMenu();
-         
+            if (getActivity() != null) getActivity().supportInvalidateOptionsMenu();
         }
     };
-
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
@@ -396,7 +383,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
         
         mVisualNeon = view.findViewById(R.id.neonVisualizer);
-        // === HAPUS: ofaVisualizer tidak dipakai ===
         
         return view;
     }
