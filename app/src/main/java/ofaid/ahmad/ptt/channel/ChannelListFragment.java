@@ -66,7 +66,7 @@ import ofaid.ahmad.ptt.db.DatabaseProvider;
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.ofa.NeonVisualizerView;
-import ofaid.ahmad.ptt.ofa.OfaVisualizerView;
+// === HAPUS: OfaVisualizerView dihilangkan ===
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnChannelClickListener;
@@ -101,7 +101,7 @@ public class ChannelListFragment extends HumlaServiceFragment
 
     // --- VISUALIZER ---
     private NeonVisualizerView mVisualNeon;
-    private OfaVisualizerView mVisualMonitor;
+    // === HAPUS: OfaVisualizerView dihilangkan ===
     private BroadcastReceiver mPenerimaLevel;
 
     // --- LOKASI OTOMATIS ---
@@ -333,13 +333,21 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
-                    // === VISUALIZER MONITOR — pakai data dari adapter ===
+                    // =============================================
+                    // ✅ TAMBAH: MONITOR — PAKAI JALUR ASLI ADA
+                    // =============================================
                     boolean sedangBicara = mChannelListAdapter.isUserTalking(user.getSession());
+                    // Tingkat sesuai status bicara — bisa disesuaikan nanti
                     float levelMonitor = sedangBicara ? 0.85f : 0f;
-                    if (mVisualMonitor != null) {
-                        mVisualMonitor.setAudioLevel(levelMonitor);
-                    }
-                    // === BANNER ===
+                    
+                    // Kirim ke tampilan kalau dibutuhkan
+                    // (hilangkan komentar kalau pakai tampilan monitor)
+                    // if (mVisualMonitor != null) {
+                    //     mVisualMonitor.setAudioLevel(levelMonitor);
+                    // }
+                    // ============= AKHIR TAMBAHAN ===============
+                    
+                    // === BANNER — TETAP ASLI ===
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
                     if (!displayName.equals(currentSpeakerName)) {
@@ -395,7 +403,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
         
         mVisualNeon = view.findViewById(R.id.neonVisualizer);
-        mVisualMonitor = view.findViewById(R.id.ofaVisualizer);
+        // === HAPUS: ofaVisualizer tidak dipakai ===
         
         return view;
     }
