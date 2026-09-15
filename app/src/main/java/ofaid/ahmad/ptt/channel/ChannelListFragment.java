@@ -326,44 +326,46 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         }
 /*======================*/
-     @Override
-    public void onUserTalkStateUpdated(IUser user) {
-        if (mChannelListAdapter != null && mChannelView != null) {
-            mChannelListAdapter.updateUserStates(user, mChannelView);
-        }
-        if (getActivity() != null && !isDetached()) {
-            getActivity().runOnUiThread(() -> {
-                boolean sedangBicara = mChannelListAdapter.isUserTalking(user.getSession());
-                float levelMonitor = sedangBicara ? 0.85f : 0f;
+        @Override
+        public void onUserTalkStateUpdated(IUser user) {
+            if (mChannelListAdapter != null && mChannelView != null) {
+                mChannelListAdapter.updateUserStates(user, mChannelView);
+            }
+            if (getActivity() != null && !isDetached()) {
+                getActivity().runOnUiThread(() -> {
+                    boolean sedangBicara = mChannelListAdapter.isUserTalking(user.getSession());
+                    float levelMonitor = sedangBicara ? 0.85f : 0f;
 
-                // if (mVisualMonitor != null) {
-                //     mVisualMonitor.setAudioLevel(levelMonitor);
-                // }
+                    // if (mVisualMonitor != null) {
+                    //     mVisualMonitor.setAudioLevel(levelMonitor);
+                    // }
 
-                bannerHideHandler.removeCallbacks(bannerHideRunnable);
-                String displayName = user.getName();
-                if (!displayName.equals(currentSpeakerName)) {
-                    currentSpeakerName = displayName;
-                    if (tvSpeakerName != null) tvSpeakerName.setText(displayName);
-                }
-                if (bannerActiveSpeaker != null &&
-                    bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
-                    bannerActiveSpeaker.setVisibility(View.VISIBLE);
-                    bannerActiveSpeaker.setAlpha(1f);
-                }
-                bannerHideHandler.postDelayed(bannerHideRunnable, 500);
-            });
+                    bannerHideHandler.removeCallbacks(bannerHideRunnable);
+                    String displayName = user.getName();
+                    if (!displayName.equals(currentSpeakerName)) {
+                        currentSpeakerName = displayName;
+                        if (tvSpeakerName != null) tvSpeakerName.setText(displayName);
+                    }
+                    if (bannerActiveSpeaker != null &&
+                        bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
+                        bannerActiveSpeaker.setVisibility(View.VISIBLE);
+                        bannerActiveSpeaker.setAlpha(1f);
+                    }
+                    bannerHideHandler.postDelayed(bannerHideRunnable, 500);
+                });
+            }
         }
-    } // ✅ KURUNG INI WAJIB ADA — TUTUP FUNGSI onUserTalkStateUpdated!
 
 /*=======================*/
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (getActivity() != null) getActivity().supportInvalidateOptionsMenu();
+         if (getActivity() != null) getActivity().supportInvalidateOptionsMenu();
+         
         }
     };
+
 
     @Override
     public void onCreate(Bundle savedInstanceState) {
