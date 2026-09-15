@@ -12,7 +12,7 @@ public class NeonVisualizerView extends View {
     private final Paint neonPaint = new Paint();
     private float mLevel = 0f;
     private float mSensitivitas = 1.8f;
-    private static final float LENYAP_CEPAT = 0.15f;
+    private static final float LENYAP_CEPAT = 0.35f;
 
     public NeonVisualizerView(Context context) {
         super(context);
