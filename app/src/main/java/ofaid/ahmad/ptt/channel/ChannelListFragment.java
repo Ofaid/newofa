@@ -268,7 +268,13 @@ public class ChannelListFragment extends HumlaServiceFragment
     }
 
 /*========================= PEMANTAU =========================*/
+
     private final IHumlaObserver mServiceObserver = new HumlaObserver() {
+    
+        // === VARIABEL UNTUK LANCARKAN GERAKAN VISUALIZER ===
+        private float levelSaatIni = 0f;
+        private long waktuTerakhir = 0;
+
         @Override
         public void onDisconnected(HumlaException e) {
             if (mChannelView != null) mChannelView.setAdapter(null);
@@ -319,7 +325,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         }
 
-          @Override
+        @Override
         public void onUserTalkStateUpdated(IUser user) {
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
@@ -327,13 +333,24 @@ public class ChannelListFragment extends HumlaServiceFragment
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
                     boolean sedangBicara = mChannelListAdapter.isUserTalking(user.getSession());
-                    float levelMonitor = sedangBicara ? 0.85f : 0f;
-
-                    // ✅ TAMBAHKAN INI — MONITOR ORANG LAIN BICARA
+                    
+                    // === LANCARKAN GERAKAN — NAIK TURUN MENGIKUTI SUARA ===
+                    long sekarang = System.currentTimeMillis();
+                    long berlalu = sekarang - waktuTerakhir;
+                    waktuTerakhir = sekarang;
+                    
+                    // Kalau bicara → target acak antara 0.55–0.90, kalau diam → 0
+                    float target = sedangBicara ? (0.55f + (float)Math.random() * 0.35f) : 0f;
+                    float kecepatan = sedangBicara ? 0.12f : 0.06f;
+                    
+                    levelSaatIni += (target - levelSaatIni) * kecepatan;
+                    levelSaatIni = Math.max(0f, Math.min(1f, levelSaatIni));
+                    
                     if (mVisualNeon != null) {
-                        mVisualNeon.setAudioLevel(levelMonitor);
+                        mVisualNeon.setAudioLevel(levelSaatIni);
                     }
-
+                    
+                    // === BANNER NAMA PEMBICARA ===
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
                     if (!displayName.equals(currentSpeakerName)) {
@@ -350,6 +367,8 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         }
     };
+/*=======================*/
+
 
 /*=======================*/
 
