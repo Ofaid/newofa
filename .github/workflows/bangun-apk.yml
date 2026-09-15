@@ -40,14 +40,19 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Siapkan Android SDK
-        uses: android-actions/setup-android@v3
-        with:
-          accept-android-sdk-licenses: true
+      # HAPUS alat yang rusak → pasang sendiri yang baru
+      - name: Pasang Android SDK Tools secara langsung
+        run: |
+          mkdir -p ~/android-sdk/cmdline-tools
+          cd ~/android-sdk/cmdline-tools
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-12667192_latest.zip
+          unzip -q commandlinetools-linux-12667192_latest.zip
+          mv cmdline-tools latest
+          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
 
       - name: Pasang NDK
         run: |
-          ${ANDROID_SDK_ROOT}/cmdline-tools/12.0/bin/sdkmanager --install "ndk;25.1.8937393"
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
 
       - name: Tulis lokasi SDK & NDK
         run: |
