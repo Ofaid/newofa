@@ -443,6 +443,28 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
         return -1;
     }
+    
+       // === UNTUK VISUALIZER MONITOR ===
+    public boolean isUserTalking(int sessionId) {
+        if (sessionId <= 0 || mService == null || !mService.isConnected()) {
+            return false;
+        }
+        try {
+            IHumlaSession sesi = mService.HumlaSession();
+            for (IUser user : sesi.getSessionChannel().getUsers()) {
+                if (user.getSession() == sessionId) {
+                    se.lublin.humla.model.TalkState state = user.getTalkState();
+                    return state == se.lublin.humla.model.TalkState.TALKING
+                        || state == se.lublin.humla.model.TalkState.SHOUTING
+                        || state == se.lublin.humla.model.TalkState.WHISPERING;
+                }
+            }
+        } catch (Exception e) {
+            Log.d(TAG, "Cek status bicara gagal", e);
+        }
+        return false;
+    }
+/*============================*/
 
     public void refreshUserStatus(int sessionId) {
         if (sessionId <= 0) return;
