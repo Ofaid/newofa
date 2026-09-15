@@ -40,15 +40,32 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # HAPUS alat yang rusak → pasang sendiri yang baru
-      - name: Pasang Android SDK Tools secara langsung
+      # ✅ Pasang alat SDK dengan perintah yang diperbaiki
+      - name: Pasang Android SDK Tools
         run: |
-          mkdir -p ~/android-sdk/cmdline-tools
-          cd ~/android-sdk/cmdline-tools
-          wget -q https://dl.google.com/android/repository/commandlinetools-linux-12667192_latest.zip
-          unzip -q commandlinetools-linux-12667192_latest.zip
-          mv cmdline-tools latest
-          echo "ANDROID_SDK_ROOT=$HOME/android-sdk" >> $GITHUB_ENV
+          ANDROID_SDK_ROOT="$HOME/android-sdk"
+          mkdir -p "$ANDROID_SDK_ROOT/cmdline-tools"
+          cd "$ANDROID_SDK_ROOT/cmdline-tools"
+          
+          # Unduh dari alamat resmi
+          wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-12667192_latest.zip
+          
+          # Periksa apakah unduhan berhasil
+          if [ ! -f tools.zip ]; then
+            echo "Gagal mengunduh alat!"
+            exit 1
+          fi
+          
+          unzip -q tools.zip
+          rm tools.zip
+          
+          # Sesuaikan nama folder agar dikenali
+          if [ -d cmdline-tools ]; then
+            mv cmdline-tools latest
+          fi
+          
+          echo "ANDROID_SDK_ROOT=$ANDROID_SDK_ROOT" >> $GITHUB_ENV
+        shell: bash
 
       - name: Pasang NDK
         run: |
