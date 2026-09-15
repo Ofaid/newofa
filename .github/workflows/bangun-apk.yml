@@ -31,6 +31,7 @@ jobs:
         run: |
           rm -rf ~/.gradle/caches
           rm -rf ~/.gradle/wrapper
+          rm -rf /usr/local/lib/android/sdk/cmdline-tools
           ./gradlew clean --no-daemon || true
 
       - name: Siapkan Java
@@ -40,28 +41,24 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # ✅ KEMBALI KE CARA ASLI — biarkan alat bekerja sendiri
-      - name: Siapkan Android SDK
-        uses: android-actions/setup-android@v3
-
-      # ✅ Cek jalur mana yang ada, pakai yang benar
-      - name: Cek & Pasang NDK
+      # ✅ Hapus yang rusak → pasang yang versi terbukti baik
+      - name: Pasang Android SDK Tools
         run: |
-          if [ -d "$ANDROID_SDK_ROOT/cmdline-tools/latest/bin" ]; then
-            SDK_BIN="$ANDROID_SDK_ROOT/cmdline-tools/latest/bin"
-          elif [ -d "$ANDROID_SDK_ROOT/cmdline-tools/16.0/bin" ]; then
-            SDK_BIN="$ANDROID_SDK_ROOT/cmdline-tools/16.0/bin"
-          elif [ -d "$ANDROID_SDK_ROOT/cmdline-tools/12.0/bin" ]; then
-            SDK_BIN="$ANDROID_SDK_ROOT/cmdline-tools/12.0/bin"
-          else
-            echo "Tidak ketemu jalur sdkmanager!"
-            ls -la "$ANDROID_SDK_ROOT/cmdline-tools/"
-            exit 1
-          fi
+          SDK_DIR="/usr/local/lib/android/sdk"
+          mkdir -p "$SDK_DIR/cmdline-tools"
+          cd "$SDK_DIR/cmdline-tools"
           
-          echo "Menggunakan: $SDK_BIN"
-          $SDK_BIN/sdkmanager --install "ndk;25.1.8937393"
-          echo "SDK_BIN=$SDK_BIN" >> $GITHUB_ENV
+          # Unduh versi yang alamatnya benar
+          wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q tools.zip
+          rm tools.zip
+          mv cmdline-tools latest
+          
+          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> $GITHUB_ENV
+
+      - name: Pasang NDK
+        run: |
+          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
 
       - name: Tulis lokasi SDK & NDK
         run: |
@@ -85,3 +82,4 @@ jobs:
         with:
           name: Ofaid-APK
           path: "**/*.apk"
+
