@@ -66,6 +66,7 @@ import ofaid.ahmad.ptt.db.DatabaseProvider;
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.ofa.NeonVisualizerView;
+import ofaid.ahmad.ptt.ofa.OfaVisualizerView;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnChannelClickListener;
@@ -98,8 +99,9 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     };
 
-    // ✅ === VISUALIZER MICROFON ===
-    private NeonVisualizerView mVisualNeon;
+    // --- VISUALIZER ---
+    private NeonVisualizerView mVisualNeon;        // Kamu bicara → Hijau/Kuning/Merah
+    private OfaVisualizerView mVisualMonitor;      // Orang bicara → Biru/Ungu/Putih
     private BroadcastReceiver mPenerimaLevel;
 
     // --- LOKASI OTOMATIS ---
@@ -249,8 +251,8 @@ public class ChannelListFragment extends HumlaServiceFragment
                 if (daftarAlamat != null && !daftarAlamat.isEmpty()) {
                     Address alamat = daftarAlamat.get(0);
                     
-                    String kab = alamat.getSubAdminArea();   // Kabupaten
-                    String prov = alamat.getAdminArea();      // Provinsi
+                    String kab = alamat.getSubAdminArea();
+                    String prov = alamat.getAdminArea();
 
                     StringBuilder sb = new StringBuilder();
                     if (kab != null && !kab.trim().isEmpty()) {
@@ -278,7 +280,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         }).start();
     }
 
-    // ========== PERBARUI TAMPILAN ==========
+    // ========== PERBARUI TAMPILAN LOKASI ==========
     private void perbaruiTampilanLokasi() {
         if (mChannelListAdapter != null && lokasiTerbaca != null) {
             mChannelListAdapter.setLokasiSaya(lokasiTerbaca);
@@ -404,8 +406,17 @@ public class ChannelListFragment extends HumlaServiceFragment
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
+            
+            // ✅ MONITOR — Orang lain bicara → Biru/Ungu/Putih
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
+                    boolean sedangBicara = user.isTalking();
+                    float levelMonitor = sedangBicara ? 0.85f : 0f;
+                    
+                    if (mVisualMonitor != null) {
+                        mVisualMonitor.setAudioLevel(levelMonitor);
+                    }
+                    
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
                     if (!displayName.equals(currentSpeakerName)) {
@@ -466,8 +477,11 @@ public class ChannelListFragment extends HumlaServiceFragment
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
-        /*===========Visulizer-Microphone=========*/
+        
+        // ✅ HUBUNGKAN KEDUA VISUALIZER
         mVisualNeon = view.findViewById(R.id.neonVisualizer);
+        mVisualMonitor = view.findViewById(R.id.ofaVisualizer);
+        
         return view;
     }
 
@@ -476,6 +490,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         super.onViewCreated(view, savedInstanceState);
         mintaIzinLokasiOtomatis();
         
+        // Terima level suara MIC → kirim ke Neon
         mPenerimaLevel = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
