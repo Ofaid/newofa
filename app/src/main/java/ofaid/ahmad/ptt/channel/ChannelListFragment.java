@@ -400,22 +400,36 @@ public class ChannelListFragment extends HumlaServiceFragment
                 getActivity().supportInvalidateOptionsMenu();
             }
         }
+//-------------------===========
+             @Override
+        public void onUserStateUpdated(IUser user) {
+            super.onUserStateUpdated(user);
+            if (mChannelListAdapter != null && mChannelView != null && user != null) {
+                mChannelListAdapter.refreshUserStatus(user.getSession());
+                int posisi = mChannelListAdapter.getUserPositionBySession(user.getSession());
+                if (posisi != -1) {
+                    mChannelView.getAdapter().notifyItemChanged(posisi);
+                }
+            }
+            if (getActivity() != null && !isDetached()) {
+                getActivity().supportInvalidateOptionsMenu();
+            }
+        }
 
         @Override
         public void onUserTalkStateUpdated(IUser user) {
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
-            
-            // ✅ MONITOR — Orang lain bicara → Biru/Ungu/Putih
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
-                    boolean sedangBicara = user.isTalking();
+                    // === TAMBAH: MONITOR BERGERAK SAAT ADA YANG BICARA ===
+                    boolean sedangBicara = user.isSpeaking();
                     float levelMonitor = sedangBicara ? 0.85f : 0f;
-                    
                     if (mVisualMonitor != null) {
                         mVisualMonitor.setAudioLevel(levelMonitor);
                     }
+                    // === AKHIR TAMBAHAN ===
                     
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
@@ -433,6 +447,8 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         }
     };
+
+/*=======================*/
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
