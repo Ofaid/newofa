@@ -1,20 +1,8 @@
 /*
  * Copyright (C) 2015 Andrew Comminos <andrew@comminos.com>
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *Ofaid/Ahmad — Sistem Peran & Label
  */
-
+ 
 package ofaid.ahmad.ptt.channel;
 
 import android.content.Context;
@@ -40,13 +28,14 @@ import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.channel.comment.UserCommentFragment;
 // ✅ IMPOR Fitur OFA — TAMBAHAN SAJA, TIDAK UBAH YANG LAIN
 import ofaid.ahmad.ptt.ofa.OfaUserStatus;
+import ofaid.ahmad.ptt.ofa.OfaRole;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.util.ModelUtils;
 
 /**
  * Created by andrew on 19/11/15.
- * OFA: Ditambahkan fitur Status Pengguna — terpisah, tidak ganggu fungsi asli
+ * OFA: Ditambahkan fitur Status Pengguna & Peran — terpisah, tidak ganggu fungsi asli
  */
 public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, PopupMenu.OnMenuItemClickListener {
     private static final String TAG = UserMenu.class.getName();
@@ -56,6 +45,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
     private final MumlaService mService;
     private final FragmentManager mFragmentManager;
     private final IUserLocalStateListener mStateListener;
+    private OnPeranDiubahListener mPeranListener; // ✅ Pembaruan tampilan peran
 
     public UserMenu(Context context, IUser user, MumlaService service,
                     FragmentManager fragmentManager, IUserLocalStateListener stateListener) {
@@ -66,9 +56,18 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         mStateListener = stateListener;
     }
 
+    // ✅ Antarmuka pembaruan peran
+    public interface OnPeranDiubahListener {
+        void diperbarui();
+    }
+
+    public void setOnPeranDiubahListener(OnPeranDiubahListener pendengar) {
+        this.mPeranListener = pendengar;
+    }
+
     @Override
     public void onMenuPrepare(Menu menu, int permissions) {
-        // === KODE ASLI — TETAP UTUH, TIDAK DIUBAH SATU BARIS PUN ===
+        // === KODE ASLI — TETAP UTUH, TIDAK DIUBAH SATU BARIS PUN 🛡️ ===
         boolean self;
         try {
             self = mUser.getSession() == mService.getSessionId();
@@ -113,9 +112,12 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         menu.findItem(R.id.context_ignore_messages).setVisible(!self);
 
         // ✅ === TAMBAH TOMBOL PILIH STATUS — HANYA UNTUK DIRI SENDIRI ===
-        // ⚠️ JANGAN LUPA tambah di res/values/ids.xml: <item type="id" name="menu_pilih_status" />
         MenuItem itemPilihStatus = menu.add(0, R.id.menu_pilih_status, 0, R.string.pilih_status);
-        itemPilihStatus.setVisible(self); // ✅ HANYA MUNCUL UNTUK DIRI SENDIRI — aman!
+        itemPilihStatus.setVisible(self);
+
+        // ✅ === TAMBAH TETAPKAN PERAN — HANYA UNTUK DIRI SENDIRI (PENGATUR) ===
+        MenuItem itemTetapkanPeran = menu.add(0, R.id.menu_tetapkan_peran, 1, "📋 Tetapkan Peran");
+        itemTetapkanPeran.setVisible(self); // Sementara tampil ke diri sendiri, nanti dibatasi ke admin
 
         // Highlight toggles — tetap asli, tidak diubah
         menu.findItem(R.id.context_mute).setChecked(mUser.isMuted() || mUser.isSuppressed());
@@ -129,12 +131,18 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
     public boolean onMenuItemClick(final MenuItem menuItem) {
         int itemId = menuItem.getItemId();
         
-        // ✅ === PENANGANAN KLIK PILIH STATUS — TAMBAHAN BARU, TIDAK GANGGU YANG LAIN ===
+        // ✅ === PILIH STATUS ===
         if (itemId == R.id.menu_pilih_status) {
-            int idPengguna = mUser.getSession(); // ✅ SESUAI ASLI — pakai getSession()!
+            int idPengguna = mUser.getSession();
             String namaPengguna = mUser.getName();
             PilihStatusDialog dialog = PilihStatusDialog.buat(idPengguna, namaPengguna);
             dialog.show(mFragmentManager, "PilihStatusDialog");
+            return true;
+        }
+
+        // ✅ === TETAPKAN PERAN ===
+        if (itemId == R.id.menu_tetapkan_peran) {
+            tampilkanPilihanPeran();
             return true;
         }
 
@@ -180,6 +188,44 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             return false;
         }
         return true;
+    }
+
+    // ✅ === PILIHAN PERAN BARU ===
+    private void tampilkanPilihanPeran() {
+        int uid = mUser.getUserId();
+        final String ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
+        final String namaUser = mUser.getName();
+
+        final String[] pilihan = {
+            "💚 Tetapkan Sebagai Warga",
+            "🏡 Tetapkan Sebagai Lurah",
+            "👑 Tetapkan Sebagai Pemimpin CH",
+            "❌ Hapus Peran"
+        };
+
+        new MaterialAlertDialogBuilder(mContext)
+            .setTitle("Atur Peran — " + namaUser)
+            .setItems(pilihan, (dialog, which) -> {
+                switch (which) {
+                    case 0: // Warga
+                        OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_WARGA, "");
+                        break;
+                    case 1: // Lurah
+                        OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_LURAH, "");
+                        break;
+                    case 2: // Pemimpin CH
+                        OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_PEMIMPIN_CH, "");
+                        break;
+                    case 3: // Hapus
+                        OfaRole.hapusPeranUser(mContext, ofaId);
+                        break;
+                }
+                // Segarkan tampilan
+                if (mPeranListener != null) {
+                    mPeranListener.diperbarui();
+                }
+            })
+            .show();
     }
 
     // === SEMUA METODE ASLI — TETAP UTUH, TIDAK DIUBAH! 🛡️ ===
