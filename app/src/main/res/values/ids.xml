@@ -2,4 +2,6 @@
 <resources>
     <!-- ID Khusus Fitur OFA -->
     <item type="id" name="menu_pilih_status" />
+<item type="id" name="menu_tetapkan_peran" />
+
 </resources>
