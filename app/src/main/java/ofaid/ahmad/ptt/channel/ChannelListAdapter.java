@@ -257,8 +257,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 uvh.mUserIdView.setTextColor(0xFF00CCFF);
             }
             
-           import ofaid.ahmad.ptt.ofa.OfaIdentity;
-import ofaid.ahmad.ptt.ofa.OfaRole;
+       
 //==========================="=====""""""""""
                      
 //==========="=========SETATUS DAN LOKASI===============
