@@ -408,26 +408,31 @@ public class ChannelListFragment extends HumlaServiceFragment
         };
         requireContext().registerReceiver(mPenerimaLevel, new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA"));
 
-        // 📊 Penerima untuk Monitor (suara teman dari AudioOutput)
-        mPenerimaMonitor = new BroadcastReceiver() {
-            @Override
-            public void onReceive(Context context, Intent intent) {
-                if ("ofaid.ahmad.ptt.LEVEL_MONITOR".equals(intent.getAction())) {
-                    float level = intent.getFloatExtra("level", 0f);
-                    
-                    // Ubah level jadi bentuk data batang
-                    byte[] data = new byte[32];
-                    byte nilai = (byte)(level * 127);
-                    for (int i = 0; i < 32; i++) {
-                        data[i] = nilai;
-                    }
-                    
-                    if (mVisualMonitor != null) {
-                        mVisualMonitor.updateVisualizer(data);
-                    }
-                }
+      // 📊 Penerima untuk Monitor (suara teman dari AudioOutput)
+mPenerimaMonitor = new BroadcastReceiver() {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        if ("ofaid.ahmad.ptt.LEVEL_MONITOR".equals(intent.getAction())) {
+            float level = intent.getFloatExtra("level", 0f);
+            
+            // ✅ PERBESAR DI SINI — TIDAK UBAH LOGIKA
+            level = level * 5f;  // 5 kali lipat, kalau masih kecil naik ke 6f / 7f
+            if (level > 1f) level = 1f; // batasi maksimal, jangan lewat
+            
+            // Ubah level jadi bentuk data batang
+            byte[] data = new byte[32];
+            byte nilai = (byte)(level * 127);
+            for (int i = 0; i < 32; i++) {
+                data[i] = nilai;
             }
-        };
+            
+            if (mVisualMonitor != null) {
+                mVisualMonitor.updateVisualizer(data);
+            }
+        }
+    }
+};
+
         requireContext().registerReceiver(mPenerimaMonitor, new IntentFilter("ofaid.ahmad.ptt.LEVEL_MONITOR"));
     }
 
