@@ -10,10 +10,15 @@ import android.view.View;
 
 public class VisualizerView extends View {
 
-    private byte[] mBytes;
-    private float[] mPoints;
-    private Rect mRect = new Rect();
-    private Paint mForePaint = new Paint();
+    private byte[] mData;
+    private Paint mPaint;
+    
+    // SAMA PERSIS DENGAN NEON MIC
+    private static final int WARNA_BAWAH = 0xFF00FF00;  // Hijau
+    private static final int WARNA_TENGAH = 0xFFFFFF00; // Kuning
+    private static final int WARNA_ATAS = 0xFFFF0000;   // Merah
+    private static final int JUMLAH_BATANG = 32;
+    private static final float JARAK_ANTAR = 1.5f;
 
     public VisualizerView(Context context) {
         super(context);
@@ -31,35 +36,71 @@ public class VisualizerView extends View {
     }
 
     private void init() {
-        mBytes = null;
-        mForePaint.setStrokeWidth(1f);
-        mForePaint.setAntiAlias(true);
-        mForePaint.setColor(Color.rgb(0, 128, 255));
+        mData = null;
+        mPaint = new Paint();
+        mPaint.setAntiAlias(true);
+        mPaint.setStyle(Paint.Style.FILL);
     }
 
-    public void updateVisualizer(byte[] bytes) {
-        mBytes = bytes;
+    public void updateVisualizer(byte[] data) {
+        mData = data;
         invalidate();
     }
 
     @Override
     protected void onDraw(Canvas canvas) {
         super.onDraw(canvas);
-        if (mBytes == null) {
-            return;
+        
+        if (mData == null || mData.length == 0) return;
+
+        int lebarTotal = getWidth();
+        int tinggiTotal = getHeight();
+        
+        float lebarBatang = (lebarTotal - (JUMLAH_BATANG - 1) * JARAK_ANTAR) / JUMLAH_BATANG;
+        int langkah = mData.length / JUMLAH_BATANG;
+
+        for (int i = 0; i < JUMLAH_BATANG; i++) {
+            // Ambil nilai rata-rata
+            int mulai = i * langkah;
+            int akhir = Math.min(mulai + langkah, mData.length);
+            
+            int total = 0;
+            for (int j = mulai; j < akhir; j++) {
+                total += Math.abs(mData[j]);
+            }
+            float nilai = total / (akhir - mulai) / 128f;
+            if (nilai > 1f) nilai = 1f;
+            
+            // TINGGI BATANG — sama persis skala dengan mic
+            float tinggiBatang = nilai * tinggiTotal;
+            if (tinggiBatang < 2f) tinggiBatang = 2f;
+            
+            // WARNA — hijau → kuning → merah sama persis dengan Neon
+            int warna;
+            if (nilai < 0.5f) {
+                // Hijau → Kuning
+                float f = nilai / 0.5f;
+                int r = (int)(0xFF * f);
+                int g = 0xFF;
+                int b = 0;
+                warna = Color.rgb(r, g, b);
+            } else {
+                // Kuning → Merah
+                float f = (nilai - 0.5f) / 0.5f;
+                int r = 0xFF;
+                int g = (int)(0xFF * (1f - f));
+                int b = 0;
+                warna = Color.rgb(r, g, b);
+            }
+            mPaint.setColor(warna);
+            
+            // Gambar batang — tumbuh dari bawah ke atas
+            float kiri = i * (lebarBatang + JARAK_ANTAR);
+            float kanan = kiri + lebarBatang;
+            float atas = tinggiTotal - tinggiBatang;
+            float bawah = tinggiTotal;
+            
+            canvas.drawRect(kiri, atas, kanan, bawah, mPaint);
         }
-        if (mPoints == null || mPoints.length < mBytes.length * 4) {
-            mPoints = new float[mBytes.length * 4];
-        }
-        mRect.set(0, 0, getWidth(), getHeight());
-        for (int i = 0; i < mBytes.length - 1; i++) {
-            mPoints[i * 4] = mRect.width() * i / (mBytes.length - 1);
-            mPoints[i * 4 + 1] = mRect.height() / 2
-                + ((byte) (mBytes[i] + 128)) * (mRect.height() / 2) / 128;
-            mPoints[i * 4 + 2] = mRect.width() * (i + 1) / (mBytes.length - 1);
-            mPoints[i * 4 + 3] = mRect.height() / 2
-                + ((byte) (mBytes[i + 1] + 128)) * (mRect.height() / 2) / 128;
-        }
-        canvas.drawLines(mPoints, mForePaint);
     }
 }
