@@ -231,18 +231,18 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         // =============================================
         // ✅ SIAPKAN OFAID — DI LUAR BIAR BISA DIPAKAI SEMUA
         // =============================================
-        String ofaId = null;
+                String ofaId = null;
 
         // Cek apakah ini DIRI SENDIRI
         int sesiUser = user.getSession();
-        int sesiSaya = -1;
+        int sesiSayaId = -1; // ✅ Nama beda, TIDAK TABRAK!
         try {
             if (mService != null && mService.isConnected()) {
-                sesiSaya = mService.HumlaSession().getSessionId();
+                sesiSayaId = mService.HumlaSession().getSessionId();
             }
         } catch (Exception ignored) {}
 
-        if (sesiUser == sesiSaya) {
+        if (sesiUser == sesiSayaId) {
             // ✅ DIRI SENDIRI → pakai ID yang TERKUNCI, TETAP, TIDAK BERUBAH
             ofaId = OfaIdentity.getGlobalOfaId(mContext);
         } else {
@@ -261,7 +261,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
 
         // =============================================
-        // ✅ TAMPILKAN LABEL PERAN
+        // ✅ TAMPILKAN LABEL PERAN — GANTI STATUS LAMA
         // =============================================
         if (uvh.mUserStatusView != null && ofaId != null) {
             int peran = OfaRole.getPeranUser(mContext, ofaId);
@@ -287,15 +287,8 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     uvh.mUserStatusView.setTextColor(0xFF4CAF50); // Hijau
                 }
                 uvh.mUserStatusView.setVisibility(View.VISIBLE);
-            }
-        }
-
-
-       
-//==========================="=====""""""""""
-                     
-//==========="=========SETATUS DAN LOKASI===============
-            if (uvh.mUserStatusView != null) {
+            } else {
+                // Tampil status lama kalau belum ada peran
                 String status = OfaUserStatus.dapatStatus(mContext, user.getSession());
                 uvh.mUserStatusView.setText(status);
                 uvh.mUserStatusView.setVisibility(View.VISIBLE);
@@ -307,50 +300,50 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     uvh.mUserStatusView.setTextColor(0xFFBBBBBB);
                 }
             }
+        }
 
-            // =============================================
-            // ✅ TAMPILKAN LOKASI — DARI KOMENTAR SERVER
-            // =============================================
-            if (uvh.mUserLokasi != null) {
-                String keterangan = user.getComment();
-                String lokasiTampil = null;
+        // =============================================
+        // ✅ TAMPILKAN LOKASI — DARI KOMENTAR SERVER
+        // =============================================
+        if (uvh.mUserLokasi != null) {
+            String keterangan = user.getComment();
+            String lokasiTampil = null;
 
-                if (keterangan != null && !keterangan.trim().isEmpty()) {
-                    String[] baris = keterangan.split("\\r?\\n");
-                    for (String b : baris) {
-                        String bersih = b.trim();
-                        if (bersih.contains(". ") && !bersih.startsWith("📍")) {
-                            // Format: Kabupaten. Provinsi
-                            lokasiTampil = bersih;
-                            break;
-                        }
-                        if (bersih.startsWith("📍")) {
-                            lokasiTampil = bersih;
-                            break;
-                        }
+            if (keterangan != null && !keterangan.trim().isEmpty()) {
+                String[] baris = keterangan.split("\\r?\\n");
+                for (String b : baris) {
+                    String bersih = b.trim();
+                    if (bersih.contains(". ") && !bersih.startsWith("📍")) {
+                        lokasiTampil = bersih;
+                        break;
                     }
-                }
-
-                // ✅ Khusus untuk diri sendiri — tampilkan langsung
-                int sesiSaya = -1;
-                try {
-                    if (mService != null && mService.isConnected()) {
-                        sesiSaya = mService.HumlaSession().getSessionId();
+                    if (bersih.startsWith("📍")) {
+                        lokasiTampil = bersih;
+                        break;
                     }
-                } catch (Exception ignored) {}
-
-                if (lokasiSaya != null && user.getSession() == sesiSaya) {
-                    lokasiTampil = lokasiSaya;
-                }
-
-                if (lokasiTampil != null) {
-                    uvh.mUserLokasi.setText(lokasiTampil);
-                    uvh.mUserLokasi.setTextColor(0xFFFF9900);
-                    uvh.mUserLokasi.setVisibility(View.VISIBLE);
-                } else {
-                    uvh.mUserLokasi.setVisibility(View.GONE);
                 }
             }
+
+            // ✅ Khusus untuk diri sendiri — tampilkan langsung
+            int sesiSayaLokasi = -1; // ✅ Nama beda, TIDAK TABRAK!
+            try {
+                if (mService != null && mService.isConnected()) {
+                    sesiSayaLokasi = mService.HumlaSession().getSessionId();
+                }
+            } catch (Exception ignored) {}
+
+            if (lokasiSaya != null && user.getSession() == sesiSayaLokasi) {
+                lokasiTampil = lokasiSaya;
+            }
+
+            if (lokasiTampil != null) {
+                uvh.mUserLokasi.setText(lokasiTampil);
+                uvh.mUserLokasi.setTextColor(0xFFFF9900);
+                uvh.mUserLokasi.setVisibility(View.VISIBLE);
+            } else {
+                uvh.mUserLokasi.setVisibility(View.GONE);
+            }
+        }
 
             // =============================================
             // ✅ TEBAL NAMA UNTUK DIRI SENDIRI
