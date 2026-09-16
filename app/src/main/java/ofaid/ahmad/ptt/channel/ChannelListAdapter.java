@@ -44,6 +44,9 @@ import ofaid.ahmad.ptt.drawable.CircleDrawable;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.ofa.OfaUserStatus;
 import ofaid.ahmad.ptt.ofa.OfaLokasi;
+import ofaid.ahmad.ptt.ofa.OfaIdentity;
+import ofaid.ahmad.ptt.ofa.OfaRole;
+
 
 public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements UserMenu.IUserLocalStateListener {
     private static final String TAG = ChannelListAdapter.class.getName();
@@ -225,20 +228,40 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 uvh.mUserName.setTextColor(Color.parseColor("#FF9900"));
             }
 
-            // =============================================
-            // ✅ TAMPILKAN ID PENGGUNA
+                   // =============================================
+            // ✅ TAMPILKAN ID PENGGUNA — PAKAI ID TERKUNCI
             // =============================================
             if (uvh.mUserIdView != null) {
-                int uid = user.getUserId();
-                int gabungan = Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000;
-                uvh.mUserIdView.setText("OFA-" + gabungan);
+                String ofaId;
+                
+                // Cek apakah ini DIRI SENDIRI
+                int sesiUser = user.getSession();
+                int sesiSaya = -1;
+                try {
+                    if (mService != null && mService.isConnected()) {
+                        sesiSaya = mService.HumlaSession().getSessionId();
+                    }
+                } catch (Exception ignored) {}
+                
+                if (sesiUser == sesiSaya) {
+                    // ✅ DIRI SENDIRI → pakai ID yang TERKUNCI, TETAP, TIDAK BERUBAH
+                    ofaId = OfaIdentity.getGlobalOfaId(mContext);
+                } else {
+                    // ORANG LAIN → tampilkan sementara
+                    int uid = user.getUserId();
+                    ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
+                }
+                
+                uvh.mUserIdView.setText(ofaId);
                 uvh.mUserIdView.setVisibility(View.VISIBLE);
                 uvh.mUserIdView.setTextColor(0xFF00CCFF);
             }
-
-            // =============================================
-            // ✅ TAMPILKAN STATUS
-            // =============================================
+            
+           import ofaid.ahmad.ptt.ofa.OfaIdentity;
+import ofaid.ahmad.ptt.ofa.OfaRole;
+//==========================="=====""""""""""
+                     
+//==========="=========SETATUS DAN LOKASI===============
             if (uvh.mUserStatusView != null) {
                 String status = OfaUserStatus.dapatStatus(mContext, user.getSession());
                 uvh.mUserStatusView.setText(status);
