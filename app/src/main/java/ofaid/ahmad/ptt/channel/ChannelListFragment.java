@@ -24,6 +24,7 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.media.AudioManager;
+import android.media.audiofx.Visualizer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -66,6 +67,7 @@ import ofaid.ahmad.ptt.db.DatabaseProvider;
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.ofa.NeonVisualizerView;
+import ofaid.ahmad.ptt.ofa.VisualizerView;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.channel.ChannelListAdapter.OnChannelClickListener;
@@ -98,6 +100,8 @@ public class ChannelListFragment extends HumlaServiceFragment
     };
 
     private NeonVisualizerView mVisualNeon;
+    private VisualizerView mVisualMonitor;
+    private Visualizer mVisualizer;
     private BroadcastReceiver mPenerimaLevel;
 
     private LocationManager mLocationManager;
@@ -383,7 +387,8 @@ public class ChannelListFragment extends HumlaServiceFragment
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
         
         mVisualNeon = view.findViewById(R.id.neonVisualizer);
-        
+        mVisualMonitor = view.findViewById(R.id.visualizerMonitor);
+
         return view;
     }
 
@@ -404,12 +409,17 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         };
         requireContext().registerReceiver(mPenerimaLevel, new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA"));
+        
+        initAudioMonitor();
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        if (mPenerimaLevel != null) requireContext().unregisterReceiver(mPenerimaLevel);
+        hentikanMonitor();
+        if (mPenerimaLevel != null) {
+            requireContext().unregisterReceiver(mPenerimaLevel);
+        }
     }
 
     @Override
@@ -566,6 +576,40 @@ public class ChannelListFragment extends HumlaServiceFragment
         int p = mChannelListAdapter.getUserPosition(uid);
         mChannelView.scrollToPosition(p);
     }
+
+/*==================== MONITOR VISUALIZER ====================*/
+    private void initAudioMonitor() {
+        if (mVisualMonitor == null) return;
+        
+        mVisualizer = new Visualizer(0);
+        int ukuran = Visualizer.getCaptureSizeRange()[1];
+        mVisualizer.setCaptureSize(ukuran);
+        
+        mVisualizer.setDataCaptureListener(
+            new Visualizer.OnDataCaptureListener() {
+                @Override
+                public void onWaveFormDataCapture(Visualizer v, byte[] data, int rate) {
+                    if (mVisualMonitor != null) {
+                        mVisualMonitor.updateVisualizer(data);
+                    }
+                }
+                @Override
+                public void onFftDataCapture(Visualizer v, byte[] data, int rate) {}
+            },
+            Visualizer.getMaxCaptureRate() / 2,
+            true,
+            false
+        );
+        mVisualizer.setEnabled(true);
+    }
+
+    private void hentikanMonitor() {
+        if (mVisualizer != null) {
+            mVisualizer.release();
+            mVisualizer = null;
+        }
+    }
+/*============================================================*/
 
     @Override
     public void onChannelClick(IChannel ch) {
