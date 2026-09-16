@@ -24,7 +24,6 @@ import android.location.Location;
 import android.location.LocationListener;
 import android.location.LocationManager;
 import android.media.AudioManager;
-import android.media.audiofx.Visualizer;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -98,11 +97,12 @@ public class ChannelListFragment extends HumlaServiceFragment
                 .start();
         }
     };
-
+    
+    // ✅ VARIABEL BERSIH — TIDAK ADA DUPLIKAT
+    private BroadcastReceiver mPenerimaLevel;
+    private BroadcastReceiver mPenerimaMonitor;
     private NeonVisualizerView mVisualNeon;
     private VisualizerView mVisualMonitor;
-    private Visualizer mVisualizer;
-    private BroadcastReceiver mPenerimaLevel;
 
     private LocationManager mLocationManager;
     private String lokasiTerbaca = null;
@@ -330,9 +330,6 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
             if (getActivity() != null && !isDetached()) {
                 getActivity().runOnUiThread(() -> {
-                    boolean sedangBicara = mChannelListAdapter.isUserTalking(user.getSession());
-                    float levelMonitor = sedangBicara ? 0.85f : 0f;
-
                     bannerHideHandler.removeCallbacks(bannerHideRunnable);
                     String displayName = user.getName();
                     if (!displayName.equals(currentSpeakerName)) {
@@ -397,6 +394,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         super.onViewCreated(view, savedInstanceState);
         mintaIzinLokasiOtomatis();
         
+        // 🎤 Penerima untuk Neon (suara sendiri)
         mPenerimaLevel = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -409,16 +407,39 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         };
         requireContext().registerReceiver(mPenerimaLevel, new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA"));
-        
-        initAudioMonitor();
+
+        // 📊 Penerima untuk Monitor (suara teman dari AudioOutput)
+        mPenerimaMonitor = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if ("ofaid.ahmad.ptt.LEVEL_MONITOR".equals(intent.getAction())) {
+                    float level = intent.getFloatExtra("level", 0f);
+                    
+                    // Ubah level jadi bentuk data batang
+                    byte[] data = new byte[32];
+                    byte nilai = (byte)(level * 127);
+                    for (int i = 0; i < 32; i++) {
+                        data[i] = nilai;
+                    }
+                    
+                    if (mVisualMonitor != null) {
+                        mVisualMonitor.updateVisualizer(data);
+                    }
+                }
+            }
+        };
+        requireContext().registerReceiver(mPenerimaMonitor, new IntentFilter("ofaid.ahmad.ptt.LEVEL_MONITOR"));
     }
 
     @Override
     public void onDestroyView() {
         super.onDestroyView();
-        hentikanMonitor();
+        
         if (mPenerimaLevel != null) {
             requireContext().unregisterReceiver(mPenerimaLevel);
+        }
+        if (mPenerimaMonitor != null) {
+            requireContext().unregisterReceiver(mPenerimaMonitor);
         }
     }
 
@@ -576,74 +597,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         int p = mChannelListAdapter.getUserPosition(uid);
         mChannelView.scrollToPosition(p);
     }
-
-/*==================== MONITOR VISUALIZER ====================*/
-    /*==================== MONITOR VISUALIZER ====================*/
-    private void initAudioMonitor() {
-        if (mVisualMonitor == null) return;
-        
-        // Ambil ID sesi audio aplikasi ini saja
-        int sesiAudio = getSesiAudioAplikasi();
-        mVisualizer = new Visualizer(sesiAudio);
-       
-        int ukuran = Visualizer.getCaptureSizeRange()[1];
-        mVisualizer.setCaptureSize(ukuran);
-        
-        mVisualizer.setDataCaptureListener(
-            new Visualizer.OnDataCaptureListener() {
-                @Override
-                public void onWaveFormDataCapture(Visualizer v, byte[] data, int rate) {
-                    if (mVisualMonitor != null) {
-                        mVisualMonitor.updateVisualizer(data);
-                    }
-                }
-                @Override
-                public void onFftDataCapture(Visualizer v, byte[] data, int rate) {}
-            },
-            Visualizer.getMaxCaptureRate() / 2,
-            true,
-            false
-        );
-        mVisualizer.setEnabled(true);
-    }
-
-    private void hentikanMonitor() {
-        if (mVisualizer != null) {
-            mVisualizer.release();
-            mVisualizer = null;
-        }
-    }
-
-    // ✅ FUNGSI AMBIL SESI AUDIO APLIKASI SENDIRI
-    private int getSesiAudioAplikasi() {
-        int sesi = 0; // 0 = sistem (semua suara), kita cari yang khusus aplikasi ini
-        
-        try {
-            // Cari dari Service Humla/Mumla
-            Object service = getService();
-            if (service != null) {
-                // Coba ambil langsung dari AudioTrack yang dipakai putar suara
-                // Kalau ada method getAudioSessionId() di service:
-                try {
-                    sesi = (int) service.getClass()
-                        .getMethod("getAudioSessionId")
-                        .invoke(service);
-                } catch (Exception e) {
-                    // Tidak ada method, cari cara lain
-                }
-            }
-        } catch (Exception e) {
-            Log.e("Visualizer", "Gagal ambil sesi", e);
-        }
-        
-        // Kalau ketemu sesi khusus → pakai itu, hanya tangkap suara dari aplikasi ini
-        // Kalau tidak ketemu → tetap 0 (sistem), tapi sudah ada dasar untuk dikembangkan
-        Log.d("Visualizer", "Sesi audio dipakai: " + sesi);
-        return sesi;
-    }
-/*============================================================*/
-
-/*============================================================*/
 
     @Override
     public void onChannelClick(IChannel ch) {
