@@ -3,7 +3,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent">
 
-    <!-- ✅ DAFTAR CHANNEL — DI BAWAH, TETAP DIAM! -->
+    <!-- ✅ DAFTAR CHANNEL — TETAP UTUH -->
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/channelUsers"
         android:layout_width="match_parent"
@@ -15,7 +15,7 @@
         android:choiceMode="singleChoice"
         android:clipToPadding="false"/>
 
-    <!-- ✅ BARIS ATAS: TOMBOL KIRI + VISUALIZER + TOMBOL KANAN -->
+    <!-- ✅ BARIS ATAS: TOMBOL + VISUALIZERS -->
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
@@ -25,38 +25,31 @@
         android:paddingHorizontal="8dp"
         android:paddingTop="4dp">
 
-      <!-- 🔘 TOMBOL KIRI → IKON DARI PROYEKMU SENDIRI -->
- <ImageButton
-     android:id="@+id/btnKiri"
-     android:layout_width="40dp"
-     android:layout_height="40dp"
-     android:background="@drawable/bg_tombol_biru"
-     android:src="@drawable/ic_action_microphone"
-android:tint="#FFFFFF"
-     android:contentDescription="Mikrofon" />
-        <!-- 📊 VISUALIZER DI TENGAH -->
-   android:contentDescription="Mikrofon" />
-        <!-- 📊 VISUALIZER DI TENGAH -->
+        <!-- 🔘 TOMBOL KIRI -->
+        <ImageButton
+            android:id="@+id/btnKiri"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:background="@drawable/bg_tombol_biru"
+            android:src="@drawable/ic_action_microphone"
+            android:tint="#FFFFFF"
+            android:contentDescription="Mikrofon" />
+
+        <!-- 📊 NEON VISUALIZER (MIC) → TETAP ADA -->
         <ofaid.ahmad.ptt.ofa.NeonVisualizerView
             android:id="@+id/neonVisualizer"
             android:layout_width="0dp"
             android:layout_height="25dp"
             android:layout_weight="1"
-            android:layout_marginHorizontal="8dp"
-/>
+            android:layout_marginHorizontal="8dp"/>
 
-        <!-- 📊 Ofa VISUALIZER  -->
-        <ofaid.ahmad.ptt.ofa.OfaVisualizerView
-            android:id="@+id/ofaVisualizer"
+        <!-- 📊 MONITOR VISUALIZER → YANG BARU JALAN -->
+        <ofaid.ahmad.ptt.ofa.VisualizerView
+            android:id="@+id/visualizerMonitor"
             android:layout_width="0dp"
             android:layout_height="25dp"
             android:layout_weight="1"
             android:layout_marginHorizontal="8dp"/>
-<ofaid.ahmad.ptt.ofa.VisualizerView
-    android:id="@+id/visualizerMonitor"
-    android:layout_width="match_parent"
-    android:layout_height="50dp" />
-
 
         <!-- 🔘 TOMBOL KANAN -->
         <ImageButton
@@ -70,7 +63,7 @@ android:tint="#FFFFFF"
 
     </LinearLayout>
 
-    <!-- ✅ BANNER NAMA — DI BAWAH BARIS ATAS -->
+    <!-- ✅ BANNER NAMA PEMBICARA -->
     <FrameLayout
         android:id="@+id/bannerActiveSpeaker"
         android:layout_width="match_parent"
