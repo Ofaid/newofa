@@ -22,7 +22,7 @@ public class OfaRole {
         return ID_PEMILIK_UTAMA.equals(ofaId);
     }
 
-    // Simpan peran user
+      // Simpan peran user
     public static void setPeranUser(Context ctx, String ofaId, int peran, String channel) {
         SharedPreferences sp = ctx.getSharedPreferences(PREF_NAMA, Context.MODE_PRIVATE);
         sp.edit()
@@ -53,4 +53,14 @@ public class OfaRole {
         SharedPreferences sp = ctx.getSharedPreferences(PREF_NAMA, Context.MODE_PRIVATE);
         return sp.getString(KUNCI_CHANNEL + ofaId, "");
     }
+
+    // ✅ Hapus peran & data user
+    public static void hapusPeranUser(Context ctx, String ofaId) {
+        SharedPreferences sp = ctx.getSharedPreferences(PREF_NAMA, Context.MODE_PRIVATE);
+        sp.edit()
+            .remove(KUNCI_PERAN + ofaId)
+            .remove(KUNCI_CHANNEL + ofaId)
+            .apply();
+    }
 }
+
