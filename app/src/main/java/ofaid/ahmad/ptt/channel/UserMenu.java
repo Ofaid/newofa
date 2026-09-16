@@ -27,6 +27,7 @@ import se.lublin.humla.net.Permissions;
 import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.channel.comment.UserCommentFragment;
 // ✅ IMPOR Fitur OFA — TAMBAHAN SAJA, TIDAK UBAH YANG LAIN
+import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.OfaUserStatus;
 import ofaid.ahmad.ptt.ofa.OfaRole;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
@@ -115,9 +116,16 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         MenuItem itemPilihStatus = menu.add(0, R.id.menu_pilih_status, 0, R.string.pilih_status);
         itemPilihStatus.setVisible(self);
 
-        // ✅ === TAMBAH TETAPKAN PERAN — HANYA UNTUK DIRI SENDIRI (PENGATUR) ===
+        // ✅ === TAMBAH TETAPKAN PERAN — HANYA PEMILIK UTAMA ===
+        boolean adalahPemilik = false;
+        try {
+            String idSaya = OfaIdentity.getGlobalOfaId(mContext);
+            adalahPemilik = OfaRole.adalahPemilikUtama(idSaya);
+        } catch (Exception e) {
+            adalahPemilik = false;
+        }
         MenuItem itemTetapkanPeran = menu.add(0, R.id.menu_tetapkan_peran, 1, "📋 Tetapkan Peran");
-        itemTetapkanPeran.setVisible(self); // Sementara tampil ke diri sendiri, nanti dibatasi ke admin
+        itemTetapkanPeran.setVisible(self && adalahPemilik); // 🔒 HANYA KAMU YANG LIHAT!
 
         // Highlight toggles — tetap asli, tidak diubah
         menu.findItem(R.id.context_mute).setChecked(mUser.isMuted() || mUser.isSuppressed());
@@ -190,49 +198,49 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         return true;
     }
 
-  // ✅ === PILIHAN PERAN BARU ===
-private void tampilkanPilihanPeran() {
-    // 🔒 CEK: HANYA PEMILIK UTAMA YANG BISA BUKA INI
-    String idSaya = OfaIdentity.dapatIdSaya(mContext);
-    if (!OfaRole.adalahPemilikUtama(idSaya)) {
-        return; // Orang lain langsung ditutup, tidak tampil sama sekali!
+    // ✅ === PILIHAN PERAN BARU ===
+    private void tampilkanPilihanPeran() {
+        // 🔒 CEK: HANYA PEMILIK UTAMA YANG BISA BUKA INI
+        String idSaya = OfaIdentity.getGlobalOfaId(mContext);
+        if (!OfaRole.adalahPemilikUtama(idSaya)) {
+            return; // Orang lain langsung ditutup, tidak tampil sama sekali!
+        }
+
+        int uid = mUser.getUserId();
+        final String ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
+        final String namaUser = mUser.getName();
+
+        final String[] pilihan = {
+            "💚 Tetapkan Sebagai Warga",
+            "🏡 Tetapkan Sebagai Lurah",
+            "👑 Tetapkan Sebagai Pemimpin CH",
+            "❌ Hapus Peran"
+        };
+
+        new MaterialAlertDialogBuilder(mContext)
+            .setTitle("Atur Peran — " + namaUser)
+            .setItems(pilihan, (dialog, which) -> {
+                switch (which) {
+                    case 0: // Warga
+                        OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_WARGA, "");
+                        break;
+                    case 1: // Lurah
+                        OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_LURAH, "");
+                        break;
+                    case 2: // Pemimpin CH
+                        OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_PEMIMPIN_CH, "");
+                        break;
+                    case 3: // Hapus Peran
+                        OfaRole.hapusPeranUser(mContext, ofaId);
+                        break;
+                }
+                // Segarkan tampilan langsung
+                if (mPeranListener != null) {
+                    mPeranListener.diperbarui();
+                }
+            })
+            .show();
     }
-
-    int uid = mUser.getUserId();
-    final String ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
-    final String namaUser = mUser.getName();
-
-    final String[] pilihan = {
-        "💚 Tetapkan Sebagai Warga",
-        "🏡 Tetapkan Sebagai Lurah",
-        "👑 Tetapkan Sebagai Pemimpin CH",
-        "❌ Hapus Peran"
-    };
-
-    new MaterialAlertDialogBuilder(mContext)
-        .setTitle("Atur Peran — " + namaUser)
-        .setItems(pilihan, (dialog, which) -> {
-            switch (which) {
-                case 0: // Warga
-                    OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_WARGA, "");
-                    break;
-                case 1: // Lurah
-                    OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_LURAH, "");
-                    break;
-                case 2: // Pemimpin CH
-                    OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_PEMIMPIN_CH, "");
-                    break;
-                case 3: // Hapus Peran
-                    OfaRole.hapusPeranUser(mContext, ofaId);
-                    break;
-            }
-            // Segarkan tampilan langsung
-            if (mPeranListener != null) {
-                mPeranListener.diperbarui();
-            }
-        })
-        .show();
-}
 
     // === SEMUA METODE ASLI — TETAP UTUH, TIDAK DIUBAH! 🛡️ ===
     private void showUserComment(final boolean edit) {
