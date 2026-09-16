@@ -219,44 +219,78 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 }
             });
 
-            // =============================================
-            // ✅ TAMPILKAN NAMA
-            // =============================================
-            if (uvh.mUserName != null) {
-                uvh.mUserName.setText(user.getName());
-                uvh.mUserName.setVisibility(View.VISIBLE);
-                uvh.mUserName.setTextColor(Color.parseColor("#FF9900"));
-            }
+                  // =============================================
+        // ✅ TAMPILKAN NAMA
+        // =============================================
+        if (uvh.mUserName != null) {
+            uvh.mUserName.setText(user.getName());
+            uvh.mUserName.setVisibility(View.VISIBLE);
+            uvh.mUserName.setTextColor(Color.parseColor("#FF9900"));
+        }
 
-                   // =============================================
-            // ✅ TAMPILKAN ID PENGGUNA — PAKAI ID TERKUNCI
-            // =============================================
-            if (uvh.mUserIdView != null) {
-                String ofaId;
-                
-                // Cek apakah ini DIRI SENDIRI
-                int sesiUser = user.getSession();
-                int sesiSaya = -1;
-                try {
-                    if (mService != null && mService.isConnected()) {
-                        sesiSaya = mService.HumlaSession().getSessionId();
-                    }
-                } catch (Exception ignored) {}
-                
-                if (sesiUser == sesiSaya) {
-                    // ✅ DIRI SENDIRI → pakai ID yang TERKUNCI, TETAP, TIDAK BERUBAH
-                    ofaId = OfaIdentity.getGlobalOfaId(mContext);
-                } else {
-                    // ORANG LAIN → tampilkan sementara
-                    int uid = user.getUserId();
-                    ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
-                }
-                
-                uvh.mUserIdView.setText(ofaId);
-                uvh.mUserIdView.setVisibility(View.VISIBLE);
-                uvh.mUserIdView.setTextColor(0xFF00CCFF);
+        // =============================================
+        // ✅ SIAPKAN OFAID — DI LUAR BIAR BISA DIPAKAI SEMUA
+        // =============================================
+        String ofaId = null;
+
+        // Cek apakah ini DIRI SENDIRI
+        int sesiUser = user.getSession();
+        int sesiSaya = -1;
+        try {
+            if (mService != null && mService.isConnected()) {
+                sesiSaya = mService.HumlaSession().getSessionId();
             }
-            
+        } catch (Exception ignored) {}
+
+        if (sesiUser == sesiSaya) {
+            // ✅ DIRI SENDIRI → pakai ID yang TERKUNCI, TETAP, TIDAK BERUBAH
+            ofaId = OfaIdentity.getGlobalOfaId(mContext);
+        } else {
+            // ORANG LAIN → tampilkan sementara
+            int uid = user.getUserId();
+            ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
+        }
+
+        // =============================================
+        // ✅ TAMPILKAN ID PENGGUNA
+        // =============================================
+        if (uvh.mUserIdView != null && ofaId != null) {
+            uvh.mUserIdView.setText(ofaId);
+            uvh.mUserIdView.setVisibility(View.VISIBLE);
+            uvh.mUserIdView.setTextColor(0xFF00CCFF);
+        }
+
+        // =============================================
+        // ✅ TAMPILKAN LABEL PERAN
+        // =============================================
+        if (uvh.mUserStatusView != null && ofaId != null) {
+            int peran = OfaRole.getPeranUser(mContext, ofaId);
+            String namaPeran = OfaRole.getNamaPeran(peran);
+            String namaChannel = OfaRole.getChannelUser(mContext, ofaId);
+
+            if (!namaPeran.isEmpty()) {
+                String tampilLabel;
+                if (!namaChannel.isEmpty()) {
+                    tampilLabel = "[" + namaPeran + " — " + namaChannel + "]";
+                } else {
+                    tampilLabel = "[" + namaPeran + "]";
+                }
+
+                uvh.mUserStatusView.setText(tampilLabel);
+
+                // Warna sesuai peran
+                if (peran == OfaRole.ROLE_LURAH) {
+                    uvh.mUserStatusView.setTextColor(0xFFFF9800); // Oranye
+                } else if (peran == OfaRole.ROLE_PEMIMPIN_CH) {
+                    uvh.mUserStatusView.setTextColor(0xFF9C27B0); // Ungu
+                } else if (peran == OfaRole.ROLE_WARGA) {
+                    uvh.mUserStatusView.setTextColor(0xFF4CAF50); // Hijau
+                }
+                uvh.mUserStatusView.setVisibility(View.VISIBLE);
+            }
+        }
+
+
        
 //==========================="=====""""""""""
                      
