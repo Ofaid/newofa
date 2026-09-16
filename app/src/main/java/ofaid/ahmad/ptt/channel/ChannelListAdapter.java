@@ -352,15 +352,23 @@ import ofaid.ahmad.ptt.ofa.OfaRole;
                     uvh.mUserHolder.getPaddingTop(),
                     uvh.mUserHolder.getPaddingRight(),
                     uvh.mUserHolder.getPaddingBottom());
-
-            uvh.mMoreButton.setOnClickListener(new View.OnClickListener() {
+//======== menu baru
+                        uvh.mMoreButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     UserMenu menu = new UserMenu(mContext, user, (MumlaService) mService,
                             mFragmentManager, ChannelListAdapter.this);
+                    // ✅ Sambung pembaruan peran
+                    menu.setOnPeranDiubahListener(new UserMenu.OnPeranDiubahListener() {
+                        @Override
+                        public void diperbarui() {
+                            notifyDataSetChanged(); // Langsung tampil label baru
+                        }
+                    });
                     menu.showPopup(v);
                 }
             });
+//===================================
 
             uvh.itemView.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
