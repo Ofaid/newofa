@@ -1,53 +1,56 @@
-/*Edit By Ofaid/Ahmd-jr 16-9-2026 — Sistem Peran & Label*/
 package ofaid.ahmad.ptt.ofa;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 
 public class OfaRole {
-    private static final String PREFS_NAME = "ofa_roles_prefs";
-
-    public static final int ROLE_NONE = 0;
+    // === TINGKAT PERAN ===
     public static final int ROLE_WARGA = 1;
     public static final int ROLE_LURAH = 2;
     public static final int ROLE_PEMIMPIN_CH = 3;
+    public static final int ROLE_PEMILIK_UTAMA = 99; // ✅ HANYA KAMU
 
-    public static void setPeranUser(Context context, String ofaId, int peran, String channelId) {
-        if (context == null || ofaId == null || ofaId.trim().isEmpty()) return;
-        SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+    // === ID PEMILIK UTAMA — GANTI DENGAN ID-MU ===
+    private static final String ID_PEMILIK_UTAMA = "OFA-10000-SU";
+
+    private static final String PREF_NAMA = "OfaRolePrefs";
+    private static final String KUNCI_PERAN = "peran_";
+    private static final String KUNCI_CHANNEL = "channel_";
+
+    // Cek apakah yang masuk adalah pemilik utama
+    public static boolean adalahPemilikUtama(String ofaId) {
+        return ID_PEMILIK_UTAMA.equals(ofaId);
+    }
+
+    // Simpan peran user
+    public static void setPeranUser(Context ctx, String ofaId, int peran, String channel) {
+        SharedPreferences sp = ctx.getSharedPreferences(PREF_NAMA, Context.MODE_PRIVATE);
         sp.edit()
-                .putInt("peran_" + ofaId, peran)
-                .putString("channel_" + ofaId, channelId)
-                .apply();
+            .putInt(KUNCI_PERAN + ofaId, peran)
+            .putString(KUNCI_CHANNEL + ofaId, channel)
+            .apply();
     }
 
-    public static int getPeranUser(Context context, String ofaId) {
-        if (context == null || ofaId == null) return ROLE_NONE;
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getInt("peran_" + ofaId, ROLE_NONE);
+    // Baca peran user
+    public static int getPeranUser(Context ctx, String ofaId) {
+        SharedPreferences sp = ctx.getSharedPreferences(PREF_NAMA, Context.MODE_PRIVATE);
+        return sp.getInt(KUNCI_PERAN + ofaId, ROLE_WARGA);
     }
 
-    public static String getChannelUser(Context context, String ofaId) {
-        if (context == null || ofaId == null) return "";
-        return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .getString("channel_" + ofaId, "");
-    }
-
-    public static void hapusPeranUser(Context context, String ofaId) {
-        if (context == null || ofaId == null) return;
-        SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        sp.edit()
-                .remove("peran_" + ofaId)
-                .remove("channel_" + ofaId)
-                .apply();
-    }
-
+    // Baca nama peran
     public static String getNamaPeran(int peran) {
         switch (peran) {
-            case ROLE_WARGA:       return "Warga";
-            case ROLE_LURAH:       return "Lurah";
+            case ROLE_PEMILIK_UTAMA: return "Pemilik";
             case ROLE_PEMIMPIN_CH: return "Pemimpin CH";
-            default:               return "";
+            case ROLE_LURAH: return "Lurah";
+            case ROLE_WARGA: return "Warga";
+            default: return "";
         }
+    }
+
+    // Baca nama channel
+    public static String getChannelUser(Context ctx, String ofaId) {
+        SharedPreferences sp = ctx.getSharedPreferences(PREF_NAMA, Context.MODE_PRIVATE);
+        return sp.getString(KUNCI_CHANNEL + ofaId, "");
     }
 }
