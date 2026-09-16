@@ -578,10 +578,14 @@ public class ChannelListFragment extends HumlaServiceFragment
     }
 
 /*==================== MONITOR VISUALIZER ====================*/
+    /*==================== MONITOR VISUALIZER ====================*/
     private void initAudioMonitor() {
         if (mVisualMonitor == null) return;
         
-        mVisualizer = new Visualizer(0);
+        // Ambil ID sesi audio aplikasi ini saja
+        int sesiAudio = getSesiAudioAplikasi();
+        mVisualizer = new Visualizer(sesiAudio);
+       
         int ukuran = Visualizer.getCaptureSizeRange()[1];
         mVisualizer.setCaptureSize(ukuran);
         
@@ -609,6 +613,36 @@ public class ChannelListFragment extends HumlaServiceFragment
             mVisualizer = null;
         }
     }
+
+    // ✅ FUNGSI AMBIL SESI AUDIO APLIKASI SENDIRI
+    private int getSesiAudioAplikasi() {
+        int sesi = 0; // 0 = sistem (semua suara), kita cari yang khusus aplikasi ini
+        
+        try {
+            // Cari dari Service Humla/Mumla
+            Object service = getService();
+            if (service != null) {
+                // Coba ambil langsung dari AudioTrack yang dipakai putar suara
+                // Kalau ada method getAudioSessionId() di service:
+                try {
+                    sesi = (int) service.getClass()
+                        .getMethod("getAudioSessionId")
+                        .invoke(service);
+                } catch (Exception e) {
+                    // Tidak ada method, cari cara lain
+                }
+            }
+        } catch (Exception e) {
+            Log.e("Visualizer", "Gagal ambil sesi", e);
+        }
+        
+        // Kalau ketemu sesi khusus → pakai itu, hanya tangkap suara dari aplikasi ini
+        // Kalau tidak ketemu → tetap 0 (sistem), tapi sudah ada dasar untuk dikembangkan
+        Log.d("Visualizer", "Sesi audio dipakai: " + sesi);
+        return sesi;
+    }
+/*============================================================*/
+
 /*============================================================*/
 
     @Override
