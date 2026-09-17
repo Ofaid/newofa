@@ -109,7 +109,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     // ✅ KODE PERMINTAAN IZIN — SESUAI POLA ASLI
     private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
     private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 2;
-    private static final int PERMISSIONS_REQUEST_STORAGE = 917; // ✅ Baru
+    private static final int PERMISSIONS_REQUEST_STORAGE = 917;
 
     private IMumlaService mService;
     private MumlaDatabase mDatabase;
@@ -125,7 +125,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     private AlertDialog mConnectingDialog;
     private AlertDialog mErrorDialog;
 
-    private boolean mIzinPenyimpananDiproses = false; // ✅ Tanda agar tidak berulang
+    private boolean mIzinPenyimpananDiproses = false;
 
     private final List<HumlaServiceFragment> mServiceFragments = new ArrayList<>();
 
@@ -333,7 +333,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
 
-        // ✅ POLA ASLI DIPERTAHANKAN: cek izin dulu, baru lanjut ke Startup
+        // ✅ CEK IZIN PENYIMPANAN DULU, BARU LANJUT
         if (savedInstanceState == null) {
             if (cekIzinPenyimpanan()) {
                 lanjutKeAwal();
@@ -357,17 +357,16 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     // ==================================================
-    // ✅ CEK IZIN PENYIMPANAN — TAMBAHAN SAJA, TIDAK UBAH ALUR
+    // ✅ CEK IZIN PENYIMPANAN
     // ==================================================
     private boolean cekIzinPenyimpanan() {
-        // Android 13+ tidak butuh izin WRITE_EXTERNAL_STORAGE
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            return true; // Langsung boleh
+            return true;
         }
         
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 == PackageManager.PERMISSION_GRANTED) {
-            return true; // Sudah ada izin
+            return true;
         }
 
         if (!mIzinPenyimpananDiproses) {
@@ -377,15 +376,15 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                                  Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     PERMISSIONS_REQUEST_STORAGE);
         }
-        return false; // Tunggu izin
+        return false;
     }
 
     private void lanjutKeAwal() {
         if (mSettings.isFirstRun()) {
             showFirstRunGuide();
         } else {
-            // ✅ TETAP PAKAI POLA ASLI — TIDAK UBAH StartupAction
-            new StartupAction().execute(this);
+            // ✅ PERBAIKAN UTAMA — SESUAI TIPE ASLI
+            new StartupAction().execute(MumlaActivity.this);
         }
     }
 
@@ -396,22 +395,22 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
 
         if (grantResults.length == 0) return;
 
-        // ✅ TANGGAPI IZIN PENYIMPANAN — TETAP KE POLA ASLI
+        // ✅ IZIN PENYIMPANAN
         if (requestCode == PERMISSIONS_REQUEST_STORAGE) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.i("OFA_PERM", "✅ Izin penyimpanan DIBERIKAN");
             } else {
-                Log.w("OFA_PERM", "⚠️ Izin penyimpanan DITOLAK — sertifikat tetap bekerja tanpa cadangan file luar");
+                Log.w("OFA_PERM", "⚠️ Izin penyimpanan DITOLAK — sertifikat tetap bekerja");
                 new MaterialAlertDialogBuilder(this)
                         .setMessage("Tanpa izin akses file, saat install ulang akan buat sertifikat baru. Fitur tetap berjalan.")
                         .setPositiveButton("Mengerti", null)
                         .show();
             }
-            lanjutKeAwal(); // ✅ LANGSUNG KE POLA ASLI — TIDAK UBAH
+            lanjutKeAwal();
             return;
         }
 
-        // ✅ IZIN LAIN — TETAP SAMA PERSIS
+        // ✅ IZIN LAIN — TETAP SAMA
         switch (requestCode) {
             case PERMISSIONS_REQUEST_RECORD_AUDIO:
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -524,12 +523,13 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     // ==================================================
-    // ✅ TAMBAH: PULIHKAN DARI CADANGAN — TETAP PANGGIL StartupAction SESUAI POLA ASLI
+    // ✅ PANDUAN AWAL & PULIHKAN SERTIFIKAT
     // ==================================================
     private void showFirstRunGuide() {
         if (mSettings.isUsingCertificate()) {
             mSettings.setFirstRun(false);
-            new StartupAction().execute(this); // ✅ TETAP PAKAI CARA ASLI
+            // ✅ PERBAIKAN — TIPE SESUAI
+            new StartupAction().execute(MumlaActivity.this);
             return;
         }
 
@@ -541,7 +541,8 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                     mSettings.setDefaultCertificateId(result.getId());
                     mSettings.setFirstRun(false);
                     Log.i("OFA_CERT", "✅ Dipulihkan dari cadangan — ID: " + result.getId());
-                    new StartupAction().execute(this); // ✅ SESUAI POLA ASLI
+                    // ✅ PERBAIKAN — TIPE SESUAI
+                    new StartupAction().execute(MumlaActivity.this);
                     return;
                 }
                 tampilkanDialogBuatBaru();
@@ -566,7 +567,8 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                             if (result != null) {
                                 mSettings.setDefaultCertificateId(result.getId());
                                 mSettings.setFirstRun(false);
-                                new StartupAction().execute(this); // ✅ SESUAI POLA ASLI
+                                // ✅ PERBAIKAN — TIPE SESUAI
+                                new StartupAction().execute(MumlaActivity.this);
                             }
                         }
                     };
@@ -854,14 +856,9 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     // ==================================================
-    // ✅ KELAS StartupAction — DIPERTAHANKAN PERSIS SEPERTI ASLINYA
+    // ✅ KELAS StartupAction — DIPERBAIKI TIPE & KONSTRUKTOR
     // ==================================================
     private static class StartupAction extends android.os.AsyncTask<MumlaActivity, Void, Void> {
-        private MumlaActivity mActivity;
-
-        public StartupAction(MumlaActivity activity) {
-            mActivity = activity;
-        }
 
         @Override
         protected Void doInBackground(MumlaActivity... activities) {
@@ -871,8 +868,11 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-            if (mActivity.isFinishing() || mActivity.isDestroyed()) return;
-            mActivity.loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
+            // Ambil activity dari parameter pertama
+            if (isCancelled()) return;
+            MumlaActivity activity = (MumlaActivity) getParams()[0];
+            if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
+            activity.loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
         }
     }
 }
