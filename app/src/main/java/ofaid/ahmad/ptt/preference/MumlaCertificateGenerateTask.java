@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Modified By OFAID 2026 — Sistem Cadangan Sertifikat Tetap
+ * Modified By OFAID 2026 — Sistem Cadangan Tetap
  */
 
 package ofaid.ahmad.ptt.preference;
@@ -9,7 +9,6 @@ import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Environment;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.appcompat.app.AlertDialog;
 
@@ -57,53 +56,61 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
     @Override
     protected DatabaseCertificate doInBackground(Void... params) {
         try {
-            // ✅ LANGKAH 1: Cek Cadangan Aman — Pulihkan Jika Ada
-            DatabaseCertificate pulihDariCadangan = cekDanPulihkanCadangan();
-            if (pulihDariCadangan != null) {
-                Log.i(TAG, "✅ Sertifikat dipulihkan dari cadangan!");
-                return pulihDariCadangan;
+            // ==============================================
+            // ✅ LANGKAH 1: CEK CADANGAN DULU — PULIHKAN JIKA ADA
+            // ==============================================
+            DatabaseCertificate dariCadangan = cekDanPulihkan();
+            if (dariCadangan != null) {
+                Log.i(TAG, "✅ Dipulihkan dari cadangan!");
+                return dariCadangan; // Selesai, TIDAK buat baru
             }
 
-            // ✅ LANGKAH 2: Tidak Ada Cadangan → Buat Baru
-            Log.i(TAG, "Tidak ada cadangan, buat sertifikat baru...");
+            // ==============================================
+            // ✅ LANGKAH 2: TIDAK ADA CADANGAN → BUAT BARU
+            // ==============================================
+            Log.i(TAG, "Tidak ada cadangan, buat baru...");
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             HumlaCertificateGenerator.generateCertificate(baos);
             byte[] dataSertifikat = baos.toByteArray();
 
-            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
-            String fileName = context.getString(R.string.certificate_export_format, dateFormat.format(new Date()));
+            SimpleDateFormat df = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
+            String nama = context.getString(R.string.certificate_export_format, df.format(new Date()));
 
-            MumlaDatabase database = new MumlaSQLiteDatabase(context);
-            DatabaseCertificate dc = database.addCertificate(fileName, dataSertifikat);
-            database.close();
+            MumlaDatabase db = new MumlaSQLiteDatabase(context);
+            DatabaseCertificate hasil = db.addCertificate(nama, dataSertifikat);
+            db.close();
 
-            // ✅ LANGKAH 3: Simpan Cadangan ke Tempat Aman
+            // ==============================================
+            // ✅ LANGKAH 3: SIMPAN CADANGAN — UNTUK MASA DEPAN
+            // ==============================================
             simpanCadangan(dataSertifikat);
-            Log.i(TAG, "✅ Sertifikat baru dibuat & dicadangkan");
+            Log.i(TAG, "✅ Baru dibuat & dicadangkan");
 
-            return dc;
+            return hasil;
         } catch (Exception e) {
-            Log.e(TAG, "❌ Gagal proses sertifikat: " + e.getMessage());
+            Log.e(TAG, "❌ Gagal: " + e.getMessage());
             e.printStackTrace();
             return null;
         }
     }
 
-    // ========== SISTEM CADANGAN & PULIHKAN ==========
-    private DatabaseCertificate cekDanPulihkanCadangan() {
+    // ==================================================
+    // PULIHKAN DARI CADANGAN
+    // ==================================================
+    private DatabaseCertificate cekDanPulihkan() {
         try {
-            File folderCadangan = new File(
+            File folder = new File(
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
                     BACKUP_FOLDER);
-            File fileCadangan = new File(folderCadangan, BACKUP_FILE);
+            File file = new File(folder, BACKUP_FILE);
 
-            if (!fileCadangan.exists()) {
+            if (!file.exists()) {
                 Log.i(TAG, "Tidak ada file cadangan");
                 return null;
             }
 
-            // Baca data dari cadangan
-            FileInputStream fis = new FileInputStream(fileCadangan);
+            // Baca data cadangan
+            FileInputStream fis = new FileInputStream(file);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             byte[] buffer = new byte[4096];
             int baca;
@@ -111,56 +118,49 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
                 baos.write(buffer, 0, baca);
             }
             fis.close();
-            byte[] dataCadangan = baos.toByteArray();
+            byte[] data = baos.toByteArray();
 
-            // Masukkan ke database seolah-olah baru dibuat
-            SimpleDateFormat dateFormat = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
-            String namaPulih = "Dipulihkan-" + dateFormat.format(new Date());
-
-            MumlaDatabase database = new MumlaSQLiteDatabase(context);
-            DatabaseCertificate dc = database.addCertificate(namaPulih, dataCadangan);
-            database.close();
+            // Masukkan ke database
+            String namaPulih = "Dipulihkan-" + new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
+                    .format(new Date());
+            MumlaDatabase db = new MumlaSQLiteDatabase(context);
+            DatabaseCertificate dc = db.addCertificate(namaPulih, data);
+            db.close();
 
             return dc;
         } catch (Exception e) {
-            Log.w(TAG, "Gagal pulihkan cadangan: " + e.getMessage());
+            Log.w(TAG, "Gagal pulihkan: " + e.getMessage());
             return null;
         }
     }
 
+    // ==================================================
+    // SIMPAN CADANGAN
+    // ==================================================
     private void simpanCadangan(byte[] data) {
         try {
-            File folderCadangan = new File(
+            File folder = new File(
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
                     BACKUP_FOLDER);
 
-            if (!folderCadangan.exists()) {
-                folderCadangan.mkdirs();
-            }
+            if (!folder.exists()) folder.mkdirs();
 
-            File fileCadangan = new File(folderCadangan, BACKUP_FILE);
-            FileOutputStream fos = new FileOutputStream(fileCadangan);
+            File file = new File(folder, BACKUP_FILE);
+            FileOutputStream fos = new FileOutputStream(file);
             fos.write(data);
             fos.flush();
             fos.close();
 
-            Log.i(TAG, "✅ Cadangan tersimpan di: " + fileCadangan.getAbsolutePath());
+            Log.i(TAG, "✅ Cadangan disimpan: " + file.getAbsolutePath());
         } catch (Exception e) {
-            Log.e(TAG, "❌ Gagal simpan cadangan: " + e.getMessage());
+            Log.e(TAG, "❌ Gagal simpan: " + e.getMessage());
         }
     }
-    // ========== AKHIR SISTEM CADANGAN ==========
 
     @Override
     protected void onPostExecute(DatabaseCertificate result) {
         super.onPostExecute(result);
-        if (result == null) {
-            Toast.makeText(context, R.string.generateCertFailure, Toast.LENGTH_SHORT).show();
-        } else {
-            Toast.makeText(context, "✅ Sertifikat siap dipakai!", Toast.LENGTH_SHORT).show();
-        }
-
-        if (loadingDialog != null) {
+        if (loadingDialog != null && loadingDialog.isShowing()) {
             loadingDialog.dismiss();
         }
     }
