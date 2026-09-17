@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Modified By OFAID 2026 — Sistem Cadangan Tetap
+ * Modified By OFAID 2026 — Pulihkan Nama & ID Asli
  */
 
 package ofaid.ahmad.ptt.preference;
@@ -15,10 +15,12 @@ import androidx.appcompat.app.AlertDialog;
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.ByteArrayOutputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -30,9 +32,9 @@ import ofaid.ahmad.ptt.db.MumlaDatabase;
 import ofaid.ahmad.ptt.db.MumlaSQLiteDatabase;
 
 public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, DatabaseCertificate> {
-    private static final String DATE_FORMAT = "yyyy-MM-dd-HH-mm-ss";
     private static final String BACKUP_FOLDER = "OFAID_PTT";
-    private static final String BACKUP_FILE = "ofaid_cert_backup.bin";
+    private static final String BACKUP_FILE_DATA = "cert_data.bin";
+    private static final String BACKUP_FILE_NAME = "cert_name.txt";
     private static final String TAG = "CertBackup";
 
     private Context context;
@@ -57,12 +59,12 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
     protected DatabaseCertificate doInBackground(Void... params) {
         try {
             // ==============================================
-            // ✅ LANGKAH 1: CEK CADANGAN DULU — PULIHKAN JIKA ADA
+            // ✅ LANGKAH 1: CEK CADANGAN — PULIHKAN NAMA ASLI
             // ==============================================
             DatabaseCertificate dariCadangan = cekDanPulihkan();
             if (dariCadangan != null) {
-                Log.i(TAG, "✅ Dipulihkan dari cadangan!");
-                return dariCadangan; // Selesai, TIDAK buat baru
+                Log.i(TAG, "✅ Dipulihkan — Nama: " + dariCadangan.getName());
+                return dariCadangan;
             }
 
             // ==============================================
@@ -73,18 +75,18 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
             HumlaCertificateGenerator.generateCertificate(baos);
             byte[] dataSertifikat = baos.toByteArray();
 
-            SimpleDateFormat df = new SimpleDateFormat(DATE_FORMAT, Locale.getDefault());
-            String nama = context.getString(R.string.certificate_export_format, df.format(new Date()));
+            SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault());
+            String namaAsli = context.getString(R.string.certificate_export_format, df.format(new Date()));
 
             MumlaDatabase db = new MumlaSQLiteDatabase(context);
-            DatabaseCertificate hasil = db.addCertificate(nama, dataSertifikat);
+            DatabaseCertificate hasil = db.addCertificate(namaAsli, dataSertifikat);
             db.close();
 
             // ==============================================
-            // ✅ LANGKAH 3: SIMPAN CADANGAN — UNTUK MASA DEPAN
+            // ✅ LANGKAH 3: SIMPAN — NAMA & DATA BERSAMAAN
             // ==============================================
-            simpanCadangan(dataSertifikat);
-            Log.i(TAG, "✅ Baru dibuat & dicadangkan");
+            simpanCadangan(namaAsli, dataSertifikat);
+            Log.i(TAG, "✅ Baru dibuat & dicadangkan — Nama: " + namaAsli);
 
             return hasil;
         } catch (Exception e) {
@@ -95,36 +97,42 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
     }
 
     // ==================================================
-    // PULIHKAN DARI CADANGAN
+    // PULIHKAN — NAMA ASLI DIPAKAI KEMBALI
     // ==================================================
     private DatabaseCertificate cekDanPulihkan() {
         try {
             File folder = new File(
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
                     BACKUP_FOLDER);
-            File file = new File(folder, BACKUP_FILE);
+            File fileData = new File(folder, BACKUP_FILE_DATA);
+            File fileNama = new File(folder, BACKUP_FILE_NAME);
 
-            if (!file.exists()) {
-                Log.i(TAG, "Tidak ada file cadangan");
+            if (!fileData.exists() || !fileNama.exists()) {
+                Log.i(TAG, "Tidak ada file cadangan lengkap");
                 return null;
             }
 
-            // Baca data cadangan
-            FileInputStream fis = new FileInputStream(file);
+            // Baca NAMA ASLI yang pertama kali dipakai
+            FileInputStream fisNama = new FileInputStream(fileNama);
+            byte[] bacaNama = new byte[(int) fileNama.length()];
+            fisNama.read(bacaNama);
+            fisNama.close();
+            String namaAsli = new String(bacaNama, "UTF-8");
+
+            // Baca data sertifikat
+            FileInputStream fisData = new FileInputStream(fileData);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             byte[] buffer = new byte[4096];
             int baca;
-            while ((baca = fis.read(buffer)) != -1) {
+            while ((baca = fisData.read(buffer)) != -1) {
                 baos.write(buffer, 0, baca);
             }
-            fis.close();
+            fisData.close();
             byte[] data = baos.toByteArray();
 
-            // Masukkan ke database
-            String namaPulih = "Dipulihkan-" + new SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
-                    .format(new Date());
+            // Masukkan ke database DENGAN NAMA YANG SAMA PERSIS
             MumlaDatabase db = new MumlaSQLiteDatabase(context);
-            DatabaseCertificate dc = db.addCertificate(namaPulih, data);
+            DatabaseCertificate dc = db.addCertificate(namaAsli, data);
             db.close();
 
             return dc;
@@ -135,23 +143,28 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
     }
 
     // ==================================================
-    // SIMPAN CADANGAN
+    // SIMPAN — NAMA & DATA DIPISAH DUA FILE
     // ==================================================
-    private void simpanCadangan(byte[] data) {
+    private void simpanCadangan(String nama, byte[] data) {
         try {
             File folder = new File(
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
                     BACKUP_FOLDER);
-
             if (!folder.exists()) folder.mkdirs();
 
-            File file = new File(folder, BACKUP_FILE);
-            FileOutputStream fos = new FileOutputStream(file);
-            fos.write(data);
-            fos.flush();
-            fos.close();
+            // Simpan data sertifikat
+            FileOutputStream fosData = new FileOutputStream(new File(folder, BACKUP_FILE_DATA));
+            fosData.write(data);
+            fosData.flush();
+            fosData.close();
 
-            Log.i(TAG, "✅ Cadangan disimpan: " + file.getAbsolutePath());
+            // Simpan NAMA ASLI secara terpisah
+            FileOutputStream fosNama = new FileOutputStream(new File(folder, BACKUP_FILE_NAME));
+            fosNama.write(nama.getBytes("UTF-8"));
+            fosNama.flush();
+            fosNama.close();
+
+            Log.i(TAG, "✅ Tersimpan — Nama: " + nama);
         } catch (Exception e) {
             Log.e(TAG, "❌ Gagal simpan: " + e.getMessage());
         }
