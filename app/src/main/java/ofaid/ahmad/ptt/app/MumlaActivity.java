@@ -1,21 +1,10 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
  *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+OFAID 2026
  */
 
-package ofaid.ahmad.ptt.app;
+package se.lublin.mumla.app;
 
 import static java.util.Objects.requireNonNull;
 
@@ -87,28 +76,28 @@ import se.lublin.humla.protobuf.Mumble;
 import se.lublin.humla.util.HumlaException;
 import se.lublin.humla.util.HumlaObserver;
 import se.lublin.humla.util.MumbleURLParser;
-import ofaid.ahmad.ptt.BuildConfig;
-import ofaid.ahmad.ptt.R;
-import ofaid.ahmad.ptt.Settings;
-import ofaid.ahmad.ptt.channel.AccessTokenFragment;
-import ofaid.ahmad.ptt.channel.ChannelFragment;
-import ofaid.ahmad.ptt.channel.ServerInfoFragment;
-import ofaid.ahmad.ptt.db.DatabaseCertificate;
-import ofaid.ahmad.ptt.db.DatabaseProvider;
-import ofaid.ahmad.ptt.db.MumlaDatabase;
-import ofaid.ahmad.ptt.db.MumlaSQLiteDatabase;
-import ofaid.ahmad.ptt.db.PublicServer;
-import ofaid.ahmad.ptt.preference.MumlaCertificateGenerateTask;
-import ofaid.ahmad.ptt.preference.SettingsActivity;
-import ofaid.ahmad.ptt.servers.FavouriteServerListFragment;
-import ofaid.ahmad.ptt.servers.PublicServerListFragment;
-import ofaid.ahmad.ptt.servers.ServerEditFragment;
-import ofaid.ahmad.ptt.service.IMumlaService;
-import ofaid.ahmad.ptt.service.MumlaService;
-import ofaid.ahmad.ptt.util.HumlaServiceFragment;
-import ofaid.ahmad.ptt.util.HumlaServiceProvider;
-import ofaid.ahmad.ptt.util.MumlaTrustStore;
-import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
+import se.lublin.mumla.BuildConfig;
+import se.lublin.mumla.R;
+import se.lublin.mumla.Settings;
+import se.lublin.mumla.channel.AccessTokenFragment;
+import se.lublin.mumla.channel.ChannelFragment;
+import se.lublin.mumla.channel.ServerInfoFragment;
+import se.lublin.mumla.db.DatabaseCertificate;
+import se.lublin.mumla.db.DatabaseProvider;
+import se.lublin.mumla.db.MumlaDatabase;
+import se.lublin.mumla.db.MumlaSQLiteDatabase;
+import se.lublin.mumla.db.PublicServer;
+import se.lublin.mumla.preference.MumlaCertificateGenerateTask;
+import se.lublin.mumla.preference.SettingsActivity;
+import se.lublin.mumla.servers.FavouriteServerListFragment;
+import se.lublin.mumla.servers.PublicServerListFragment;
+import se.lublin.mumla.servers.ServerEditFragment;
+import se.lublin.mumla.service.IMumlaService;
+import se.lublin.mumla.service.MumlaService;
+import se.lublin.mumla.util.HumlaServiceFragment;
+import se.lublin.mumla.util.HumlaServiceProvider;
+import se.lublin.mumla.util.MumlaTrustStore;
+import se.lublin.mumla.ofa.PilihStatusDialog;
 
 public class MumlaActivity extends AppCompatActivity implements ListView.OnItemClickListener,
         FavouriteServerListFragment.ServerConnectHandler, HumlaServiceProvider, DatabaseProvider,
@@ -514,12 +503,44 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
         loadDrawerFragment((int) id);
     }
 
-    private void showFirstRunGuide() {
-        // Prompt the user to generate a certificate.
+        private void showFirstRunGuide() {
+        // ==============================================
+        // ✅ CEK SUDAH ADA SERTIFIKAT? → LANGSUNG MASUK
+        // ==============================================
         if (mSettings.isUsingCertificate()) {
             mSettings.setFirstRun(false);
             return;
         }
+
+        // ==============================================
+        // ✅ CEK CADANGAN .p12 DULU — SEBELUM TAMPILKAN DIALOG
+        // ==============================================
+        MumlaCertificateGenerateTask pulihkanTask = new MumlaCertificateGenerateTask(this) {
+            @Override
+            protected void onPostExecute(DatabaseCertificate result) {
+                super.onPostExecute(result);
+                
+                if (result != null) {
+                    // ✅ BERHASIL DIPULIHKAN — LANGSUNG SET ID & MASUK
+                    mSettings.setDefaultCertificateId(result.getId());
+                    mSettings.setFirstRun(false);
+                    Log.i("OFA_CERT", "✅ Sertifikat dipulihkan — ID: " + result.getId());
+                    return; // TIDAK muncul dialog "Buat Baru"
+                }
+
+                // ==============================================
+                // ❌ TIDAK ADA CADANGAN → TAMPILKAN DIALOG BUAT BARU
+                // ==============================================
+                tampilkanDialogBuatBaru();
+            }
+        };
+        pulihkanTask.execute();
+    }
+
+    // ==================================================
+    // ✅ DIALOG BUAT BARU — HANYA MUNCUL JIKA TIDAK ADA CADANGAN
+    // ==================================================
+    private void tampilkanDialogBuatBaru() {
         String msg = getString(R.string.first_run_generate_certificate);
         if (BuildConfig.FLAVOR.equals("donation")) {
             msg = getString(R.string.donation_thanks) + "\n\n" + msg;
@@ -532,14 +553,17 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
                         @Override
                         protected void onPostExecute(DatabaseCertificate result) {
                             super.onPostExecute(result);
-                            if (result != null) mSettings.setDefaultCertificateId(result.getId());
+                            if (result != null) {
+                                mSettings.setDefaultCertificateId(result.getId());
+                                mSettings.setFirstRun(false);
+                            }
                         }
                     };
                     generateTask.execute();
-                    mSettings.setFirstRun(false);
                 })
                 .show();
     }
+
 
     /**
      * Loads a fragment from the drawer.
