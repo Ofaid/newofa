@@ -1,12 +1,8 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Modifed By Ofaid/Ahmad — Sertifikat Permanen
  */
 
 package se.lublin.humla.net;
-
-import android.content.Context;
-import android.util.Log;
 
 import org.spongycastle.asn1.x500.X500Name;
 import org.spongycastle.asn1.x509.SubjectPublicKeyInfo;
@@ -18,7 +14,6 @@ import org.spongycastle.operator.ContentSigner;
 import org.spongycastle.operator.OperatorCreationException;
 import org.spongycastle.operator.jcajce.JcaContentSignerBuilder;
 
-import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.OutputStream;
@@ -35,21 +30,14 @@ import java.security.cert.X509Certificate;
 import java.util.Calendar;
 import java.util.Date;
 
-import ofaid.ahmad.ptt.ofa.OfaCertificateBackup;
-
 public class HumlaCertificateGenerator {
-    private static final String TAG = "OfaCertGen";
     private static final String ISSUER = "CN=Humla Client";
     private static final Integer YEARS_VALID = 20;
 
-    // =============================================
-    // ✅ BUAT SERTIFIKAT BARU + SIMPAN CADANGAN
-    // =============================================
-    public static X509Certificate generateCertificate(Context context, OutputStream output)
+    public static X509Certificate generateCertificate(OutputStream output)
             throws NoSuchAlgorithmException, OperatorCreationException, CertificateException,
             KeyStoreException, NoSuchProviderException, IOException {
-        
-        // Buat sertifikat seperti biasa — tidak diubah
+
         BouncyCastleProvider provider = new BouncyCastleProvider();
         KeyPairGenerator generator = KeyPairGenerator.getInstance("RSA");
         generator.initialize(2048, new SecureRandom());
@@ -77,59 +65,10 @@ public class HumlaCertificateGenerator {
         keyStore.load(null, null);
         keyStore.setKeyEntry("Humla Key", keyPair.getPrivate(), null, new X509Certificate[] { certificate });
 
-        // Simpan ke output asli
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         keyStore.store(baos, "".toCharArray());
-        byte[] dataSertifikat = baos.toByteArray();
-        
-        output.write(dataSertifikat);
-
-        // ✅ SIMPAN KE TEMPAT AMAN — sekali saja, tidak tertimpa!
-        if (context != null) {
-            OfaCertificateBackup.simpanSertifikat(context, dataSertifikat);
-            Log.i(TAG, "✅ Sertifikat disimpan permanen");
-        }
+        output.write(baos.toByteArray());
 
         return certificate;
-    }
-
-    // =============================================
-    // ✅ PULIHKAN DARI CADANGAN — KALAU HILANG
-    // =============================================
-    public static boolean pulihkanSertifikatCadangan(Context context, OutputStream tujuan) {
-        if (context == null || tujuan == null) return false;
-
-        byte[] cadangan = OfaCertificateBackup.pulihkanSertifikat(context);
-        if (cadangan == null) {
-            Log.d(TAG, "Belum ada cadangan sertifikat");
-            return false;
-        }
-
-        try {
-            // Tulis ke tempat asli — aplikasi langsung pakai
-            tujuan.write(cadangan);
-            Log.i(TAG, "✅ Sertifikat dipulihkan otomatis — tidak perlu buat baru!");
-            return true;
-        } catch (IOException e) {
-            Log.e(TAG, "Gagal pulihkan: " + e.getMessage());
-            return false;
-        }
-    }
-
-    // =============================================
-    // ✅ CEK: ADA CADANGAN?
-    // =============================================
-    public static boolean adaCadangan(Context context) {
-        return OfaCertificateBackup.adaCadangan(context);
-    }
-
-    // =============================================
-    // ⚠️ Versi lama — tetap ada agar tidak error
-    // =============================================
-    @Deprecated
-    public static X509Certificate generateCertificate(OutputStream output)
-            throws NoSuchAlgorithmException, OperatorCreationException, CertificateException,
-            KeyStoreException, NoSuchProviderException, IOException {
-        return generateCertificate(null, output);
     }
 }
