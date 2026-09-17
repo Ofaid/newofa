@@ -231,25 +231,22 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         // =============================================
         // ✅ SIAPKAN OFAID — DI LUAR BIAR BISA DIPAKAI SEMUA
         // =============================================
-                String ofaId = null;
+                if (sesiUser == sesiSayaId) {
+    // ✅ DIRI SENDIRI — pakai ID terkunci
+    ofaId = OfaIdentity.getGlobalOfaId(mContext); // untuk cek peran & simpan
+    String idTampil = OfaIdentity.getSingkat(mContext); // untuk tampil di layar
+    uvh.mUserIdView.setText(idTampil);
+} else {
+    // ORANG LAIN — tetap pakai ID sementara
+    int uid = user.getUserId();
+    ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
+    // Potong juga biar rapi
+    if (ofaId.length() > 10) {
+        ofaId = ofaId.substring(0, 10);
+    }
+    uvh.mUserIdView.setText(ofaId);
+}
 
-        // Cek apakah ini DIRI SENDIRI
-        int sesiUser = user.getSession();
-        int sesiSayaId = -1; // ✅ Nama beda, TIDAK TABRAK!
-        try {
-            if (mService != null && mService.isConnected()) {
-                sesiSayaId = mService.HumlaSession().getSessionId();
-            }
-        } catch (Exception ignored) {}
-
-        if (sesiUser == sesiSayaId) {
-            // ✅ DIRI SENDIRI → pakai ID yang TERKUNCI, TETAP, TIDAK BERUBAH
-            ofaId = OfaIdentity.getGlobalOfaId(mContext);
-        } else {
-            // ORANG LAIN → tampilkan sementara
-            int uid = user.getUserId();
-            ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
-        }
 
         // =============================================
         // ✅ TAMPILKAN ID PENGGUNA
