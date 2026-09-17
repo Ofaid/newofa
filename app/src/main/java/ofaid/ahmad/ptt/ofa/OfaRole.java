@@ -17,12 +17,16 @@ public class OfaRole {
     private static final String KUNCI_PERAN = "peran_";
     private static final String KUNCI_CHANNEL = "channel_";
 
-    // Cek apakah yang masuk adalah pemilik utama
+    // =============================================
+    // ✅ CEK PEMILIK UTAMA
+    // =============================================
     public static boolean adalahPemilikUtama(String ofaId) {
         return ID_PEMILIK_UTAMA.equals(ofaId);
     }
 
-      // Simpan peran user
+    // =============================================
+    // ✅ SIMPAN PERAN
+    // =============================================
     public static void setPeranUser(Context ctx, String ofaId, int peran, String channel) {
         SharedPreferences sp = ctx.getSharedPreferences(PREF_NAMA, Context.MODE_PRIVATE);
         sp.edit()
@@ -31,30 +35,51 @@ public class OfaRole {
             .apply();
     }
 
-    // Baca peran user
+    // =============================================
+    // ✅ BACA PERAN
+    // =============================================
     public static int getPeranUser(Context ctx, String ofaId) {
         SharedPreferences sp = ctx.getSharedPreferences(PREF_NAMA, Context.MODE_PRIVATE);
         return sp.getInt(KUNCI_PERAN + ofaId, ROLE_WARGA);
     }
 
-    // Baca nama peran
+    // =============================================
+    // ✅ NAMA PERAN
+    // =============================================
     public static String getNamaPeran(int peran) {
         switch (peran) {
             case ROLE_PEMILIK_UTAMA: return "Pemilik";
             case ROLE_PEMIMPIN_CH: return "Pemimpin CH";
             case ROLE_LURAH: return "Lurah";
             case ROLE_WARGA: return "Warga";
-            default: return "";
+            default: return "Tamu";
         }
     }
 
-    // Baca nama channel
+    // =============================================
+    // ✅ WARNA PERAN — DITAMBAHKAN UNTUK PERBAIKI ERROR
+    // =============================================
+    public static int getWarnaPeran(int peran) {
+        switch (peran) {
+            case ROLE_PEMILIK_UTAMA: return 0xFFFFD700;   // Emas
+            case ROLE_PEMIMPIN_CH:   return 0xFFFF9800;   // Oranye
+            case ROLE_LURAH:         return 0xFF4CAF50;   // Hijau
+            case ROLE_WARGA:         return 0xFF2196F3;   // Biru
+            default:                 return 0xFFBBBBBB;   // Abu-abu
+        }
+    }
+
+    // =============================================
+    // ✅ NAMA CHANNEL
+    // =============================================
     public static String getChannelUser(Context ctx, String ofaId) {
         SharedPreferences sp = ctx.getSharedPreferences(PREF_NAMA, Context.MODE_PRIVATE);
         return sp.getString(KUNCI_CHANNEL + ofaId, "");
     }
 
-    // ✅ Hapus peran & data user
+    // =============================================
+    // ✅ HAPUS DATA PERAN
+    // =============================================
     public static void hapusPeranUser(Context ctx, String ofaId) {
         SharedPreferences sp = ctx.getSharedPreferences(PREF_NAMA, Context.MODE_PRIVATE);
         sp.edit()
@@ -63,4 +88,3 @@ public class OfaRole {
             .apply();
     }
 }
-
