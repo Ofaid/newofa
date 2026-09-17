@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * OFAID/AHMAD (C) 2026 — Simpan&Pulih Sertifikat Otomatis
+ * OFAID/AHMAD (C) 2026 — Simpan&Pulih + Izin Penyimpanan
  */
 package ofaid.ahmad.ptt.app;
 
@@ -106,10 +106,10 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
 
     public static final String EXTRA_DRAWER_FRAGMENT = "drawer_fragment";
 
-    // ✅ KODE PERMINTAAN IZIN PENYIMPANAN
+    // ✅ KODE PERMINTAAN IZIN — SESUAI POLA ASLI
     private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
     private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 2;
-    private static final int PERMISSIONS_REQUEST_STORAGE = 917;
+    private static final int PERMISSIONS_REQUEST_STORAGE = 917; // ✅ Baru
 
     private IMumlaService mService;
     private MumlaDatabase mDatabase;
@@ -124,6 +124,8 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
 
     private AlertDialog mConnectingDialog;
     private AlertDialog mErrorDialog;
+
+    private boolean mIzinPenyimpananDiproses = false; // ✅ Tanda agar tidak berulang
 
     private final List<HumlaServiceFragment> mServiceFragments = new ArrayList<>();
 
@@ -241,7 +243,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     protected void onCreate(Bundle savedInstanceState) {
         mSettings = Settings.getInstance(this);
 
-        // === FORCE DEFAULT PTT SAAT PERTAMA KALI ===
+        // === FORCE DEFAULT PTT SAAT PERTAMA KALI — TETAP SAMA ===
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
             SharedPreferences.Editor editor = prefs.edit();
@@ -251,7 +253,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             editor.putBoolean("first_run_ptt_setup_done", true);
             editor.commit();
         }
-        // ===========================================
+        // ========================================================
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -331,9 +333,11 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
 
-        // ✅ PANGGIL CEK IZIN PENYIMPANAN DULU — SEBELUM APA-APA
+        // ✅ POLA ASLI DIPERTAHANKAN: cek izin dulu, baru lanjut ke Startup
         if (savedInstanceState == null) {
-            cekIzinPenyimpananDulu();
+            if (cekIzinPenyimpanan()) {
+                lanjutKeAwal();
+            }
         }
 
         if (getIntent() != null && Intent.ACTION_VIEW.equals(getIntent().getAction())) {
@@ -353,28 +357,34 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     // ==================================================
-    // ✅ FUNGSI CEK IZIN PENYIMPANAN — PALING DEPAN!
+    // ✅ CEK IZIN PENYIMPANAN — TAMBAHAN SAJA, TIDAK UBAH ALUR
     // ==================================================
-    private void cekIzinPenyimpananDulu() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            if (ContextCompat.checkSelfPermission(this,
-                    Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                    != PackageManager.PERMISSION_GRANTED) {
-                String[] daftarIzin = {
-                        Manifest.permission.READ_EXTERNAL_STORAGE,
-                        Manifest.permission.WRITE_EXTERNAL_STORAGE
-                };
-                ActivityCompat.requestPermissions(this, daftarIzin, PERMISSIONS_REQUEST_STORAGE);
-                return;
-            }
+    private boolean cekIzinPenyimpanan() {
+        // Android 13+ tidak butuh izin WRITE_EXTERNAL_STORAGE
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            return true; // Langsung boleh
         }
-        lanjutKeAwal();
+        
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_GRANTED) {
+            return true; // Sudah ada izin
+        }
+
+        if (!mIzinPenyimpananDiproses) {
+            mIzinPenyimpananDiproses = true;
+            ActivityCompat.requestPermissions(this,
+                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,
+                                 Manifest.permission.WRITE_EXTERNAL_STORAGE},
+                    PERMISSIONS_REQUEST_STORAGE);
+        }
+        return false; // Tunggu izin
     }
 
     private void lanjutKeAwal() {
         if (mSettings.isFirstRun()) {
             showFirstRunGuide();
         } else {
+            // ✅ TETAP PAKAI POLA ASLI — TIDAK UBAH StartupAction
             new StartupAction().execute(this);
         }
     }
@@ -386,21 +396,22 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
 
         if (grantResults.length == 0) return;
 
-        // ✅ TANGGAPI IZIN PENYIMPANAN
+        // ✅ TANGGAPI IZIN PENYIMPANAN — TETAP KE POLA ASLI
         if (requestCode == PERMISSIONS_REQUEST_STORAGE) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.i("OFA_PERM", "✅ Izin penyimpanan DIBERIKAN");
             } else {
-                Log.w("OFA_PERM", "⚠️ Izin penyimpanan DITOLAK — sertifikat TIDAK akan tersimpan saat hapus pasang");
+                Log.w("OFA_PERM", "⚠️ Izin penyimpanan DITOLAK — sertifikat tetap bekerja tanpa cadangan file luar");
                 new MaterialAlertDialogBuilder(this)
-                        .setMessage("Tanpa izin akses file, saat install ulang akan buat sertifikat baru lagi.")
+                        .setMessage("Tanpa izin akses file, saat install ulang akan buat sertifikat baru. Fitur tetap berjalan.")
                         .setPositiveButton("Mengerti", null)
                         .show();
             }
-            lanjutKeAwal();
+            lanjutKeAwal(); // ✅ LANGSUNG KE POLA ASLI — TIDAK UBAH
             return;
         }
 
+        // ✅ IZIN LAIN — TETAP SAMA PERSIS
         switch (requestCode) {
             case PERMISSIONS_REQUEST_RECORD_AUDIO:
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -513,17 +524,15 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     // ==================================================
-    // ✅ DIPERBAIKI: TAMBAH PERINTAH BUKA HALAMAN SETIAP JALUR
+    // ✅ TAMBAH: PULIHKAN DARI CADANGAN — TETAP PANGGIL StartupAction SESUAI POLA ASLI
     // ==================================================
     private void showFirstRunGuide() {
-        // ✅ SUDAH ADA SERTIFIKAT AKTIF? → LANGSUNG MASUK
         if (mSettings.isUsingCertificate()) {
             mSettings.setFirstRun(false);
-            new StartupAction().execute(this); // ✅ DITAMBAH
+            new StartupAction().execute(this); // ✅ TETAP PAKAI CARA ASLI
             return;
         }
 
-        // ✅ CEK CADANGAN .p12 DULU
         MumlaCertificateGenerateTask pulihkanTask = new MumlaCertificateGenerateTask(this) {
             @Override
             protected void onPostExecute(DatabaseCertificate result) {
@@ -531,8 +540,8 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                 if (result != null) {
                     mSettings.setDefaultCertificateId(result.getId());
                     mSettings.setFirstRun(false);
-                    Log.i("OFA_CERT", "✅ DIPULIHKAN DARI CADANGAN — ID: " + result.getId());
-                    new StartupAction().execute(this); // ✅ DITAMBAH
+                    Log.i("OFA_CERT", "✅ Dipulihkan dari cadangan — ID: " + result.getId());
+                    new StartupAction().execute(this); // ✅ SESUAI POLA ASLI
                     return;
                 }
                 tampilkanDialogBuatBaru();
@@ -557,36 +566,13 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                             if (result != null) {
                                 mSettings.setDefaultCertificateId(result.getId());
                                 mSettings.setFirstRun(false);
-                                new StartupAction().execute(this); // ✅ DITAMBAH
+                                new StartupAction().execute(this); // ✅ SESUAI POLA ASLI
                             }
                         }
                     };
                     generateTask.execute();
                 })
                 .show();
-    }
-
-    // ==================================================
-    // ✅ KELAS INI DIPASTIKAN ADA — JANGAN DIPINDAH/DIHAPUS
-    // ==================================================
-    private static class StartupAction extends android.os.AsyncTask<MumlaActivity, Void, Void> {
-        private MumlaActivity mActivity;
-
-        public StartupAction(MumlaActivity activity) {
-            mActivity = activity;
-        }
-
-        @Override
-        protected Void doInBackground(MumlaActivity... activities) {
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
-            if (mActivity.isFinishing() || mActivity.isDestroyed()) return;
-            mActivity.loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
-        }
     }
 
     private void loadDrawerFragment(int fragmentId) {
@@ -863,7 +849,30 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                 supportInvalidateOptionsMenu();
             });
         } catch (Exception e) {
-            Log.w("OFA_STATUS", "Pembaruan tampilan tertunda: " + e.getMessage());
+            Log.w("OFA_STATUS", "Pembaruan tertunda: " + e.getMessage());
+        }
+    }
+
+    // ==================================================
+    // ✅ KELAS StartupAction — DIPERTAHANKAN PERSIS SEPERTI ASLINYA
+    // ==================================================
+    private static class StartupAction extends android.os.AsyncTask<MumlaActivity, Void, Void> {
+        private MumlaActivity mActivity;
+
+        public StartupAction(MumlaActivity activity) {
+            mActivity = activity;
+        }
+
+        @Override
+        protected Void doInBackground(MumlaActivity... activities) {
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            if (mActivity.isFinishing() || mActivity.isDestroyed()) return;
+            mActivity.loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
         }
     }
 }
