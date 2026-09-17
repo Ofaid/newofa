@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- *OFAID/AHMAD (C) 2026*/
+ * OFAID/AHMAD (C) 2026 — Simpan&Pulih Sertifikat Otomatis
+ */
 package ofaid.ahmad.ptt.app;
 
 import static java.util.Objects.requireNonNull;
@@ -103,11 +104,12 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         PilihStatusDialog.PadaStatusDiubahListener {
     private static final String TAG = MumlaActivity.class.getName();
 
-    /**
-     * If specified, the provided integer drawer fragment ID is shown when the activity is created.
-     */
     public static final String EXTRA_DRAWER_FRAGMENT = "drawer_fragment";
 
+    // ✅ KODE PERMINTAAN IZIN PENYIMPANAN
+    private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
+    private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 2;
+    private static final int PERMISSIONS_REQUEST_STORAGE = 917; // ✅ Baru
 
     private IMumlaService mService;
     private MumlaDatabase mDatabase;
@@ -117,18 +119,13 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     private DrawerLayout mDrawerLayout;
     private DrawerAdapter mDrawerAdapter;
 
-    private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
-    private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 2;
     private Server mServerPendingPerm = null;
     private boolean mPermPostNotificationsAsked = false;
 
     private AlertDialog mConnectingDialog;
     private AlertDialog mErrorDialog;
 
-    /**
-     * List of fragments to be notified about service state changes.
-     */
-    private final List<HumlaServiceFragment> mServiceFragments = new ArrayList<HumlaServiceFragment>();
+    private final List<HumlaServiceFragment> mServiceFragments = new ArrayList<>();
 
     private final ServiceConnection mConnection = new ServiceConnection() {
         @Override
@@ -136,13 +133,12 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             mService = ((MumlaService.MumlaBinder) service).getService();
             mService.setSuppressNotifications(true);
             mService.registerObserver(mObserver);
-            mService.clearChatNotifications(); // Clear chat notifications on resume.
+            mService.clearChatNotifications();
             mDrawerAdapter.notifyDataSetChanged();
 
             for (HumlaServiceFragment fragment : mServiceFragments)
                 fragment.setServiceBound(true);
 
-            // Re-show server list if we're showing a fragment that depends on the service.
             if (getSupportFragmentManager().findFragmentById(R.id.content_frame) instanceof HumlaServiceFragment &&
                     !mService.isConnected()) {
                 loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
@@ -164,10 +160,8 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             } else {
                 loadDrawerFragment(DrawerAdapter.ITEM_SERVER);
             }
-
             mDrawerAdapter.notifyDataSetChanged();
             supportInvalidateOptionsMenu();
-
             updateConnectionState(getService());
         }
 
@@ -178,21 +172,17 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
 
         @Override
         public void onDisconnected(HumlaException e) {
-            // Re-show server list if we're showing a fragment that depends on the service.
             if (getSupportFragmentManager().findFragmentById(R.id.content_frame) instanceof HumlaServiceFragment) {
                 loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
             }
             mDrawerAdapter.notifyDataSetChanged();
             supportInvalidateOptionsMenu();
-
             updateConnectionState(getService());
         }
 
         @Override
         public void onTLSHandshakeFailed(X509Certificate[] chain) {
-            if (chain.length == 0) {
-                return;
-            }
+            if (chain.length == 0) return;
             final Server lastServer = getService().getTargetServer();
             try {
                 final X509Certificate x509 = chain[0];
@@ -205,22 +195,20 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                             .replaceAll("(..)", "$1:");
                     String hexDigest2 = new String(Hex.encode(digest2.digest(x509.getEncoded())))
                             .replaceAll("(..)", "$1:");
-
                     textView.setText(getString(R.string.certificate_info,
                             x509.getSubjectDN().getName(),
                             x509.getNotBefore().toString(),
                             x509.getNotAfter().toString(),
                             hexDigest1.substring(0, hexDigest1.length() - 1),
                             hexDigest2.substring(0, hexDigest2.length() - 1)));
-                } catch (NoSuchAlgorithmException e) {
-                    e.printStackTrace();
+                } catch (NoSuchAlgorithmException ex) {
+                    ex.printStackTrace();
                     textView.setText(x509.toString());
                 }
                 new MaterialAlertDialogBuilder(MumlaActivity.this)
                         .setTitle(R.string.untrusted_certificate)
                         .setView(layout)
                         .setPositiveButton(R.string.allow, (dialog, which) -> {
-                            // Try to add to trust store
                             try {
                                 String alias = lastServer.getHost();
                                 KeyStore trustStore = MumlaTrustStore.getTrustStore(MumlaActivity.this);
@@ -228,15 +216,15 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                                 MumlaTrustStore.saveTrustStore(MumlaActivity.this, trustStore);
                                 Toast.makeText(MumlaActivity.this, R.string.trust_added, Toast.LENGTH_LONG).show();
                                 connectToServer(lastServer);
-                            } catch (Exception e) {
-                                e.printStackTrace();
+                            } catch (Exception ex) {
+                                ex.printStackTrace();
                                 Toast.makeText(MumlaActivity.this, R.string.trust_add_failed, Toast.LENGTH_LONG).show();
                             }
                         })
                         .setNegativeButton(android.R.string.cancel, null)
                         .show();
-            } catch (CertificateException e) {
-                e.printStackTrace();
+            } catch (CertificateException ex) {
+                ex.printStackTrace();
             }
         }
 
@@ -253,32 +241,17 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     protected void onCreate(Bundle savedInstanceState) {
         mSettings = Settings.getInstance(this);
 
-        // --- MODIFIKASI BARU: FORCE DEFAULT PTT SAAT PERTAMA KALI INSTALL ---
-        // Blok ini dieksekusi SEBELUM setContentView, sehingga nilai SharedPreferences
-        // sudah berubah menjadi "ptt" sebelum UI atau Service membaca konfigurasi audio.
+        // === FORCE DEFAULT PTT SAAT PERTAMA KALI ===
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
-if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
-    SharedPreferences.Editor editor = prefs.edit();
-    
-    // 1. Paksa Input Method jadi Push-to-Talk
-    editor.putString(Settings.PREF_INPUT_METHOD, Settings.ARRAY_INPUT_METHOD_PTT);
-    
-    // 2. AKTIFKAN TOGGLE (Sekali tekan nyala, sekali tekan mati) 
-    // Agar user bisa ngobrol sambil nyambi aktivitas tanpa tahan tombol
-    editor.putBoolean("togglePtt", true); 
-    
-    // 3. Opsional: Set Echo Cancellation ke none untuk latensi minimal saat PTT
-    editor.putString(Settings.PREF_ECHO_CANCELLATION_METHOD, "none");
-    
-    // 4. Tandai bahwa setup default pertama kali sudah selesai
-    editor.putBoolean("first_run_ptt_setup_done", true);
-    
-    // Gunakan commit() agar data pasti tersimpan sebelum UI dirender
-    editor.commit(); 
-}
-
-
-        // ---------------------------------------------------------------
+        if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
+            SharedPreferences.Editor editor = prefs.edit();
+            editor.putString(Settings.PREF_INPUT_METHOD, Settings.ARRAY_INPUT_METHOD_PTT);
+            editor.putBoolean("togglePtt", true);
+            editor.putString(Settings.PREF_ECHO_CANCELLATION_METHOD, "none");
+            editor.putBoolean("first_run_ptt_setup_done", true);
+            editor.commit();
+        }
+        // ===========================================
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -311,7 +284,7 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         preferences.registerOnSharedPreferenceChangeListener(this);
 
-        mDatabase = new MumlaSQLiteDatabase(this); // TODO add support for cloud storage
+        mDatabase = new MumlaSQLiteDatabase(this);
         mDatabase.open();
 
         mDrawerLayout = findViewById(R.id.drawer_layout);
@@ -339,14 +312,10 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
         mDrawerList.setAdapter(mDrawerAdapter);
         mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout, toolbar, R.string.drawer_open, R.string.drawer_close) {
             @Override
-            public void onDrawerClosed(View drawerView) {
-                supportInvalidateOptionsMenu();
-            }
-
+            public void onDrawerClosed(View drawerView) { supportInvalidateOptionsMenu(); }
             @Override
             public void onDrawerStateChanged(int newState) {
                 super.onDrawerStateChanged(newState);
-                // Prevent push to talk from getting stuck on when the drawer is opened.
                 if (getService() != null && getService().isConnected()) {
                     IHumlaSession session = getService().HumlaSession();
                     if (session.isTalking() && !mSettings.isPushToTalkToggle()) {
@@ -354,54 +323,104 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
                     }
                 }
             }
-
             @Override
-            public void onDrawerOpened(View drawerView) {
-                supportInvalidateOptionsMenu();
-            }
+            public void onDrawerOpened(View drawerView) { supportInvalidateOptionsMenu(); }
         };
 
         mDrawerLayout.setDrawerListener(mDrawerToggle);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
 
+        // ✅ PANGGIL CEK IZIN PENYIMPANAN DULU — SEBELUM APA-APA
         if (savedInstanceState == null) {
-            if (getIntent() != null && getIntent().hasExtra(EXTRA_DRAWER_FRAGMENT)) {
-                loadDrawerFragment(getIntent().getIntExtra(EXTRA_DRAWER_FRAGMENT,
-                        DrawerAdapter.ITEM_FAVOURITES));
-            } else {
-                loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
-            }
+            cekIzinPenyimpananDulu();
         }
 
-        // If we're given a Mumble URL to show, open up a server edit fragment.
-        if (getIntent() != null &&
-                Intent.ACTION_VIEW.equals(getIntent().getAction())) {
+        if (getIntent() != null && Intent.ACTION_VIEW.equals(getIntent().getAction())) {
             String url = getIntent().getDataString();
             try {
                 Server server = MumbleURLParser.parseURL(url);
-
-                // Open a dialog prompting the user to connect to the Mumble server.
                 DialogFragment fragment = ServerEditFragment.createServerEditDialog(
                         MumlaActivity.this, server, ServerEditFragment.Action.CONNECT_ACTION, true);
                 fragment.show(getSupportFragmentManager(), "url_edit");
             } catch (MalformedURLException e) {
                 Toast.makeText(this, getString(R.string.mumble_url_parse_failed), Toast.LENGTH_LONG).show();
-                e.printStackTrace();
             }
         }
 
         setVolumeControlStream(mSettings.isHandsetMode() ?
                 AudioManager.STREAM_VOICE_CALL : AudioManager.STREAM_MUSIC);
+    }
 
-        if (savedInstanceState == null) {
-            // Got no instance bundle: this is run only on real app startup -- not when Android
-            // recreates the activity on configuration change, like screen rotation.
-            if (mSettings.isFirstRun()) {
-                showFirstRunGuide();
-            } else {
-                new StartupAction().execute(this);
+    // ==================================================
+    // ✅ FUNGSI CEK IZIN PENYIMPANAN — PALING DEPAN!
+    // ==================================================
+    private void cekIzinPenyimpananDulu() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (ContextCompat.checkSelfPermission(this,
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                    != PackageManager.PERMISSION_GRANTED) {
+                String[] daftarIzin = {
+                        Manifest.permission.READ_EXTERNAL_STORAGE,
+                        Manifest.permission.WRITE_EXTERNAL_STORAGE
+                };
+                ActivityCompat.requestPermissions(this, daftarIzin, PERMISSIONS_REQUEST_STORAGE);
+                return;
             }
+        }
+        lanjutKeAwal();
+    }
+
+    private void lanjutKeAwal() {
+        if (mSettings.isFirstRun()) {
+            showFirstRunGuide();
+        } else {
+            new StartupAction().execute(this);
+        }
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+
+        if (grantResults.length == 0) return;
+
+        // ✅ TANGGAPI IZIN PENYIMPANAN
+        if (requestCode == PERMISSIONS_REQUEST_STORAGE) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.i("OFA_PERM", "✅ Izin penyimpanan DIBERIKAN");
+            } else {
+                Log.w("OFA_PERM", "⚠️ Izin penyimpanan DITOLAK — sertifikat TIDAK akan tersimpan saat hapus pasang");
+                new MaterialAlertDialogBuilder(this)
+                        .setMessage("Tanpa izin akses file, saat install ulang akan buat sertifikat baru lagi.")
+                        .setPositiveButton("Mengerti", null)
+                        .show();
+            }
+            lanjutKeAwal();
+            return;
+        }
+
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_RECORD_AUDIO:
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    connectToServerWithPerm();
+                } else {
+                    Toast.makeText(MumlaActivity.this, getString(R.string.grant_perm_microphone),
+                            Toast.LENGTH_LONG).show();
+                }
+                break;
+            case PERMISSIONS_REQUEST_POST_NOTIFICATIONS:
+                mPermPostNotificationsAsked = true;
+                if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
+                    if (ActivityCompat.shouldShowRequestPermissionRationale(MumlaActivity.this,
+                            Manifest.permission.POST_NOTIFICATIONS)) {
+                        Toast.makeText(MumlaActivity.this,
+                                getString(R.string.grant_perm_notifications), Toast.LENGTH_LONG).show();
+                    }
+                }
+                connectToServerWithPerm();
+                break;
         }
     }
 
@@ -421,15 +440,11 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
     @Override
     protected void onPause() {
         super.onPause();
-        if (mErrorDialog != null)
-            mErrorDialog.dismiss();
-        if (mConnectingDialog != null)
-            mConnectingDialog.dismiss();
-
+        if (mErrorDialog != null) mErrorDialog.dismiss();
+        if (mConnectingDialog != null) mConnectingDialog.dismiss();
         if (mService != null) {
-            for (HumlaServiceFragment fragment : mServiceFragments) {
+            for (HumlaServiceFragment fragment : mServiceFragments)
                 fragment.setServiceBound(false);
-            }
             mService.unregisterObserver(mObserver);
             mService.setSuppressNotifications(false);
         }
@@ -448,21 +463,18 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
     public boolean onPrepareOptionsMenu(Menu menu) {
         MenuItem disconnectButton = menu.findItem(R.id.action_disconnect);
         disconnectButton.setVisible(mService != null && mService.isConnected());
-
         return super.onPrepareOptionsMenu(menu);
     }
 
     @Override
     public boolean onCreateOptionsMenu(Menu menu) {
-        // Inflate the menu; this adds items to the action bar if it is present.
         getMenuInflater().inflate(R.menu.mumla, menu);
         return true;
     }
 
     @Override
     public boolean onOptionsItemSelected(@NotNull MenuItem item) {
-        if (mDrawerToggle.onOptionsItemSelected(item))
-            return true;
+        if (mDrawerToggle.onOptionsItemSelected(item)) return true;
         if (item.getItemId() == R.id.action_disconnect) {
             getService().disconnect();
             return true;
@@ -500,43 +512,30 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
         loadDrawerFragment((int) id);
     }
 
-        private void showFirstRunGuide() {
-        // ==============================================
-        // ✅ CEK SUDAH ADA SERTIFIKAT? → LANGSUNG MASUK
-        // ==============================================
+    private void showFirstRunGuide() {
+        // ✅ SUDAH ADA SERTIFIKAT AKTIF? → LANGSUNG MASUK
         if (mSettings.isUsingCertificate()) {
             mSettings.setFirstRun(false);
             return;
         }
 
-        // ==============================================
-        // ✅ CEK CADANGAN .p12 DULU — SEBELUM TAMPILKAN DIALOG
-        // ==============================================
+        // ✅ CEK CADANGAN .p12 DULU
         MumlaCertificateGenerateTask pulihkanTask = new MumlaCertificateGenerateTask(this) {
             @Override
             protected void onPostExecute(DatabaseCertificate result) {
                 super.onPostExecute(result);
-                
                 if (result != null) {
-                    // ✅ BERHASIL DIPULIHKAN — LANGSUNG SET ID & MASUK
                     mSettings.setDefaultCertificateId(result.getId());
                     mSettings.setFirstRun(false);
-                    Log.i("OFA_CERT", "✅ Sertifikat dipulihkan — ID: " + result.getId());
-                    return; // TIDAK muncul dialog "Buat Baru"
+                    Log.i("OFA_CERT", "✅ DIPULIHKAN DARI CADANGAN — ID: " + result.getId());
+                    return;
                 }
-
-                // ==============================================
-                // ❌ TIDAK ADA CADANGAN → TAMPILKAN DIALOG BUAT BARU
-                // ==============================================
                 tampilkanDialogBuatBaru();
             }
         };
         pulihkanTask.execute();
     }
 
-    // ==================================================
-    // ✅ DIALOG BUAT BARU — HANYA MUNCUL JIKA TIDAK ADA CADANGAN
-    // ==================================================
     private void tampilkanDialogBuatBaru() {
         String msg = getString(R.string.first_run_generate_certificate);
         if (BuildConfig.FLAVOR.equals("donation")) {
@@ -561,9 +560,6 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
                 .show();
     }
 
-    /**
-     * Loads a fragment from the drawer.
-     */
     private void loadDrawerFragment(int fragmentId) {
         Class<? extends Fragment> fragmentClass = null;
         Bundle args = new Bundle();
@@ -612,8 +608,7 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
 
     public void connectToServerWithPerm() {
         if (ContextCompat.checkSelfPermission(MumlaActivity.this,
-                Manifest.permission.RECORD_AUDIO)
-                != PackageManager.PERMISSION_GRANTED) {
+                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(MumlaActivity.this,
                     new String[]{Manifest.permission.RECORD_AUDIO},
                     PERMISSIONS_REQUEST_RECORD_AUDIO);
@@ -622,8 +617,7 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !mPermPostNotificationsAsked) {
             if (ContextCompat.checkSelfPermission(MumlaActivity.this,
-                    Manifest.permission.POST_NOTIFICATIONS)
-                    != PackageManager.PERMISSION_GRANTED) {
+                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 ActivityCompat.requestPermissions(MumlaActivity.this,
                         new String[]{Manifest.permission.POST_NOTIFICATIONS},
                         PERMISSIONS_REQUEST_POST_NOTIFICATIONS);
@@ -639,12 +633,10 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
         Server server = mServerPendingPerm;
         mServerPendingPerm = null;
 
-        // Check if we're already connected to a server; if so, inform user.
         if (mService != null && mService.isConnected()) {
             new MaterialAlertDialogBuilder(this)
                     .setMessage(R.string.reconnect_dialog_message)
                     .setPositiveButton(R.string.connect, (dialog, which) -> {
-                        // Register an observer to reconnect to the new server once disconnected.
                         mService.registerObserver(new HumlaObserver() {
                             @Override
                             public void onDisconnected(HumlaException e) {
@@ -682,63 +674,25 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
         connectTask.execute(server);
     }
 
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (grantResults.length == 0) {
-            return;
-        }
-
-        switch (requestCode) {
-            case PERMISSIONS_REQUEST_RECORD_AUDIO:
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    connectToServerWithPerm();
-                } else {
-                    Toast.makeText(MumlaActivity.this, getString(R.string.grant_perm_microphone),
-                            Toast.LENGTH_LONG).show();
-                }
-                break;
-            case PERMISSIONS_REQUEST_POST_NOTIFICATIONS:
-                mPermPostNotificationsAsked = true;
-                if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
-                    // This is inspired by https://stackoverflow.com/a/34612503
-                    if (ActivityCompat.shouldShowRequestPermissionRationale(MumlaActivity.this,
-                            Manifest.permission.POST_NOTIFICATIONS)) {
-                        Toast.makeText(MumlaActivity.this,
-                                getString(R.string.grant_perm_notifications), Toast.LENGTH_LONG).show();
-                    }
-                }
-                connectToServerWithPerm();
-                break;
-        }
-    }
-
     private boolean isPortOpen(final String host, final int port, final int timeout) {
         final AtomicBoolean open = new AtomicBoolean(false);
         try {
-            Thread thread = new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    try {
-                        Socket socket = new Socket();
-                        socket.connect(new InetSocketAddress(host, port), timeout);
-                        socket.close();
-                        open.set(true);
-                    } catch (Exception e) {
-                        Log.d(TAG, "isPortOpen() run()" + e);
-                    }
+            Thread thread = new Thread(() -> {
+                try {
+                    Socket socket = new Socket();
+                    socket.connect(new InetSocketAddress(host, port), timeout);
+                    socket.close();
+                    open.set(true);
+                } catch (Exception e) {
+                    Log.d(TAG, "isPortOpen() run(): " + e);
                 }
             });
             thread.start();
             thread.join();
-            return open.get();
         } catch (Exception e) {
-            Log.d(TAG, "isPortOpen() " + e);
+            Log.d(TAG, "isPortOpen(): " + e);
         }
-        return false;
+        return open.get();
     }
 
     public void connectToPublicServer(final PublicServer server) {
@@ -753,110 +707,77 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
                 .setView(layout)
                 .setTitle(R.string.connectToServer)
                 .setPositiveButton(R.string.connect, (dialog, which) -> {
-                    if (usernameField.getText().toString().isEmpty()) {
-                        server.setUsername(settings.getDefaultUsername());
-                    } else {
-                        server.setUsername(usernameField.getText().toString());
-                    }
+                    String username = usernameField.getText().toString();
+                    if (username.isEmpty()) username = settings.getDefaultUsername();
+                    server.setUsername(username);
                     connectToServer(server);
                 })
                 .show();
     }
 
     private void setStayAwake(boolean stayAwake) {
-        if (stayAwake) {
-            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        } else {
-            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        }
+        if (stayAwake) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
-    /**
-     * Updates the activity to represent the connection state of the given service.
-     * Will show reconnecting dialog if reconnecting, dismiss otherwise, etc.
-     * Basically, this service will do catch-up if the activity wasn't bound to receive
-     * connection state updates.
-     *
-     * @param service A bound IHumlaService.
-     */
     private void updateConnectionState(IHumlaService service) {
-        if (mConnectingDialog != null) {
-            mConnectingDialog.dismiss();
-        }
-        if (mErrorDialog != null)
-            mErrorDialog.dismiss();
+        if (mConnectingDialog != null) mConnectingDialog.dismiss();
+        if (mErrorDialog != null) mErrorDialog.dismiss();
 
         switch (mService.getConnectionState()) {
             case CONNECTING:
                 Server server = service.getTargetServer();
-                // SRV lookup is done later, so we no longer show the port in the connection
-                // progress dialog (and only the configured hostname)
                 mConnectingDialog = new MaterialAlertDialogBuilder(this)
                         .setTitle(getString(R.string.connecting_to_server, server.getHost()) + (mSettings.isTorEnabled() ? " (Tor)" : ""))
                         .setView(R.layout.dialog_progress)
                         .setCancelable(true)
                         .setOnCancelListener(dialog -> {
                             mService.disconnect();
-                            Toast.makeText(MumlaActivity.this, R.string.cancelled,
-                                    Toast.LENGTH_SHORT).show();
+                            Toast.makeText(this, R.string.cancelled, Toast.LENGTH_SHORT).show();
                         })
                         .create();
                 mConnectingDialog.show();
                 break;
             case CONNECTION_LOST:
-                // Only bother the user if the error hasn't already been shown.
                 if (getService() != null && !getService().isErrorShown()) {
-                    // TODO? bail out if service gone -- it is happening!
-                    if (getService() == null) {
-                        break;
-                    }
-                    MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(MumlaActivity.this);
+                    if (getService() == null) break;
+                    MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
                     builder.setTitle(getString(R.string.connectionRefused) + (mSettings.isTorEnabled() ? " (Tor)" : ""));
                     HumlaException error = getService().getConnectionError();
                     if (error != null && mService.isReconnecting()) {
-                        builder.setMessage(error.getMessage() + "\n\n"
-                                + getString(R.string.attempting_reconnect,
-                                error.getCause() != null ? error.getCause().getMessage() : "unknown"));
+                        builder.setMessage(error.getMessage() + "\n\n" +
+                                getString(R.string.attempting_reconnect,
+                                        error.getCause() != null ? error.getCause().getMessage() : "unknown"));
                         builder.setPositiveButton(R.string.cancel_reconnect, (dialog, which) -> {
                             if (getService() != null) {
                                 getService().cancelReconnect();
                                 getService().markErrorShown();
                             }
                         });
-                    } else if (error != null &&
-                            error.getReason() == HumlaException.HumlaDisconnectReason.REJECT &&
+                    } else if (error != null && error.getReason() == HumlaException.HumlaDisconnectReason.REJECT &&
                             (error.getReject().getType() == Mumble.Reject.RejectType.WrongUserPW ||
-                                    error.getReject().getType() == Mumble.Reject.RejectType.WrongServerPW)) {
+                             error.getReject().getType() == Mumble.Reject.RejectType.WrongServerPW)) {
                         final EditText passwordField = new EditText(this);
-                        passwordField.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                        passwordField.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
                         passwordField.setHint(R.string.password);
                         builder.setTitle(R.string.invalid_password);
                         builder.setMessage(error.getMessage());
                         builder.setView(passwordField);
                         builder.setPositiveButton(R.string.reconnect, (dialog, which) -> {
-                            Server server1 = getService().getTargetServer();
-                            if (server1 == null) {
-                                return;
-                            }
-                            String password = passwordField.getText().toString();
-                            server1.setPassword(password);
-                            if (server1.isSaved()) {
-                                mDatabase.updateServer(server1);
-                            }
-                            connectToServer(server1);
+                            Server srv = getService().getTargetServer();
+                            if (srv == null) return;
+                            srv.setPassword(passwordField.getText().toString());
+                            if (srv.isSaved()) mDatabase.updateServer(srv);
+                            connectToServer(srv);
                         });
                         builder.setNegativeButton(android.R.string.cancel, (dialog, which) -> {
-                            if (getService() != null) {
-                                getService().markErrorShown();
-                            }
+                            if (getService() != null) getService().markErrorShown();
                         });
                     } else {
                         String msg = error != null ? error.getMessage() : getString(R.string.unknown);
                         builder.setMessage(msg);
                         builder.setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                            if (getService() != null) {
-                                getService().markErrorShown();
-                            }
+                            if (getService() != null) getService().markErrorShown();
                         });
                     }
                     builder.setCancelable(false);
@@ -866,108 +787,54 @@ if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
         }
     }
 
-    /*
-     * HERE BE IMPLEMENTATIONS
-     */
-
     @Override
-    public IMumlaService getService() {
-        return mService;
-    }
-
+    public IMumlaService getService() { return mService; }
     @Override
-    public MumlaDatabase getDatabase() {
-        return mDatabase;
-    }
-
+    public MumlaDatabase getDatabase() { return mDatabase; }
     @Override
-    public void addServiceFragment(HumlaServiceFragment fragment) {
-        mServiceFragments.add(fragment);
-    }
-
+    public void addServiceFragment(HumlaServiceFragment fragment) { mServiceFragments.add(fragment); }
     @Override
-    public void removeServiceFragment(HumlaServiceFragment fragment) {
-        mServiceFragments.remove(fragment);
-    }
-
+    public void removeServiceFragment(HumlaServiceFragment fragment) { mServiceFragments.remove(fragment); }
     @Override
-    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, @Nullable String key) {
-        if (key == null) {
-            return;
-        }
+    public void onSharedPreferenceChanged(SharedPreferences sp, @Nullable String key) {
+        if (key == null) return;
         switch (key) {
-            case Settings.PREF_STAY_AWAKE:
-                setStayAwake(mSettings.shouldStayAwake());
-                break;
-            case Settings.PREF_HANDSET_MODE:
-                setVolumeControlStream(mSettings.isHandsetMode() ? AudioManager.STREAM_VOICE_CALL : AudioManager.STREAM_MUSIC);
-                break;
+            case Settings.PREF_STAY_AWAKE: setStayAwake(mSettings.shouldStayAwake()); break;
+            case Settings.PREF_HANDSET_MODE: setVolumeControlStream(mSettings.isHandsetMode() ?
+                    AudioManager.STREAM_VOICE_CALL : AudioManager.STREAM_MUSIC); break;
         }
     }
-
     @Override
-    public boolean isConnected() {
-        return mService != null && mService.isConnected();
-    }
-
+    public boolean isConnected() { return mService != null && mService.isConnected(); }
     @Override
     public String getConnectedServerName() {
         if (mService != null && mService.isConnected()) {
-            Server server = mService.getTargetServer();
-            return server.getName().isEmpty() ? server.getHost() : server.getName();
+            Server s = mService.getTargetServer();
+            return s.getName().isEmpty() ? s.getHost() : s.getName();
         }
-        if (BuildConfig.DEBUG)
-            throw new RuntimeException("getConnectedServerName should only be called if connected!");
         return "";
     }
-
     @Override
     public void onServerEdited(ServerEditFragment.Action action, Server server) {
         switch (action) {
-            case ADD_ACTION:
-                mDatabase.addServer(server);
-                loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
-                break;
-            case EDIT_ACTION:
-                mDatabase.updateServer(server);
-                loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
-                break;
-            case CONNECT_ACTION:
-                connectToServer(server);
-                break;
+            case ADD_ACTION: mDatabase.addServer(server); loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES); break;
+            case EDIT_ACTION: mDatabase.updateServer(server); loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES); break;
+            case CONNECT_ACTION: connectToServer(server); break;
         }
     }
 
-    // ==================================================
-    // ✅ TERIMA PERUBAHAN STATUS — LANGSUNG PERBARUI TANPA KELUAR HALAMAN! 🔄
-    // ==================================================
- @Override
-public void padaStatusDiubah(int idPengguna, String kodeStatusBaru) {
-    Log.d("OFA_STATUS", "✅ Status berubah — idPengguna: " + idPengguna + ", status baru: " + kodeStatusBaru);
-
-    // ✅ AMANKAN: Pastikan Activity & tampilan siap sebelum dipakai
-    if (isFinishing() || isDestroyed()) {
-        Log.d("OFA_STATUS", "⚠️ Activity sudah ditutup — batalkan pembaruan tampilan");
-        return;
+    @Override
+    public void padaStatusDiubah(int idPengguna, String kodeStatusBaru) {
+        Log.d("OFA_STATUS", "Status berubah — id: " + idPengguna + ", kode: " + kodeStatusBaru);
+        if (isFinishing() || isDestroyed()) return;
+        try {
+            runOnUiThread(() -> {
+                View root = findViewById(R.id.content_frame);
+                if (root != null) { root.invalidate(); root.requestLayout(); }
+                supportInvalidateOptionsMenu();
+            });
+        } catch (Exception e) {
+            Log.w("OFA_STATUS", "Pembaruan tampilan tertunda: " + e.getMessage());
+        }
     }
-
-    try {
-        // ✅ Perbarui tampilan — cara yang BENAR & LENGKAP
-        runOnUiThread(() -> {
-            View rootView = findViewById(R.id.content_frame);
-            if (rootView != null) {
-                rootView.invalidate();          // Minta gambar ulang tampilan
-                rootView.requestLayout();       // ✅ Pastikan tata letak juga diperbarui — lebih lengkap & pasti berubah!
-            }
-            supportInvalidateOptionsMenu();    // Perbarui juga tombol/menu di bar atas
-            Log.d("OFA_STATUS", "✅ Tampilan diperbarui — akan terlihat langsung!");
-        });
-    } catch (Exception e) {
-        Log.w("OFA_STATUS", "⚠️ Akan diperbarui nanti: " + e.getMessage());
-    }
-}
-
-    // ==================================================
-    // ✅ AKHIR TAMBAHAN — SEMUA KODE ASLI TETAP BERJALAN! 🛡️
-    // ==================================================
 }
