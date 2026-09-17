@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Modified By OFAID 2026 — Cek Cadangan Sebelum Buat Baru
+ * Modified By OFAID 2026 — Simpan ke Unduhan, Dukung Semua HP
  */
 
 package ofaid.ahmad.ptt.preference;
@@ -30,7 +30,7 @@ import ofaid.ahmad.ptt.db.MumlaSQLiteDatabase;
 
 public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, DatabaseCertificate> {
     private static final String BACKUP_FOLDER = "OFAID_PTT";
-    private static final String BACKUP_FILE = "cert_backup.p12"; // ✅ GANTI JADI .p12
+    private static final String BACKUP_FILE = "cert_backup.p12";
     private static final String BACKUP_NAME_FILE = "cert_name.txt";
     private static final String TAG = "CertBackup";
 
@@ -56,16 +56,16 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
     protected DatabaseCertificate doInBackground(Void... params) {
         try {
             // ==============================================
-            // ✅ SAKLAR: CEK CADANGAN DULU — JANGAN BUAT BARU
+            // ✅ CEK CADANGAN DULU
             // ==============================================
             DatabaseCertificate dariCadangan = cekDanPulihkan();
             if (dariCadangan != null) {
-                Log.i(TAG, "✅ DARI CADANGAN — TIDAK BUAT BARU");
-                return dariCadangan; // KELUAR — Generator TIDAK dipanggil
+                Log.i(TAG, "✅ DIPULIHKAN DARI CADANGAN — TIDAK BUAT BARU");
+                return dariCadangan;
             }
 
             // ==============================================
-            // ❌ TIDAK ADA CADANGAN → BARU BUAT BARU
+            // ❌ TIDAK ADA → BUAT BARU
             // ==============================================
             Log.i(TAG, "Tidak ada cadangan → buat baru...");
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -79,9 +79,9 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
             DatabaseCertificate hasil = db.addCertificate(nama, data);
             db.close();
 
-            // Simpan cadangan untuk masa depan
+            // ✅ Simpan cadangan ke Unduhan
             simpanCadangan(nama, data);
-            Log.i(TAG, "✅ Baru dibuat & dicadangkan");
+            Log.i(TAG, "✅ Baru dibuat & disimpan ke Unduhan/OFAID_PTT");
 
             return hasil;
         } catch (Exception e) {
@@ -92,29 +92,31 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
     }
 
     // ==================================================
-    // CEK & PULIHKAN DARI FILE .p12
+    // ✅ CEK & PULIHKAN DARI FOLDER UNDUHAN
     // ==================================================
     private DatabaseCertificate cekDanPulihkan() {
         try {
             File folder = new File(
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                     BACKUP_FOLDER);
             File fileData = new File(folder, BACKUP_FILE);
             File fileNama = new File(folder, BACKUP_NAME_FILE);
+
+            Log.i(TAG, "Cek di: " + folder.getAbsolutePath());
 
             if (!fileData.exists() || !fileNama.exists()) {
                 Log.i(TAG, "Tidak ada file cadangan");
                 return null;
             }
 
-            // Baca nama asli
+            // Baca nama
             FileInputStream fisNama = new FileInputStream(fileNama);
             byte[] bNama = new byte[(int) fileNama.length()];
             fisNama.read(bNama);
             fisNama.close();
             String namaAsli = new String(bNama, "UTF-8");
 
-            // Baca data sertifikat .p12
+            // Baca data .p12
             FileInputStream fisData = new FileInputStream(fileData);
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             byte[] buf = new byte[4096];
@@ -125,12 +127,12 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
             fisData.close();
             byte[] data = baos.toByteArray();
 
-            // Masukkan ke database — jalur asli aplikasinya
+            // Masukkan ke database
             MumlaDatabase db = new MumlaSQLiteDatabase(context);
             DatabaseCertificate dc = db.addCertificate(namaAsli, data);
             db.close();
 
-            Log.i(TAG, "✅ Dipulihkan — Nama: " + namaAsli);
+            Log.i(TAG, "✅ BERHASIL DIPULIHKAN — Nama: " + namaAsli);
             return dc;
         } catch (Exception e) {
             Log.w(TAG, "Gagal pulihkan: " + e.getMessage());
@@ -139,16 +141,20 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
     }
 
     // ==================================================
-    // SIMPAN CADANGAN KE FOLDER DOKUMEN
+    // ✅ SIMPAN KE FOLDER UNDUHAN
     // ==================================================
     private void simpanCadangan(String nama, byte[] data) {
         try {
             File folder = new File(
-                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOCUMENTS),
+                    Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS),
                     BACKUP_FOLDER);
-            if (!folder.exists()) folder.mkdirs();
+            
+            if (!folder.exists()) {
+                boolean dibuat = folder.mkdirs();
+                Log.i(TAG, "Folder dibuat: " + dibuat + " → " + folder.getAbsolutePath());
+            }
 
-            // Simpan sertifikat .p12
+            // Simpan .p12
             FileOutputStream fosData = new FileOutputStream(new File(folder, BACKUP_FILE));
             fosData.write(data);
             fosData.close();
@@ -158,9 +164,9 @@ public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, Database
             fosNama.write(nama.getBytes("UTF-8"));
             fosNama.close();
 
-            Log.i(TAG, "✅ Tersimpan — Nama: " + nama);
+            Log.i(TAG, "✅ Tersimpan di Unduhan/OFAID_PTT — Nama: " + nama);
         } catch (Exception e) {
-            Log.e(TAG, "Gagal simpan: " + e.getMessage());
+            Log.e(TAG, "❌ Gagal simpan: " + e.getMessage());
         }
     }
 
