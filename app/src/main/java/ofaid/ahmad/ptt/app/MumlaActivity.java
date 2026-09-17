@@ -109,7 +109,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     // ✅ KODE PERMINTAAN IZIN PENYIMPANAN
     private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
     private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 2;
-    private static final int PERMISSIONS_REQUEST_STORAGE = 917; // ✅ Baru
+    private static final int PERMISSIONS_REQUEST_STORAGE = 917;
 
     private IMumlaService mService;
     private MumlaDatabase mDatabase;
@@ -512,10 +512,14 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         loadDrawerFragment((int) id);
     }
 
+    // ==================================================
+    // ✅ DIPERBAIKI: TAMBAH PERINTAH BUKA HALAMAN SETIAP JALUR
+    // ==================================================
     private void showFirstRunGuide() {
         // ✅ SUDAH ADA SERTIFIKAT AKTIF? → LANGSUNG MASUK
         if (mSettings.isUsingCertificate()) {
             mSettings.setFirstRun(false);
+            new StartupAction().execute(this); // ✅ DITAMBAH
             return;
         }
 
@@ -528,6 +532,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                     mSettings.setDefaultCertificateId(result.getId());
                     mSettings.setFirstRun(false);
                     Log.i("OFA_CERT", "✅ DIPULIHKAN DARI CADANGAN — ID: " + result.getId());
+                    new StartupAction().execute(this); // ✅ DITAMBAH
                     return;
                 }
                 tampilkanDialogBuatBaru();
@@ -552,12 +557,36 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                             if (result != null) {
                                 mSettings.setDefaultCertificateId(result.getId());
                                 mSettings.setFirstRun(false);
+                                new StartupAction().execute(this); // ✅ DITAMBAH
                             }
                         }
                     };
                     generateTask.execute();
                 })
                 .show();
+    }
+
+    // ==================================================
+    // ✅ KELAS INI DIPASTIKAN ADA — JANGAN DIPINDAH/DIHAPUS
+    // ==================================================
+    private static class StartupAction extends android.os.AsyncTask<MumlaActivity, Void, Void> {
+        private MumlaActivity mActivity;
+
+        public StartupAction(MumlaActivity activity) {
+            mActivity = activity;
+        }
+
+        @Override
+        protected Void doInBackground(MumlaActivity... activities) {
+            return null;
+        }
+
+        @Override
+        protected void onPostExecute(Void aVoid) {
+            super.onPostExecute(aVoid);
+            if (mActivity.isFinishing() || mActivity.isDestroyed()) return;
+            mActivity.loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
+        }
     }
 
     private void loadDrawerFragment(int fragmentId) {
