@@ -55,7 +55,22 @@ public class OfaIdentity {
         return idBaru;
     }
 
-    // === 3. ID PER SERVER — MENGIKUTI ID UTAMA YANG TERKUNCI ===
+    // === 3. TAMPILAN SINGKAT — HAPUS 4 KARAKTER BELAKANG ===
+    public static String getSingkat(Context context) {
+        String penuh = getGlobalOfaId(context);
+        if (penuh == null) return "OFA-00000";
+        
+        // OFA-32549-24A1 → ambil sampai OFA-32549 saja
+        if (penuh.contains("-")) {
+            String[] bagian = penuh.split("-");
+            if (bagian.length >= 2) {
+                return bagian[0] + "-" + bagian[1]; // OFA-32549
+            }
+        }
+        return penuh;
+    }
+
+    // === 4. ID PER SERVER — MENGIKUTI ID UTAMA YANG TERKUNCI ===
     public static void saveForServer(Context context, String host, int port, String ofaId) {
         if (context == null || host == null || host.trim().isEmpty() || ofaId == null) return;
         
