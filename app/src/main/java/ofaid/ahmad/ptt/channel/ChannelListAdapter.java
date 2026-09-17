@@ -41,12 +41,11 @@ import se.lublin.humla.util.HumlaDisconnectedException;
 import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.db.MumlaDatabase;
 import ofaid.ahmad.ptt.drawable.CircleDrawable;
-import ofaid.ahmad.ptt.service.MumlaService;
-import ofaid.ahmad.ptt.ofa.OfaUserStatus;
-import ofaid.ahmad.ptt.ofa.OfaLokasi;
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.OfaRole;
-
+import ofaid.ahmad.ptt.ofa.OfaUserStatus;
+import ofaid.ahmad.ptt.ofa.OfaLokasi;
+import ofaid.ahmad.ptt.service.MumlaService;
 
 public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements UserMenu.IUserLocalStateListener {
     private static final String TAG = ChannelListAdapter.class.getName();
@@ -219,147 +218,118 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 }
             });
 
-                  // =============================================
-        // ✅ TAMPILKAN NAMA
-        // =============================================
-        if (uvh.mUserName != null) {
-            uvh.mUserName.setText(user.getName());
-            uvh.mUserName.setVisibility(View.VISIBLE);
-            uvh.mUserName.setTextColor(Color.parseColor("#FF9900"));
-        }
-
-        // =============================================
-        // ✅ SIAPKAN OFAID — DI LUAR BIAR BISA DIPAKAI SEMUA
-        // =============================================
-                if (sesiUser == sesiSayaId) {
-    // ✅ DIRI SENDIRI — pakai ID terkunci
-    ofaId = OfaIdentity.getGlobalOfaId(mContext); // untuk cek peran & simpan
-    String idTampil = OfaIdentity.getSingkat(mContext); // untuk tampil di layar
-    uvh.mUserIdView.setText(idTampil);
-} else {
-    // ORANG LAIN — tetap pakai ID sementara
-    int uid = user.getUserId();
-    ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
-    // Potong juga biar rapi
-    if (ofaId.length() > 10) {
-        ofaId = ofaId.substring(0, 10);
-    }
-    uvh.mUserIdView.setText(ofaId);
-}
-
-
-        // =============================================
-        // ✅ TAMPILKAN ID PENGGUNA
-        // =============================================
-        if (uvh.mUserIdView != null && ofaId != null) {
-            uvh.mUserIdView.setText(ofaId);
-            uvh.mUserIdView.setVisibility(View.VISIBLE);
-            uvh.mUserIdView.setTextColor(0xFF00CCFF);
-        }
-
-        // =============================================
-        // ✅ TAMPILKAN LABEL PERAN — GANTI STATUS LAMA
-        // =============================================
-        if (uvh.mUserStatusView != null && ofaId != null) {
-            int peran = OfaRole.getPeranUser(mContext, ofaId);
-            String namaPeran = OfaRole.getNamaPeran(peran);
-            String namaChannel = OfaRole.getChannelUser(mContext, ofaId);
-
-            if (!namaPeran.isEmpty()) {
-                String tampilLabel;
-                if (!namaChannel.isEmpty()) {
-                    tampilLabel = "[" + namaPeran + " — " + namaChannel + "]";
-                } else {
-                    tampilLabel = "[" + namaPeran + "]";
-                }
-
-                uvh.mUserStatusView.setText(tampilLabel);
-
-                // Warna sesuai peran
-                if (peran == OfaRole.ROLE_LURAH) {
-                    uvh.mUserStatusView.setTextColor(0xFFFF9800); // Oranye
-                } else if (peran == OfaRole.ROLE_PEMIMPIN_CH) {
-                    uvh.mUserStatusView.setTextColor(0xFF9C27B0); // Ungu
-                } else if (peran == OfaRole.ROLE_WARGA) {
-                    uvh.mUserStatusView.setTextColor(0xFF4CAF50); // Hijau
-                }
-                uvh.mUserStatusView.setVisibility(View.VISIBLE);
-            } else {
-                // Tampil status lama kalau belum ada peran
-                String status = OfaUserStatus.dapatStatus(mContext, user.getSession());
-                uvh.mUserStatusView.setText(status);
-                uvh.mUserStatusView.setVisibility(View.VISIBLE);
-                if (status.contains("Sibuk") || status.contains("Jangan")) {
-                    uvh.mUserStatusView.setTextColor(0xFFFF5252);
-                } else if (status.contains("Next") || status.contains("Fitur Disini")) {
-                    uvh.mUserStatusView.setTextColor(0xFF4CAF50);
-                } else {
-                    uvh.mUserStatusView.setTextColor(0xFFBBBBBB);
-                }
-            }
-        }
-
-        // =============================================
-        // ✅ TAMPILKAN LOKASI — DARI KOMENTAR SERVER
-        // =============================================
-        if (uvh.mUserLokasi != null) {
-            String keterangan = user.getComment();
-            String lokasiTampil = null;
-
-            if (keterangan != null && !keterangan.trim().isEmpty()) {
-                String[] baris = keterangan.split("\\r?\\n");
-                for (String b : baris) {
-                    String bersih = b.trim();
-                    if (bersih.contains(". ") && !bersih.startsWith("📍")) {
-                        lokasiTampil = bersih;
-                        break;
-                    }
-                    if (bersih.startsWith("📍")) {
-                        lokasiTampil = bersih;
-                        break;
-                    }
-                }
-            }
-
-            // ✅ Khusus untuk diri sendiri — tampilkan langsung
-            int sesiSayaLokasi = -1; // ✅ Nama beda, TIDAK TABRAK!
+            // =============================================
+            // ✅ TENTUKAN SESI DAN OFA-ID — DIPERBAIKI ERROR
+            // =============================================
+            int sesiSaya = -1;
+            boolean diriSendiri = false;
+            String ofaId = null;
+            
             try {
                 if (mService != null && mService.isConnected()) {
-                    sesiSayaLokasi = mService.HumlaSession().getSessionId();
+                    sesiSaya = mService.HumlaSession().getSessionId();
+                    diriSendiri = (user.getSession() == sesiSaya);
                 }
             } catch (Exception ignored) {}
 
-            if (lokasiSaya != null && user.getSession() == sesiSayaLokasi) {
-                lokasiTampil = lokasiSaya;
+            // ✅ AMBIL OFA-ID
+            if (diriSendiri) {
+                // DIRI SENDIRI — pakai ID terkunci permanen
+                ofaId = OfaIdentity.getGlobalOfaId(mContext);
+            } else {
+                // ORANG LAIN — buat ID dari sesi
+                int uid = user.getUserId();
+                ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
             }
 
-            if (lokasiTampil != null) {
-                uvh.mUserLokasi.setText(lokasiTampil);
-                uvh.mUserLokasi.setTextColor(0xFFFF9900);
-                uvh.mUserLokasi.setVisibility(View.VISIBLE);
-            } else {
-                uvh.mUserLokasi.setVisibility(View.GONE);
+            // =============================================
+            // ✅ TAMPILKAN NAMA
+            // =============================================
+            if (uvh.mUserName != null) {
+                uvh.mUserName.setText(user.getName());
+                uvh.mUserName.setVisibility(View.VISIBLE);
+                uvh.mUserName.setTextColor(Color.parseColor("#FF9900"));
             }
-        }
+
+            // =============================================
+            // ✅ TAMPILKAN ID — SINGKAT & RAPI
+            // =============================================
+            if (uvh.mUserIdView != null && ofaId != null) {
+                String idTampil;
+                if (diriSendiri) {
+                    idTampil = OfaIdentity.getSingkat(mContext);
+                } else {
+                    if (ofaId.length() > 10) {
+                        idTampil = ofaId.substring(0, 10);
+                    } else {
+                        idTampil = ofaId;
+                    }
+                }
+                uvh.mUserIdView.setText(idTampil);
+                uvh.mUserIdView.setVisibility(View.VISIBLE);
+                uvh.mUserIdView.setTextColor(0xFF00CCFF);
+            }
+
+            // =============================================
+            // ✅ TAMPILKAN PERAN
+            // =============================================
+            if (uvh.mUserStatusView != null && ofaId != null) {
+                String peranTeks;
+                int warnaPeran;
+                
+                if (diriSendiri && OfaRole.adalahPemilikUtama(ofaId)) {
+                    peranTeks = "[Pemilik]";
+                    warnaPeran = 0xFFFFD700; // Emas
+                } else {
+                    int peran = OfaRole.getPeranUser(mContext, ofaId);
+                    peranTeks = OfaRole.getNamaPeran(peran);
+                    warnaPeran = OfaRole.getWarnaPeran(peran);
+                }
+                
+                uvh.mUserStatusView.setText(peranTeks);
+                uvh.mUserStatusView.setVisibility(View.VISIBLE);
+                uvh.mUserStatusView.setTextColor(warnaPeran);
+            }
+
+            // =============================================
+            // ✅ TAMPILKAN LOKASI — DARI KOMENTAR SERVER
+            // =============================================
+            if (uvh.mUserLokasi != null) {
+                String keterangan = user.getComment();
+                String lokasiTampil = null;
+
+                if (keterangan != null && !keterangan.trim().isEmpty()) {
+                    String[] baris = keterangan.split("\\r?\\n");
+                    for (String b : baris) {
+                        String bersih = b.trim();
+                        if (bersih.contains(". ") && !bersih.startsWith("📍")) {
+                            lokasiTampil = bersih;
+                            break;
+                        }
+                        if (bersih.startsWith("📍")) {
+                            lokasiTampil = bersih;
+                            break;
+                        }
+                    }
+                }
+
+                if (lokasiSaya != null && diriSendiri) {
+                    lokasiTampil = lokasiSaya;
+                }
+
+                if (lokasiTampil != null) {
+                    uvh.mUserLokasi.setText(lokasiTampil);
+                    uvh.mUserLokasi.setTextColor(0xFFFF9900);
+                    uvh.mUserLokasi.setVisibility(View.VISIBLE);
+                } else {
+                    uvh.mUserLokasi.setVisibility(View.GONE);
+                }
+            }
 
             // =============================================
             // ✅ TEBAL NAMA UNTUK DIRI SENDIRI
             // =============================================
-            final int typefaceStyle;
-            int selfSession = -1;
-            try {
-                if (mService != null && mService.isConnected()) {
-                    selfSession = mService.HumlaSession().getSessionId();
-                }
-            } catch (HumlaDisconnectedException|IllegalStateException e) {
-                Log.d(TAG, "exception in onBindViewHolder: " + e);
-            }
-
-            if (mService != null && mService.isConnected() && user.getSession() == selfSession) {
-                typefaceStyle = Typeface.BOLD;
-            } else {
-                typefaceStyle = Typeface.NORMAL;
-            }
+            final int typefaceStyle = diriSendiri ? Typeface.BOLD : Typeface.NORMAL;
             if (uvh.mUserName != null) {
                 uvh.mUserName.setTypeface(null, typefaceStyle);
             }
@@ -375,23 +345,15 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     uvh.mUserHolder.getPaddingTop(),
                     uvh.mUserHolder.getPaddingRight(),
                     uvh.mUserHolder.getPaddingBottom());
-//======== menu baru
-                        uvh.mMoreButton.setOnClickListener(new View.OnClickListener() {
+
+            uvh.mMoreButton.setOnClickListener(new View.OnClickListener() {
                 @Override
                 public void onClick(View v) {
                     UserMenu menu = new UserMenu(mContext, user, (MumlaService) mService,
                             mFragmentManager, ChannelListAdapter.this);
-                    // ✅ Sambung pembaruan peran
-                    menu.setOnPeranDiubahListener(new UserMenu.OnPeranDiubahListener() {
-                        @Override
-                        public void diperbarui() {
-                            notifyDataSetChanged(); // Langsung tampil label baru
-                        }
-                    });
                     menu.showPopup(v);
                 }
             });
-//===================================
 
             uvh.itemView.setOnLongClickListener(new View.OnLongClickListener() {
                 @Override
@@ -474,8 +436,8 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         return res.getDrawable(R.drawable.outline_circle_talking_off);
     }
 
-    public int getUserPosition(int session) {
-        long itemId = session | USER_ID_MASK;
+    public int getUserPosition(int sessionId) {
+        long itemId = sessionId | USER_ID_MASK;
         for (int i = 0; i < mNodes.size(); i++) {
             try {
                 if (mNodes.get(i).getId() == itemId) return i;
@@ -498,7 +460,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         return -1;
     }
     
-       // === UNTUK VISUALIZER MONITOR ===
+    // === UNTUK VISUALIZER MONITOR ===
     public boolean isUserTalking(int sessionId) {
         if (sessionId <= 0 || mService == null || !mService.isConnected()) {
             return false;
@@ -507,10 +469,10 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             IHumlaSession sesi = mService.HumlaSession();
             for (IUser user : sesi.getSessionChannel().getUsers()) {
                 if (user.getSession() == sessionId) {
-                    se.lublin.humla.model.TalkState state = user.getTalkState();
-                    return state == se.lublin.humla.model.TalkState.TALKING
-                        || state == se.lublin.humla.model.TalkState.SHOUTING
-                        || state == se.lublin.humla.model.TalkState.WHISPERING;
+                    TalkState state = user.getTalkState();
+                    return state == TalkState.TALKING
+                        || state == TalkState.SHOUTING
+                        || state == TalkState.WHISPERING;
                 }
             }
         } catch (Exception e) {
@@ -518,7 +480,6 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         }
         return false;
     }
-/*============================*/
 
     public void refreshUserStatus(int sessionId) {
         if (sessionId <= 0) return;
@@ -534,14 +495,24 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                             if (holder instanceof UserViewHolder) {
                                 UserViewHolder uvh = (UserViewHolder) holder;
                                 if (uvh.mUserStatusView != null) {
-                                    String status = OfaUserStatus.dapatStatus(mContext, sessionId);
-                                    uvh.mUserStatusView.setText(status);
-                                    if (status.contains("Sibuk") || status.contains("Jangan")) {
-                                        uvh.mUserStatusView.setTextColor(0xFFFF5252);
-                                    } else if (status.contains("status") || status.contains("Next-Fiture")) {
-                                        uvh.mUserStatusView.setTextColor(0xFF4CAF50);
+                                    // Ambil ofaId untuk cek peran
+                                    int uid = -1;
+                                    try {
+                                        IUser u = node.getUser();
+                                        uid = u.getUserId();
+                                    } catch (Exception ignored) {}
+                                    
+                                    String ofaIdRefresh;
+                                    if (uid >= 0) {
+                                        ofaIdRefresh = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
                                     } else {
-                                        uvh.mUserStatusView.setTextColor(0xFFBBBBBB);
+                                        ofaIdRefresh = null;
+                                    }
+                                    
+                                    if (ofaIdRefresh != null) {
+                                        int peran = OfaRole.getPeranUser(mContext, ofaIdRefresh);
+                                        uvh.mUserStatusView.setText(OfaRole.getNamaPeran(peran));
+                                        uvh.mUserStatusView.setTextColor(OfaRole.getWarnaPeran(peran));
                                     }
                                 }
                             }
