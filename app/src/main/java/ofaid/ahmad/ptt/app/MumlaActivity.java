@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * OFAID/AHMAD (C) 2026 — Simpan&Pulih Otomatis + Izin Penyimpanan baca data cadangan
+ * OFAID/AHMAD (C) 2026 — Simpan&Pulih Otomatis + Izin Penyimpanan
  */
 package ofaid.ahmad.ptt.app;
 
@@ -379,6 +379,9 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     private void lanjutKeAwal() {
+        // ✅ Selalu cek cadangan saat mulai
+        pulihkanDariCadanganOtomatis();
+        
         if (mSettings.isFirstRun()) {
             showFirstRunGuide();
         } else {
@@ -391,22 +394,12 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     // ==================================================
     private boolean pulihkanDariCadanganOtomatis() {
         try {
-            File folderUnduhan = getExternalFilesDir(null);
-            if (folderUnduhan == null) {
-                Log.w("OFA_CERT", "⚠️ Tidak dapat akses penyimpanan");
-                return false;
-            }
-            
-            File folderOFA = new File(folderUnduhan.getParentFile(), "Download/OFAID_PTT");
-            if (!folderOFA.exists()) {
-                folderOFA = new File(android.os.Environment.getExternalStoragePublicDirectory(
-                        android.os.Environment.DIRECTORY_DOWNLOADS), "OFAID_PTT");
-            }
-            
+            File folderOFA = new File(android.os.Environment.getExternalStoragePublicDirectory(
+                    android.os.Environment.DIRECTORY_DOWNLOADS), "OFAID_PTT");
             File berkasCadangan = new File(folderOFA, "cert_backup.p12");
 
             if (!berkasCadangan.exists() || berkasCadangan.length() < 500) {
-                Log.i("OFA_CERT", "ℹ️ Cadangan tidak ditemukan atau belum ada");
+                Log.i("OFA_CERT", "ℹ️ Cadangan belum ada");
                 return false;
             }
 
@@ -426,15 +419,18 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             fis.read(dataSertifikat);
             fis.close();
 
+            // ✅ Sesuaikan nama metode dengan aslinya
             DatabaseCertificate certPulih = new DatabaseCertificate();
             certPulih.setData(dataSertifikat);
             certPulih.setName(namaPengguna);
+            
+            // ✅ Sesuaikan argumen addCertificate
             long idCert = mDatabase.addCertificate(certPulih);
 
             mSettings.setDefaultCertificateId(idCert);
             mSettings.setDefaultUsername(namaPengguna);
 
-            Log.i("OFA_CERT", "✅ DIPULIHKAN OTOMATIS — Nama: " + namaPengguna);
+            Log.i("OFA_CERT", "✅ DIPULIHKAN — " + namaPengguna);
             return true;
 
         } catch (Exception e) {
@@ -448,16 +444,13 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     // ==================================================
     private void simpanKeCadanganOtomatis(long idSertifikat, String nama) {
         try {
+            // ✅ Sesuaikan nama metode dengan aslinya
             DatabaseCertificate cert = mDatabase.getCertificate(idSertifikat);
             if (cert == null || cert.getData() == null) return;
 
             File folderOFA = new File(android.os.Environment.getExternalStoragePublicDirectory(
                     android.os.Environment.DIRECTORY_DOWNLOADS), "OFAID_PTT");
-            
-            if (!folderOFA.exists() && !folderOFA.mkdirs()) {
-                Log.w("OFA_CERT", "⚠️ Tidak bisa buat folder cadangan");
-                return;
-            }
+            if (!folderOFA.exists()) folderOFA.mkdirs();
 
             File berkasCadangan = new File(folderOFA, "cert_backup.p12");
             FileOutputStream fos = new FileOutputStream(berkasCadangan);
@@ -470,15 +463,15 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             fw.write(nama != null ? nama : "");
             fw.close();
 
-            Log.i("OFA_CERT", "✅ CADANGAN DIPERBARUI — " + nama);
+            Log.i("OFA_CERT", "✅ CADANGAN DISIMPAN — " + nama);
 
         } catch (Exception e) {
-            Log.w("OFA_CERT", "⚠️ Gagal simpan cadangan: " + e.getMessage());
+            Log.w("OFA_CERT", "⚠️ Gagal simpan: " + e.getMessage());
         }
     }
 
     private void showFirstRunGuide() {
-        // ✅ CEK DULU ADA CADANGAN?
+        // ✅ Cek dulu ada cadangan?
         if (pulihkanDariCadanganOtomatis()) {
             mSettings.setFirstRun(false);
             new StartupAction().execute(MumlaActivity.this);
@@ -511,7 +504,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                                 mSettings.setDefaultCertificateId(result.getId());
                                 mSettings.setFirstRun(false);
                                 
-                                // ✅ LANGSUNG SIMPAN KE CADANGAN
+                                // ✅ Langsung simpan ke cadangan
                                 simpanKeCadanganOtomatis(result.getId(), mSettings.getDefaultUsername());
                                 
                                 new StartupAction().execute(MumlaActivity.this);
@@ -934,7 +927,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     // ==================================================
-    // ✅ StartupAction — DIPERBAIKI
+    // ✅ StartupAction
     // ==================================================
     private static class StartupAction extends android.os.AsyncTask<MumlaActivity, Void, Void> {
         private MumlaActivity mActivity;
