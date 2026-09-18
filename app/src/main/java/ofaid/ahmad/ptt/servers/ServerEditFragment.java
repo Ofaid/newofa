@@ -35,14 +35,10 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import com.mumla.ofa.model.OfaUserId;
 
 import org.xmlpull.v1.XmlPullParser;
-import org.xmlpull.v1.XmlPullParserException;
 
-import java.io.IOException;
 import java.io.InputStream;
 import java.lang.ref.WeakReference;
 import java.net.HttpURLConnection;
-import java.net.MalformedURLException;
-import java.net.ProtocolException;
 import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
@@ -58,12 +54,12 @@ public class ServerEditFragment extends DialogFragment {
 
     private static final String PREF_OFA_SERVER = "OfaServerPrefs";
 
-    // 🔒 SERVER UTAMA — TETAP, TIDAK DIUBAH, TIDAK BISA DIUBAH DARI LUAR
+    // 🔒 SERVER UTAMA — TETAP, TIDAK DIUBAH
     public static final String SERVER_PATEN_HOST = "ahmad.cleanvoice.ru";
     public static final int SERVER_PATEN_PORT = 65202;
     public static final String SERVER_PATEN_NAMA = "OFA PTT";
 
-    // 📍 DAFTAR SERVER TAMBAHAN DARI WEB — BISA DIPAKAI NANTI
+    // 📍 DAFTAR SERVER TAMBAHAN — SIAP UNTUK NANTI
     private static final String OFA_DAFTAR_SERVER_URL = "https://jz13gri.liveblog365.com/server/daftar.cgi";
 
     private EditText mNameEdit;
@@ -74,7 +70,6 @@ public class ServerEditFragment extends DialogFragment {
 
     private ServerEditListener mListener;
 
-    // 📦 DATA SERVER DARI WEB
     static class OfaServerItem {
         final String name;
         final String ip;
@@ -121,14 +116,11 @@ public class ServerEditFragment extends DialogFragment {
     @Override
     public void onStart() {
         super.onStart();
-        ((AlertDialog)getDialog()).getButton(Dialog.BUTTON_POSITIVE).setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                if (validate()) {
-                    Server server = createServer();
-                    mListener.onServerEdited(getAction(), server);
-                    dismiss();
-                }
+        ((AlertDialog)getDialog()).getButton(Dialog.BUTTON_POSITIVE).setOnClickListener(v -> {
+            if (validate()) {
+                Server server = createServer();
+                mListener.onServerEdited(getAction(), server);
+                dismiss();
             }
         });
     }
@@ -156,7 +148,7 @@ public class ServerEditFragment extends DialogFragment {
         LayoutInflater inflater = LayoutInflater.from(getActivity());
         View view = inflater.inflate(R.layout.dialog_server_edit, null, false);
 
-            // =============================================
+        // =============================================
         // ✅ INISIALISASI SEMUA KOLOM
         // =============================================
         TextView titleLabel = view.findViewById(R.id.server_edit_name_title);
@@ -167,20 +159,11 @@ public class ServerEditFragment extends DialogFragment {
         mPasswordEdit = view.findViewById(R.id.server_edit_password);
 
         // =============================================
-        // 🔒 SEMBUNYIKAN KOLOM YANG TIDAK PERLU — TIDAK TERLIHAT SAMA SEKALI
+        // 🔒 SEMBUNYIKAN KOLOM — TANPA ERROR CARI ID
         // =============================================
-        // Sembunyikan Nama Server
         if (titleLabel != null) titleLabel.setVisibility(View.GONE);
         mNameEdit.setVisibility(View.GONE);
-
-        // Sembunyikan Alamat Host + Label-nya
-        View hostLabel = view.findViewById(R.id.server_edit_host_title);
-        if (hostLabel != null) hostLabel.setVisibility(View.GONE);
         mHostEdit.setVisibility(View.GONE);
-
-        // Sembunyikan Port + Label-nya
-        View portLabel = view.findViewById(R.id.server_edit_port_title);
-        if (portLabel != null) portLabel.setVisibility(View.GONE);
         mPortEdit.setVisibility(View.GONE);
 
         // =============================================
@@ -188,7 +171,6 @@ public class ServerEditFragment extends DialogFragment {
         // =============================================
         Server oldServer = getServer();
         if (oldServer != null) {
-            // Edit server yang sudah ada
             mNameEdit.setText(oldServer.getName());
             mHostEdit.setText(oldServer.getHost());
             if (oldServer.getPort() != 0) {
@@ -197,24 +179,20 @@ public class ServerEditFragment extends DialogFragment {
             mUsernameEdit.setText(oldServer.getUsername());
             mPasswordEdit.setText(oldServer.getPassword());
         } else {
-            // Server baru → isi otomatis server paten
             mNameEdit.setText(SERVER_PATEN_NAMA);
             mHostEdit.setText(SERVER_PATEN_HOST);
             mPortEdit.setText(String.valueOf(SERVER_PATEN_PORT));
         }
 
-        // ✅ Hanya Nama Pengguna yang Terlihat & Diisi User
+        // ✅ HANYA NAMA PENGGUNA YANG TAMPIL
         mUsernameEdit.setHint("Masukkan nama Anda");
         mUsernameEdit.setVisibility(View.VISIBLE);
-        
-        // Password tetap tampilkan / bisa disembunyikan juga kalau tidak perlu
         mPasswordEdit.setHint("Kata sandi (kosongkan jika tidak ada)");
         mPasswordEdit.setVisibility(View.VISIBLE);
 
         // =============================================
-        // 📋 DAFTAR SERVER TAMBAHAN DARI WEB (untuk masa depan)
+        // 📋 DAFTAR SERVER DARI WEB — SIAP NANTI
         // =============================================
-
         LinearLayout rootLayout = (LinearLayout) view.getParent();
         if (rootLayout != null && getAction() == Action.ADD_ACTION) {
             LinearLayout panelDaftar = new LinearLayout(requireActivity());
@@ -222,7 +200,7 @@ public class ServerEditFragment extends DialogFragment {
             panelDaftar.setPadding(24, 16, 24, 8);
 
             TextView judulDaftar = new TextView(requireActivity());
-            judulDaftar.setText("📋 Server Lain (Pilihan):");
+            judulDaftar.setText("📋 Server Lain (Nanti):");
             judulDaftar.setTextSize(14);
             judulDaftar.setTextColor(0xFF666666);
             judulDaftar.setPadding(0, 0, 0, 8);
@@ -233,7 +211,6 @@ public class ServerEditFragment extends DialogFragment {
                     ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             daftarPilihan.setDividerHeight(8);
             panelDaftar.addView(daftarPilihan);
-
             rootLayout.addView(panelDaftar, 0);
 
             mDaftarServerWeb = new ArrayList<>();
@@ -241,17 +218,6 @@ public class ServerEditFragment extends DialogFragment {
                     android.R.layout.simple_list_item_1, new ArrayList<>());
             daftarPilihan.setAdapter(mAdapterDaftar);
             muatDaftarServerDariWeb();
-
-            // ⚠️ CATATAN: Kalau dipilih dari daftar, tetap peringatkan server utama
-            daftarPilihan.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-                @Override
-                public void onItemClick(AdapterView<?> parent, View v, int posisi, long id) {
-                    OfaServerItem serverTerpilih = mDaftarServerWeb.get(posisi);
-                    // TIDAK mengganti server utama — hanya informasi
-                    // mHostEdit.setText(serverTerpilih.getIp());
-                    // mPortEdit.setText(String.valueOf(serverTerpilih.getPort()));
-                }
-            });
         }
 
         if (shouldIgnoreTitle()) {
@@ -266,7 +232,6 @@ public class ServerEditFragment extends DialogFragment {
                 .create();
     }
 
-    // 🌐 MUAT DAFTAR SERVER DARI WEB — SIAP UNTUK NANTI
     private void muatDaftarServerDariWeb() {
         new MuatDaftarServerWebTask(this).execute();
     }
@@ -287,7 +252,6 @@ public class ServerEditFragment extends DialogFragment {
                 URL url = new URL(OFA_DAFTAR_SERVER_URL);
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setRequestMethod("GET");
-                conn.addRequestProperty("version", se.lublin.humla.Constants.PROTOCOL_STRING);
                 conn.setConnectTimeout(10000);
                 conn.setReadTimeout(10000);
                 conn.connect();
@@ -311,7 +275,6 @@ public class ServerEditFragment extends DialogFragment {
 
                         int port = 64738;
                         try { port = Integer.parseInt(portStr); } catch (NumberFormatException ignored) {}
-
                         hasil.add(new OfaServerItem(nama, ip, port, negara, wilayah));
                         parser.nextTag();
                     } else {
@@ -322,7 +285,6 @@ public class ServerEditFragment extends DialogFragment {
                         }
                     }
                 }
-                parser.require(XmlPullParser.END_TAG, null, "servers");
                 aliran.close();
                 conn.disconnect();
             } catch (Exception e) {
@@ -360,25 +322,17 @@ public class ServerEditFragment extends DialogFragment {
         String username = mUsernameEdit.getText().toString().trim();
         String password = mPasswordEdit.getText().toString();
 
-        if (username.equals(""))
+        if (username.isEmpty())
             username = mUsernameEdit.getHint().toString();
 
-        // 🔒 SIMPAN ID TETAP — TIDAK BERUBAH WALAU DIBUKA BERKALI-KALI
+        // 🔒 SIMPAN ID TETAP — TIDAK BERUBAH
         Context context = requireActivity();
         String ofaPatenId = OfaUserId.getPermanentUserId(context);
         String storageKey = "ofa_paten_id_" + host + "_" + port;
         SharedPreferences sp = context.getSharedPreferences(PREF_OFA_SERVER, Context.MODE_PRIVATE);
-        SharedPreferences.Editor ed = sp.edit();
-        ed.putString(storageKey, ofaPatenId);
-        ed.apply();
+        sp.edit().putString(storageKey, ofaPatenId).apply();
 
-        long id;
-        if (getServer() != null) {
-            id = getServer().getId();
-        } else {
-            id = -1;
-        }
-
+        long id = getServer() != null ? getServer().getId() : -1;
         return new Server(id, name, host, port, username, password);
     }
 
@@ -386,7 +340,8 @@ public class ServerEditFragment extends DialogFragment {
         if (mHostEdit.getText().length() == 0) {
             mHostEdit.setError(getString(R.string.invalid_host));
             return false;
-        } else if (mPortEdit.getText().length() > 0) {
+        }
+        if (mPortEdit.getText().length() > 0) {
             try {
                 int port = Integer.parseInt(mPortEdit.getText().toString());
                 if (port < 1 || port > 65535) {
@@ -398,7 +353,6 @@ public class ServerEditFragment extends DialogFragment {
                 return false;
             }
         }
-        // Nama pengguna WAJIB diisi
         if (mUsernameEdit.getText().toString().trim().isEmpty()) {
             mUsernameEdit.setError("Masukkan nama Anda");
             return false;
