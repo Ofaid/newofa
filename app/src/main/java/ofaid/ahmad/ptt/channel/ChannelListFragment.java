@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Modif By Ofaid 2026
- */
+ * Modif By Ofaid 2026*/
 
 package ofaid.ahmad.ptt.channel;
 
