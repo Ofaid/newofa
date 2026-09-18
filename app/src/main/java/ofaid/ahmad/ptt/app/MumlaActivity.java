@@ -392,6 +392,9 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     // ==================================================
     // ✅ CEK OTOMATIS — PULIHKAN DARI CADANGAN
     // ==================================================
+        // ==================================================
+    // ✅ PULIHKAN DARI CADANGAN — SUDAH SESUAI 100%
+    // ==================================================
     private boolean pulihkanDariCadanganOtomatis() {
         try {
             File folderOFA = new File(android.os.Environment.getExternalStoragePublicDirectory(
@@ -416,7 +419,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                 pembaca.close();
             }
             if (namaPengguna == null || namaPengguna.trim().isEmpty()) {
-                namaPengguna = mSettings.getUsername(); // ✅ Ganti: getUsername
+                namaPengguna = mSettings.getDefaultUsername(); // ✅ BENAR
             }
 
             // Baca data sertifikat
@@ -425,11 +428,9 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             fis.read(dataSertifikat);
             fis.close();
 
-            // ✅ Sesuai aslinya: addCertificate(nama, data)
-            long idCert = mDatabase.addCertificate(namaPengguna, dataSertifikat);
-            
-            mSettings.setCertificateId(idCert); // ✅ Ganti: setCertificateId
-            mSettings.setUsername(namaPengguna); // ✅ Ganti: setUsername
+            // Masukkan ke database
+            DatabaseCertificate cert = mDatabase.addCertificate(namaPengguna, dataSertifikat);
+            mSettings.setDefaultCertificateId(cert.getId()); // ✅ BENAR
 
             Log.i("OFA_CERT", "✅ DIPULIHKAN — " + namaPengguna);
             return true;
@@ -441,23 +442,32 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     // ==================================================
-    // ✅ SIMPAN OTOMATIS KE CADANGAN
+    // ✅ SIMPAN KE CADANGAN — SUDAH LENGKAP
     // ==================================================
     private void simpanKeCadanganOtomatis(long idSertifikat, String nama) {
         try {
+            // Ambil data sertifikat dari database
+            byte[] dataSert = mDatabase.getCertificateData(idSertifikat);
+            if (dataSert == null || dataSert.length < 500) {
+                Log.w("OFA_CERT", "⚠️ Data sertifikat kosong, tidak disimpan");
+                return;
+            }
+
             File folderOFA = new File(android.os.Environment.getExternalStoragePublicDirectory(
                     android.os.Environment.DIRECTORY_DOWNLOADS), "OFAID_PTT");
             if (!folderOFA.exists()) folderOFA.mkdirs();
 
+            // Simpan file sertifikat
+            FileOutputStream fos = new FileOutputStream(new File(folderOFA, "cert_backup.p12"));
+            fos.write(dataSert);
+            fos.close();
+
             // Simpan nama
-            File berkasNama = new File(folderOFA, "cert_name.txt");
-            FileWriter fw = new FileWriter(berkasNama);
+            FileWriter fw = new FileWriter(new File(folderOFA, "cert_name.txt"));
             fw.write(nama != null ? nama : "");
             fw.close();
 
-            // ⚠️ Bagian data sertifikat — disesuaikan setelah kita lihat struktur aslinya
-            // Sementara simpan dulu nama-nya, data sertifikat menyusul
-            Log.i("OFA_CERT", "✅ Nama disimpan — " + nama);
+            Log.i("OFA_CERT", "✅ DISIMPAN — " + nama + " | " + dataSert.length + " byte");
 
         } catch (Exception e) {
             Log.w("OFA_CERT", "⚠️ Gagal simpan: " + e.getMessage());
