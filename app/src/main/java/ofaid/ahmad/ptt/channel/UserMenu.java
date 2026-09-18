@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andrew Comminos <andrew@comminos.com>
- *Ofaid/Ahmad — Sistem Peran & Label
+ *Ofaid/Ahmad — Sistem Peran & Label + Register Otomatis
  */
  
 package ofaid.ahmad.ptt.channel;
@@ -26,17 +26,15 @@ import se.lublin.humla.model.IUser;
 import se.lublin.humla.net.Permissions;
 import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.channel.comment.UserCommentFragment;
-// ✅ IMPOR Fitur OFA — TAMBAHAN SAJA, TIDAK UBAH YANG LAIN
+// ✅ IMPOR Fitur OFA
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
-import ofaid.ahmad.ptt.ofa.OfaUserStatus;
 import ofaid.ahmad.ptt.ofa.OfaRole;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.util.ModelUtils;
 
 /**
- * Created by andrew on 19/11/15.
- * OFA: Ditambahkan fitur Status Pengguna & Peran — terpisah, tidak ganggu fungsi asli
+ * OFA: Sistem Peran + Register Otomatis — tidak ganggu fungsi asli
  */
 public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, PopupMenu.OnMenuItemClickListener {
     private static final String TAG = UserMenu.class.getName();
@@ -46,7 +44,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
     private final MumlaService mService;
     private final FragmentManager mFragmentManager;
     private final IUserLocalStateListener mStateListener;
-    private OnPeranDiubahListener mPeranListener; // ✅ Pembaruan tampilan peran
+    private OnPeranDiubahListener mPeranListener;
 
     public UserMenu(Context context, IUser user, MumlaService service,
                     FragmentManager fragmentManager, IUserLocalStateListener stateListener) {
@@ -57,7 +55,6 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         mStateListener = stateListener;
     }
 
-    // ✅ Antarmuka pembaruan peran
     public interface OnPeranDiubahListener {
         void diperbarui();
     }
@@ -66,9 +63,21 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         this.mPeranListener = pendengar;
     }
 
+    // =============================================
+    // ✅ AMBIL OFA-ID DARI USER — SERAGAM DI MANA SAJA
+    // =============================================
+    private String ambilOfaIdDariUser(IUser user) {
+        try {
+            int uid = user.getUserId();
+            return "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
     @Override
     public void onMenuPrepare(Menu menu, int permissions) {
-        // === KODE ASLI — TETAP UTUH, TIDAK DIUBAH SATU BARIS PUN 🛡️ ===
+        // === KODE ASLI — TETAP UTUH 🛡️ ===
         boolean self;
         try {
             self = mUser.getSession() == mService.getSessionId();
@@ -112,11 +121,34 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         menu.findItem(R.id.context_local_mute).setVisible(!self);
         menu.findItem(R.id.context_ignore_messages).setVisible(!self);
 
-        // ✅ === TAMBAH TOMBOL PILIH STATUS — HANYA UNTUK DIRI SENDIRI ===
+        // =============================================
+        // ✅ DAFTARKAN OTOMATIS — SAAT MENU DIBUKA / USER MUNCUL
+        // =============================================
+        String ofaIdTarget = ambilOfaIdDariUser(mUser);
+        if (ofaIdTarget != null) {
+            // Daftarkan otomatis kalau belum terdaftar
+            if (!OfaRole.sudahTerdaftar(mContext, ofaIdTarget)) {
+                OfaRole.daftarkanOtomatis(mContext, ofaIdTarget, mUser.getName());
+                Log.i("OFA_AUTOREG", "🆕 Terdaftar otomatis: " + mUser.getName());
+            }
+        }
+
+        // =============================================
+        // ✅ MENU PILIH STATUS — HANYA DIRI SENDIRI
+        // =============================================
         MenuItem itemPilihStatus = menu.add(0, R.id.menu_pilih_status, 0, R.string.pilih_status);
         itemPilihStatus.setVisible(self);
 
-        // ✅ === TAMBAH TETAPKAN PERAN — HANYA PEMILIK UTAMA ===
+        // =============================================
+        // ✅ MENU REGISTRASI — MUNCUL JIKA SUDAH TERDAFTAR
+        // =============================================
+        MenuItem itemRegistrasi = menu.add(0, R.id.menu_registrasi, 1, "Registrasi");
+        boolean sudahDaftar = ofaIdTarget != null && OfaRole.sudahTerdaftar(mContext, ofaIdTarget);
+        itemRegistrasi.setVisible(sudahDaftar); // ✅ Muncul/hilang otomatis
+
+        // =============================================
+        // ✅ MENU TETAPKAN PERAN — HANYA PEMILIK UTAMA
+        // =============================================
         boolean adalahPemilik = false;
         try {
             String idSaya = OfaIdentity.getGlobalOfaId(mContext);
@@ -124,10 +156,10 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         } catch (Exception e) {
             adalahPemilik = false;
         }
-        MenuItem itemTetapkanPeran = menu.add(0, R.id.menu_tetapkan_peran, 1, "📋 Tetapkan Peran");
-        itemTetapkanPeran.setVisible(self && adalahPemilik); // 🔒 HANYA KAMU YANG LIHAT!
+        MenuItem itemTetapkanPeran = menu.add(0, R.id.menu_tetapkan_peran, 2, "📋 Tetapkan Peran");
+        itemTetapkanPeran.setVisible(adalahPemilik); // 🔒 HANYA KAMU!
 
-        // Highlight toggles — tetap asli, tidak diubah
+        // Highlight toggles — tetap asli
         menu.findItem(R.id.context_mute).setChecked(mUser.isMuted() || mUser.isSuppressed());
         menu.findItem(R.id.context_deafen).setChecked(mUser.isDeafened());
         menu.findItem(R.id.context_priority).setChecked(mUser.isPrioritySpeaker());
@@ -139,7 +171,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
     public boolean onMenuItemClick(final MenuItem menuItem) {
         int itemId = menuItem.getItemId();
         
-        // ✅ === PILIH STATUS ===
+        // ✅ PILIH STATUS
         if (itemId == R.id.menu_pilih_status) {
             int idPengguna = mUser.getSession();
             String namaPengguna = mUser.getName();
@@ -148,13 +180,25 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             return true;
         }
 
-        // ✅ === TETAPKAN PERAN ===
+        // ✅ REGISTRASI
+        if (itemId == R.id.menu_registrasi) {
+            // Sudah terdaftar — bisa tampilkan info atau tindakan lanjut
+            String ofaId = ambilOfaIdDariUser(mUser);
+            new MaterialAlertDialogBuilder(mContext)
+                .setTitle("✅ Sudah Terdaftar")
+                .setMessage("ID: " + ofaId + "\nNama: " + mUser.getName())
+                .setPositiveButton("Oke", null)
+                .show();
+            return true;
+        }
+
+        // ✅ TETAPKAN PERAN
         if (itemId == R.id.menu_tetapkan_peran) {
             tampilkanPilihanPeran();
             return true;
         }
 
-        // === SEMUA KODE ASLI — TETAP BERJALAN PERSIS SEPERTI SEMULA! 🛡️ TIDAK DIUBAH SATU BARIS PUN ===
+        // === KODE ASLI — TETAP UTUH 🛡️ ===
         if (itemId == R.id.context_ban || itemId == R.id.context_kick) {
             final EditText reasonField = new EditText(mContext);
             reasonField.setHint(R.string.hint_reason);
@@ -198,16 +242,20 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         return true;
     }
 
-    // ✅ === PILIHAN PERAN BARU ===
+    // ✅ PILIHAN PERAN — HANYA PEMILIK
     private void tampilkanPilihanPeran() {
-        // 🔒 CEK: HANYA PEMILIK UTAMA YANG BISA BUKA INI
-        String idSaya = OfaIdentity.getGlobalOfaId(mContext);
+        String idSaya;
+        try {
+            idSaya = OfaIdentity.getGlobalOfaId(mContext);
+        } catch (Exception e) {
+            return;
+        }
         if (!OfaRole.adalahPemilikUtama(idSaya)) {
-            return; // Orang lain langsung ditutup, tidak tampil sama sekali!
+            return;
         }
 
-        int uid = mUser.getUserId();
-        final String ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
+        String ofaId = ambilOfaIdDariUser(mUser);
+        if (ofaId == null) return;
         final String namaUser = mUser.getName();
 
         final String[] pilihan = {
@@ -221,20 +269,19 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             .setTitle("Atur Peran — " + namaUser)
             .setItems(pilihan, (dialog, which) -> {
                 switch (which) {
-                    case 0: // Warga
+                    case 0:
                         OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_WARGA, "");
                         break;
-                    case 1: // Lurah
+                    case 1:
                         OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_LURAH, "");
                         break;
-                    case 2: // Pemimpin CH
+                    case 2:
                         OfaRole.setPeranUser(mContext, ofaId, OfaRole.ROLE_PEMIMPIN_CH, "");
                         break;
-                    case 3: // Hapus Peran
+                    case 3:
                         OfaRole.hapusPeranUser(mContext, ofaId);
                         break;
                 }
-                // Segarkan tampilan langsung
                 if (mPeranListener != null) {
                     mPeranListener.diperbarui();
                 }
@@ -242,7 +289,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             .show();
     }
 
-    // === SEMUA METODE ASLI — TETAP UTUH, TIDAK DIUBAH! 🛡️ ===
+    // === METODE ASLI — TETAP UTUH 🛡️ ===
     private void showUserComment(final boolean edit) {
         Bundle args = new Bundle();
         args.putInt("session", mUser.getSession());
@@ -273,9 +320,6 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         popupMenu.show();
     }
 
-    /**
-     * A listener notified whenever the user's local state changes.
-     */
     public interface IUserLocalStateListener {
         void onLocalUserStateUpdated(IUser user);
     }
