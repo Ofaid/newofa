@@ -160,8 +160,9 @@ public class CertificateExportActivity extends AppCompatActivity implements Dial
         writeCertificate(fos, certificate, outputFile.getAbsolutePath());
         finish();
     }
-// Boleh pakai @Override atau tidak, tidak masalah
-public void onRequestPermissionsResult(int requestCode, @NonNull int[] permissions,
+@Override
+public void onRequestPermissionsResult(int requestCode,
+                                       @NonNull String[] permissions,
                                        @NonNull int[] grantResults) {
     super.onRequestPermissionsResult(requestCode, permissions, grantResults);
     
