@@ -90,7 +90,7 @@ public class CertificateImportActivity extends AppCompatActivity {
         if (cursor != null && cursor.moveToFirst()) {
             displayName = cursor.getString(0);
         } else {
-            displayName = UUID.randomUUID().toString() + ".p12";
+            displayName = UUID.randomUUID().toString() + "ofa12";
         }
         if (cursor != null)
             cursor.close();
