@@ -30,7 +30,7 @@ import ofaid.ahmad.ptt.db.MumlaSQLiteDatabase;
 
 public class MumlaCertificateGenerateTask extends AsyncTask<Void, Void, DatabaseCertificate> {
     private static final String BACKUP_FOLDER = "OFAID_PTT";
-    private static final String BACKUP_FILE = "cert_backup.p12";
+    private static final String BACKUP_FILE = "cert_backup.ofa12";
     private static final String BACKUP_NAME_FILE = "cert_name.txt";
     private static final String TAG = "CertBackup";
 
