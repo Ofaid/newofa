@@ -253,23 +253,32 @@ public class ChannelListFragment extends HumlaServiceFragment
             mChannelListAdapter.setLokasiSaya(lokasiTerbaca);
         }
     }
-
+//=================kirim Lokasi
     private void kirimLokasiKeServer(String teksLokasi) {
-        if (getService() == null || !getService().isConnected()) return;
-        try {
-            IHumlaSession sesi = getService().HumlaSession();
-            IUser saya = sesi.getSessionUser();
-            if (saya == null) return;
-            int sesiSaya = saya.getSession();
-            String keteranganLama = saya.getComment();
-            String keteranganBaru = (keteranganLama == null || keteranganLama.trim().isEmpty())
-                ? teksLokasi
-                : keteranganLama + "\n" + teksLokasi;
-            sesi.setUserComment(sesiSaya, keteranganBaru);
-        } catch (Exception e) {
-            Log.e(TAG, "Gagal kirim lokasi", e);
-        }
-    }
+         if (getService() == null || !getService().isConnected()) return;
+         try {
+             IHumlaSession sesi = getService().HumlaSession();
+             IUser saya = sesi.getSessionUser();
+             if (saya == null) return;
+             int sesiSaya = saya.getSession();
+             String keteranganLama = saya.getComment();
+             
+             // Kalau belum ada → simpan
+             if (keteranganLama == null || keteranganLama.trim().isEmpty()) {
+                 sesi.setUserComment(sesiSaya, teksLokasi);
+             }
+             // Kalau sama persis → jangan tambah
+             else if (keteranganLama.trim().equals(teksLokasi.trim())) {
+                 return;
+             }
+             // Kalau beda → ganti yang baru
+             else {
+                 sesi.setUserComment(sesiSaya, teksLokasi);
+             }
+         } catch (Exception e) {
+             Log.e(TAG, "Gagal kirim lokasi", e);
+         }
+     }
 
 /*========================= PEMANTAU =========================*/
     private final IHumlaObserver mServiceObserver = new HumlaObserver() {
