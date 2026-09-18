@@ -1,18 +1,11 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
+ * Modif By Ofaid/Ahmad 2026 — SERVER TETAP & ID TERKUNCI
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
  * the Free Software Foundation, either version 3 of the License, or
  * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
 package ofaid.ahmad.ptt.servers;
@@ -65,7 +58,12 @@ public class ServerEditFragment extends DialogFragment {
 
     private static final String PREF_OFA_SERVER = "OfaServerPrefs";
 
-    // 📍 ALAMAT DAFTAR SERVER KITA — SATU-SATUNYA SUMBER DATA!
+    // 🔒 SERVER UTAMA — TETAP, TIDAK DIUBAH, TIDAK BISA DIUBAH DARI LUAR
+    public static final String SERVER_PATEN_HOST = "ahmad.cleanvoice.ru";
+    public static final int SERVER_PATEN_PORT = 65202;
+    public static final String SERVER_PATEN_NAMA = "OFA PTT";
+
+    // 📍 DAFTAR SERVER TAMBAHAN DARI WEB — BISA DIPAKAI NANTI
     private static final String OFA_DAFTAR_SERVER_URL = "https://jz13gri.liveblog365.com/server/daftar.cgi";
 
     private EditText mNameEdit;
@@ -76,7 +74,7 @@ public class ServerEditFragment extends DialogFragment {
 
     private ServerEditListener mListener;
 
-    // 📦 PENAMPUNG DATA SENDIRI — TIDAK BERGANTUNG SISTEM LAIN!
+    // 📦 DATA SERVER DARI WEB
     static class OfaServerItem {
         final String name;
         final String ip;
@@ -158,49 +156,9 @@ public class ServerEditFragment extends DialogFragment {
         LayoutInflater inflater = LayoutInflater.from(getActivity());
         View view = inflater.inflate(R.layout.dialog_server_edit, null, false);
 
-        // 📋 TAMBAHKAN DAFTAR PILIHAN SERVER DI ATAS FORMULIR
-        LinearLayout rootLayout = (LinearLayout) view.getParent();
-        LinearLayout panelDaftar = new LinearLayout(requireActivity());
-        panelDaftar.setOrientation(LinearLayout.VERTICAL);
-        panelDaftar.setPadding(24, 16, 24, 8);
-
-        TextView judulDaftar = new TextView(requireActivity());
-        judulDaftar.setText("📋 Pilih Server — klik untuk isi otomatis:");
-        judulDaftar.setTextSize(15);
-        judulDaftar.setTextColor(0xFF666666);
-        judulDaftar.setPadding(0, 0, 0, 8);
-        panelDaftar.addView(judulDaftar);
-
-        ListView daftarPilihan = new ListView(requireActivity());
-        daftarPilihan.setLayoutParams(new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-        daftarPilihan.setDividerHeight(8);
-        panelDaftar.addView(daftarPilihan);
-
-        if (rootLayout != null && rootLayout.getChildCount() > 0) {
-            rootLayout.addView(panelDaftar, 0);
-        }
-
-        // Inisialisasi daftar & pemuat — MURNI DARI ALAMAT KITA SENDIRI!
-        mDaftarServerWeb = new ArrayList<>();
-        mAdapterDaftar = new ArrayAdapter<>(requireActivity(),
-                android.R.layout.simple_list_item_1, new ArrayList<>());
-        daftarPilihan.setAdapter(mAdapterDaftar);
-        muatDaftarServerDariWeb();
-
-        // ✅ KLIK → ISI ALAMAT & PORT OTOMATIS — NAMA PENGGUNA TETAP DIISI TANGAN!
-        daftarPilihan.setOnItemClickListener(new AdapterView.OnItemClickListener() {
-            @Override
-            public void onItemClick(AdapterView<?> parent, View v, int posisi, long id) {
-                OfaServerItem serverTerpilih = mDaftarServerWeb.get(posisi);
-                mHostEdit.setText(serverTerpilih.getIp());
-                mPortEdit.setText(String.valueOf(serverTerpilih.getPort()));
-                if (mNameEdit.getText().length() == 0) {
-                    mNameEdit.setText(serverTerpilih.getName());
-                }
-            }
-        });
-
+        // =============================================
+        // ✅ INISIALISASI SEMUA KOLOM
+        // =============================================
         TextView titleLabel = view.findViewById(R.id.server_edit_name_title);
         mNameEdit = view.findViewById(R.id.server_edit_name);
         mHostEdit = view.findViewById(R.id.server_edit_host);
@@ -209,8 +167,12 @@ public class ServerEditFragment extends DialogFragment {
         mUsernameEdit.setHint(settings.getDefaultUsername());
         mPasswordEdit = view.findViewById(R.id.server_edit_password);
 
+        // =============================================
+        // 🔒 ISI OTOMATIS SERVER PATEN — TIDAK BISA DIUBAH
+        // =============================================
         Server oldServer = getServer();
         if (oldServer != null) {
+            // Edit server yang sudah ada
             mNameEdit.setText(oldServer.getName());
             mHostEdit.setText(oldServer.getHost());
             if (oldServer.getPort() != 0) {
@@ -218,6 +180,68 @@ public class ServerEditFragment extends DialogFragment {
             }
             mUsernameEdit.setText(oldServer.getUsername());
             mPasswordEdit.setText(oldServer.getPassword());
+        } else {
+            // Server baru → ISI OTOMATIS DENGAN SERVER PATEN
+            mNameEdit.setText(SERVER_PATEN_NAMA);
+            mHostEdit.setText(SERVER_PATEN_HOST);
+            mPortEdit.setText(String.valueOf(SERVER_PATEN_PORT));
+            // Nama pengguna dikosongkan → user isi sendiri
+        }
+
+        // 🔒 KUNCI ALAMAT & PORT — TIDAK BISA DIUBAH
+        mHostEdit.setFocusable(false);
+        mHostEdit.setFocusableInTouchMode(false);
+        mHostEdit.setEnabled(false);
+        mHostEdit.setTextColor(0xFF888888); // warna abu-abu → terlihat terkunci
+
+        mPortEdit.setFocusable(false);
+        mPortEdit.setFocusableInTouchMode(false);
+        mPortEdit.setEnabled(false);
+        mPortEdit.setTextColor(0xFF888888);
+
+        // ✅ Nama pengguna — SATU-SATUNYA YANG DIISI USER
+        mUsernameEdit.setHint("Masukkan nama Anda");
+
+        // =============================================
+        // 📋 DAFTAR SERVER TAMBAHAN DARI WEB (untuk masa depan)
+        // =============================================
+        LinearLayout rootLayout = (LinearLayout) view.getParent();
+        if (rootLayout != null && getAction() == Action.ADD_ACTION) {
+            LinearLayout panelDaftar = new LinearLayout(requireActivity());
+            panelDaftar.setOrientation(LinearLayout.VERTICAL);
+            panelDaftar.setPadding(24, 16, 24, 8);
+
+            TextView judulDaftar = new TextView(requireActivity());
+            judulDaftar.setText("📋 Server Lain (Pilihan):");
+            judulDaftar.setTextSize(14);
+            judulDaftar.setTextColor(0xFF666666);
+            judulDaftar.setPadding(0, 0, 0, 8);
+            panelDaftar.addView(judulDaftar);
+
+            ListView daftarPilihan = new ListView(requireActivity());
+            daftarPilihan.setLayoutParams(new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            daftarPilihan.setDividerHeight(8);
+            panelDaftar.addView(daftarPilihan);
+
+            rootLayout.addView(panelDaftar, 0);
+
+            mDaftarServerWeb = new ArrayList<>();
+            mAdapterDaftar = new ArrayAdapter<>(requireActivity(),
+                    android.R.layout.simple_list_item_1, new ArrayList<>());
+            daftarPilihan.setAdapter(mAdapterDaftar);
+            muatDaftarServerDariWeb();
+
+            // ⚠️ CATATAN: Kalau dipilih dari daftar, tetap peringatkan server utama
+            daftarPilihan.setOnItemClickListener(new AdapterView.OnItemClickListener() {
+                @Override
+                public void onItemClick(AdapterView<?> parent, View v, int posisi, long id) {
+                    OfaServerItem serverTerpilih = mDaftarServerWeb.get(posisi);
+                    // TIDAK mengganti server utama — hanya informasi
+                    // mHostEdit.setText(serverTerpilih.getIp());
+                    // mPortEdit.setText(String.valueOf(serverTerpilih.getPort()));
+                }
+            });
         }
 
         if (shouldIgnoreTitle()) {
@@ -232,7 +256,7 @@ public class ServerEditFragment extends DialogFragment {
                 .create();
     }
 
-    // 🌐 MUAT & URAI XML — SENDIRI, PERSIS FORMAT KAU! TIDAK PAKAI KODE SISTEM LAIN!
+    // 🌐 MUAT DAFTAR SERVER DARI WEB — SIAP UNTUK NANTI
     private void muatDaftarServerDariWeb() {
         new MuatDaftarServerWebTask(this).execute();
     }
@@ -269,7 +293,6 @@ public class ServerEditFragment extends DialogFragment {
                 while ((eventType = parser.next()) != XmlPullParser.END_TAG) {
                     if (eventType != XmlPullParser.START_TAG) continue;
                     if ("server".equals(parser.getName())) {
-                        // ✅ BACA PERSIS ATRIBUT XML YANG KAU BUAT — TIDAK ADA YANG DIUBAH!
                         String nama = parser.getAttributeValue(null, "name");
                         String ip = parser.getAttributeValue(null, "ip");
                         String portStr = parser.getAttributeValue(null, "port");
@@ -282,7 +305,6 @@ public class ServerEditFragment extends DialogFragment {
                         hasil.add(new OfaServerItem(nama, ip, port, negara, wilayah));
                         parser.nextTag();
                     } else {
-                        // ✅ Lewati tag lain dengan aman — cara kompatibel SEMUA versi Android!
                         int kedalaman = 1;
                         while (kedalaman > 0 && (eventType = parser.next()) != XmlPullParser.END_DOCUMENT) {
                             if (eventType == XmlPullParser.START_TAG) kedalaman++;
@@ -293,11 +315,9 @@ public class ServerEditFragment extends DialogFragment {
                 parser.require(XmlPullParser.END_TAG, null, "servers");
                 aliran.close();
                 conn.disconnect();
-            } catch (MalformedURLException e) {}
-            catch (ProtocolException e) {}
-            catch (XmlPullParserException e) {}
-            catch (IOException e) {}
-            catch (Exception e) { e.printStackTrace(); }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
             return hasil;
         }
 
@@ -315,24 +335,25 @@ public class ServerEditFragment extends DialogFragment {
         }
     }
 
-    // ⚠️ DI BAWAH INI SEMUA KODE ASLI — TIDAK DIUBAH SATU PUN! 🛡️
+    // ✅ BUAT SERVER — ID TETAP TERKUNCI
     public Server createServer() {
-        String name = (mNameEdit).getText().toString().trim();
-        String host = (mHostEdit).getText().toString().trim();
+        String name = mNameEdit.getText().toString().trim();
+        String host = mHostEdit.getText().toString().trim();
 
         int port;
         try {
-            port = Integer.parseInt((mPortEdit).getText().toString());
+            port = Integer.parseInt(mPortEdit.getText().toString());
         } catch (final NumberFormatException ex) {
             port = 0;
         }
 
-        String username = (mUsernameEdit).getText().toString().trim();
+        String username = mUsernameEdit.getText().toString().trim();
         String password = mPasswordEdit.getText().toString();
 
         if (username.equals(""))
             username = mUsernameEdit.getHint().toString();
 
+        // 🔒 SIMPAN ID TETAP — TIDAK BERUBAH WALAU DIBUKA BERKALI-KALI
         Context context = requireActivity();
         String ofaPatenId = OfaUserId.getPermanentUserId(context);
         String storageKey = "ofa_paten_id_" + host + "_" + port;
@@ -366,6 +387,11 @@ public class ServerEditFragment extends DialogFragment {
                 mPortEdit.setError(getString(R.string.invalid_port_range));
                 return false;
             }
+        }
+        // Nama pengguna WAJIB diisi
+        if (mUsernameEdit.getText().toString().trim().isEmpty()) {
+            mUsernameEdit.setError("Masukkan nama Anda");
+            return false;
         }
         return true;
     }
