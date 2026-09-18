@@ -1,4 +1,4 @@
-/*Edit By Ofaid/Ahmd-jr 9-9-2026*/
+/*Edit By Ofaid/Ahmd-jr 9-9-2026 — ID SINKRON & PERAN*/
 /* Copyright (C) 2014 Andrew Comminos */
 
 package ofaid.ahmad.ptt.channel;
@@ -37,14 +37,11 @@ import se.lublin.humla.model.IChannel;
 import se.lublin.humla.model.IUser;
 import se.lublin.humla.model.Server;
 import se.lublin.humla.model.TalkState;
-import se.lublin.humla.util.HumlaDisconnectedException;
 import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.db.MumlaDatabase;
 import ofaid.ahmad.ptt.drawable.CircleDrawable;
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.OfaRole;
-import ofaid.ahmad.ptt.ofa.OfaUserStatus;
-import ofaid.ahmad.ptt.ofa.OfaLokasi;
 import ofaid.ahmad.ptt.service.MumlaService;
 
 public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> implements UserMenu.IUserLocalStateListener {
@@ -65,10 +62,8 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     private final FragmentManager mFragmentManager;
     private RecyclerView mAttachedRecyclerView;
 
-    // === LOKASI SAYA ===
     private String lokasiSaya;
 
-    // === FUNGSI DIPANGGIL DARI ChannelListFragment ===
     public void setLokasiSaya(String lokasiTeks) {
         this.lokasiSaya = lokasiTeks;
         notifyDataSetChanged();
@@ -84,15 +79,15 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         mFragmentManager = fragmentManager;
         mShowChannelUserCount = showChannelUserCount;
 
-        mRootChannels = new ArrayList<Integer>();
+        mRootChannels = new ArrayList<>();
         if(showPinnedOnly) {
             mRootChannels = mDatabase.getPinnedChannels(mService.getTargetServer().getId());
         } else {
             mRootChannels.add(0);
         }
 
-        mNodes = new LinkedList<Node>();
-        mExpandedChannels = new HashMap<Integer, Boolean>();
+        mNodes = new LinkedList<>();
+        mExpandedChannels = new HashMap<>();
         updateChannels();
     }
 
@@ -119,12 +114,9 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         if (node.isChannel()) {
             final IChannel channel = node.getChannel();
             final ChannelViewHolder cvh = (ChannelViewHolder) viewHolder;
-            cvh.itemView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mChannelClickListener != null) {
-                        mChannelClickListener.onChannelClick(channel);
-                    }
+            cvh.itemView.setOnClickListener(v -> {
+                if (mChannelClickListener != null) {
+                    mChannelClickListener.onChannelClick(channel);
                 }
             });
 
@@ -132,13 +124,10 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     channel.getSubchannelUserCount() > 0;
             cvh.mChannelExpandToggle.setImageResource(node.isExpanded() ?
                     R.drawable.ic_action_expanded : R.drawable.ic_action_collapsed);
-            cvh.mChannelExpandToggle.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    mExpandedChannels.put(channel.getId(), !node.isExpanded());
-                    updateChannels();
-                    notifyDataSetChanged();
-                }
+            cvh.mChannelExpandToggle.setOnClickListener(v -> {
+                mExpandedChannels.put(channel.getId(), !node.isExpanded());
+                updateChannels();
+                notifyDataSetChanged();
             });
             cvh.mChannelExpandToggle.setEnabled(expandUsable);
             cvh.mChannelExpandToggle.setVisibility(expandUsable ? View.VISIBLE : View.INVISIBLE);
@@ -169,8 +158,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
 
             if (mShowChannelUserCount) {
                 cvh.mChannelUserCount.setVisibility(View.VISIBLE);
-                int userCount = channel.getSubchannelUserCount();
-                cvh.mChannelUserCount.setText(String.format("%d", userCount));
+                cvh.mChannelUserCount.setText(String.format("%d", channel.getSubchannelUserCount()));
             } else {
                 cvh.mChannelUserCount.setVisibility(View.GONE);
             }
@@ -182,44 +170,32 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     cvh.mChannelHolder.getPaddingRight(),
                     cvh.mChannelHolder.getPaddingBottom());
 
-            cvh.mJoinButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mService != null && mService.isConnected()) {
-                        mService.HumlaSession().joinChannel(channel.getId());
-                    }
+            cvh.mJoinButton.setOnClickListener(v -> {
+                if (mService != null && mService.isConnected()) {
+                    mService.HumlaSession().joinChannel(channel.getId());
                 }
             });
 
-            cvh.mMoreButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    ChannelMenu menu = new ChannelMenu(mContext, channel, mService, mDatabase, mFragmentManager);
-                    menu.showPopup(v);
-                }
+            cvh.mMoreButton.setOnClickListener(v -> {
+                ChannelMenu menu = new ChannelMenu(mContext, channel, mService, mDatabase, mFragmentManager);
+                menu.showPopup(v);
             });
 
-            cvh.itemView.setOnLongClickListener(new View.OnLongClickListener() {
-                @Override
-                public boolean onLongClick(View v) {
-                    cvh.mMoreButton.performClick();
-                    return true;
-                }
+            cvh.itemView.setOnLongClickListener(v -> {
+                cvh.mMoreButton.performClick();
+                return true;
             });
         } else if (node.isUser()) {
             final IUser user = node.getUser();
             final UserViewHolder uvh = (UserViewHolder) viewHolder;
-            uvh.itemView.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    if (mUserClickListener != null) {
-                        mUserClickListener.onUserClick(user);
-                    }
+            uvh.itemView.setOnClickListener(v -> {
+                if (mUserClickListener != null) {
+                    mUserClickListener.onUserClick(user);
                 }
             });
 
             // =============================================
-            // ✅ TENTUKAN SESI DAN OFA-ID — DIPERBAIKI ERROR
+            // ✅ TENTUKAN SESI — DIRI SENDIRI ATAU BUKAN
             // =============================================
             int sesiSaya = -1;
             boolean diriSendiri = false;
@@ -232,18 +208,16 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                 }
             } catch (Exception ignored) {}
 
-            // ✅ AMBIL OFA-ID
+            // ✅ AMBIL OFA-ID — DIRI SENDIRI PAKAI YANG TERKUNCI
             if (diriSendiri) {
-                // DIRI SENDIRI — pakai ID terkunci permanen
                 ofaId = OfaIdentity.getGlobalOfaId(mContext);
             } else {
-                // ORANG LAIN — buat ID dari sesi
                 int uid = user.getUserId();
                 ofaId = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
             }
 
             // =============================================
-            // ✅ TAMPILKAN NAMA
+            // ✅ NAMA
             // =============================================
             if (uvh.mUserName != null) {
                 uvh.mUserName.setText(user.getName());
@@ -252,18 +226,14 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             }
 
             // =============================================
-            // ✅ TAMPILKAN ID — SINGKAT & RAPI
+            // ✅ ID — SAMA DENGAN POPUP!
             // =============================================
             if (uvh.mUserIdView != null && ofaId != null) {
                 String idTampil;
                 if (diriSendiri) {
                     idTampil = OfaIdentity.getSingkat(mContext);
                 } else {
-                    if (ofaId.length() > 10) {
-                        idTampil = ofaId.substring(0, 10);
-                    } else {
-                        idTampil = ofaId;
-                    }
+                    idTampil = ofaId.length() > 10 ? ofaId.substring(0, 10) : ofaId;
                 }
                 uvh.mUserIdView.setText(idTampil);
                 uvh.mUserIdView.setVisibility(View.VISIBLE);
@@ -271,13 +241,13 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             }
 
             // =============================================
-            // ✅ TAMPILKAN PERAN
+            // ✅ PERAN — PEMILIK / WARGA / LURAH / KETUA CH
             // =============================================
             if (uvh.mUserStatusView != null && ofaId != null) {
                 String peranTeks;
                 int warnaPeran;
                 
-                if (diriSendiri && OfaRole.adalahPemilikUtama(ofaId)) {
+                if (diriSendiri && OfaIdentity.isPerangkatPemilik(mContext)) {
                     peranTeks = "[Pemilik]";
                     warnaPeran = 0xFFFFD700; // Emas
                 } else {
@@ -292,7 +262,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             }
 
             // =============================================
-            // ✅ TAMPILKAN LOKASI — DARI KOMENTAR SERVER
+            // ✅ LOKASI
             // =============================================
             if (uvh.mUserLokasi != null) {
                 String keterangan = user.getComment();
@@ -302,11 +272,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     String[] baris = keterangan.split("\\r?\\n");
                     for (String b : baris) {
                         String bersih = b.trim();
-                        if (bersih.contains(". ") && !bersih.startsWith("📍")) {
-                            lokasiTampil = bersih;
-                            break;
-                        }
-                        if (bersih.startsWith("📍")) {
+                        if (bersih.startsWith("📍") || (bersih.contains(". ") && !bersih.startsWith("📍"))) {
                             lokasiTampil = bersih;
                             break;
                         }
@@ -327,11 +293,10 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             }
 
             // =============================================
-            // ✅ TEBAL NAMA UNTUK DIRI SENDIRI
+            // ✅ TEBAL NAMA JIKA DIRI SENDIRI
             // =============================================
-            final int typefaceStyle = diriSendiri ? Typeface.BOLD : Typeface.NORMAL;
             if (uvh.mUserName != null) {
-                uvh.mUserName.setTypeface(null, typefaceStyle);
+                uvh.mUserName.setTypeface(null, diriSendiri ? Typeface.BOLD : Typeface.NORMAL);
             }
 
             // =============================================
@@ -346,21 +311,15 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                     uvh.mUserHolder.getPaddingRight(),
                     uvh.mUserHolder.getPaddingBottom());
 
-            uvh.mMoreButton.setOnClickListener(new View.OnClickListener() {
-                @Override
-                public void onClick(View v) {
-                    UserMenu menu = new UserMenu(mContext, user, (MumlaService) mService,
-                            mFragmentManager, ChannelListAdapter.this);
-                    menu.showPopup(v);
-                }
+            uvh.mMoreButton.setOnClickListener(v -> {
+                UserMenu menu = new UserMenu(mContext, user, (MumlaService) mService,
+                        mFragmentManager, ChannelListAdapter.this);
+                menu.showPopup(v);
             });
 
-            uvh.itemView.setOnLongClickListener(new View.OnLongClickListener() {
-                @Override
-                public boolean onLongClick(View v) {
-                    uvh.mMoreButton.performClick();
-                    return true;
-                }
+            uvh.itemView.setOnLongClickListener(v -> {
+                uvh.mMoreButton.performClick();
+                return true;
             });
         }
     }
@@ -373,11 +332,8 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
     @Override
     public int getItemViewType(int position) {
         Node node = mNodes.get(position);
-        if (node.isChannel()) {
-            return R.layout.channel_row;
-        } else if (node.isUser()) {
-            return R.layout.channel_user_row;
-        }
+        if (node.isChannel()) return R.layout.channel_row;
+        if (node.isUser()) return R.layout.channel_user_row;
         return 0;
     }
 
@@ -460,11 +416,8 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         return -1;
     }
     
-    // === UNTUK VISUALIZER MONITOR ===
     public boolean isUserTalking(int sessionId) {
-        if (sessionId <= 0 || mService == null || !mService.isConnected()) {
-            return false;
-        }
+        if (sessionId <= 0 || mService == null || !mService.isConnected()) return false;
         try {
             IHumlaSession sesi = mService.HumlaSession();
             for (IUser user : sesi.getSessionChannel().getUsers()) {
@@ -495,16 +448,29 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                             if (holder instanceof UserViewHolder) {
                                 UserViewHolder uvh = (UserViewHolder) holder;
                                 if (uvh.mUserStatusView != null) {
-                                    // Ambil ofaId untuk cek peran
-                                    int uid = -1;
+                                    // ✅ CEK DIRI SENDIRI → PAKAI ID TERKUNCI
+                                    int sesiSayaRefresh = -1;
                                     try {
-                                        IUser u = node.getUser();
-                                        uid = u.getUserId();
+                                        if (mService != null && mService.isConnected()) {
+                                            sesiSayaRefresh = mService.HumlaSession().getSessionId();
+                                        }
                                     } catch (Exception ignored) {}
                                     
+                                    int sesiUserRefresh = -1;
+                                    int uidRefresh = -1;
+                                    try {
+                                        IUser u = node.getUser();
+                                        sesiUserRefresh = u.getSession();
+                                        uidRefresh = u.getUserId();
+                                    } catch (Exception ignored) {}
+                                    
+                                    boolean diriSendiriRefresh = (sesiUserRefresh == sesiSayaRefresh);
                                     String ofaIdRefresh;
-                                    if (uid >= 0) {
-                                        ofaIdRefresh = "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
+                                    
+                                    if (diriSendiriRefresh) {
+                                        ofaIdRefresh = OfaIdentity.getGlobalOfaId(mContext);
+                                    } else if (uidRefresh >= 0) {
+                                        ofaIdRefresh = "OFA-" + (Math.abs((uidRefresh * 7591 + uidRefresh * 31)) % 90000 + 10000);
                                     } else {
                                         ofaIdRefresh = null;
                                     }
@@ -577,27 +543,21 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
         notifyDataSetChanged();
         final Server server = mService.getTargetServer();
         if (user.getUserId() >= 0 && server.isSaved()) {
-            new Thread(new Runnable() {
-                @Override
-                public void run() {
-                    if (user.isLocalMuted()) {
-                        mDatabase.addLocalMutedUser(server.getId(), user.getUserId());
-                    } else {
-                        mDatabase.removeLocalMutedUser(server.getId(), user.getUserId());
-                    }
-                    if (user.isLocalIgnored()) {
-                        mDatabase.addLocalIgnoredUser(server.getId(), user.getUserId());
-                    } else {
-                        mDatabase.removeLocalIgnoredUser(server.getId(), user.getUserId());
-                    }
+            new Thread(() -> {
+                if (user.isLocalMuted()) {
+                    mDatabase.addLocalMutedUser(server.getId(), user.getUserId());
+                } else {
+                    mDatabase.removeLocalMutedUser(server.getId(), user.getUserId());
+                }
+                if (user.isLocalIgnored()) {
+                    mDatabase.addLocalIgnoredUser(server.getId(), user.getUserId());
+                } else {
+                    mDatabase.removeLocalIgnoredUser(server.getId(), user.getUserId());
                 }
             }).start();
         }
     }
 
-    // =============================================
-    // ✅ PEMEGANG TAMPILAN
-    // =============================================
     private static class UserViewHolder extends RecyclerView.ViewHolder {
         public LinearLayout mUserHolder;
         public TextView mUserName;
