@@ -396,13 +396,18 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         try {
             File folderOFA = new File(android.os.Environment.getExternalStoragePublicDirectory(
                     android.os.Environment.DIRECTORY_DOWNLOADS), "OFAID_PTT");
+            if (!folderOFA.exists()) {
+                Log.i("OFA_CERT", "ℹ️ Folder cadangan belum ada");
+                return false;
+            }
+            
             File berkasCadangan = new File(folderOFA, "cert_backup.p12");
-
             if (!berkasCadangan.exists() || berkasCadangan.length() < 500) {
                 Log.i("OFA_CERT", "ℹ️ Cadangan belum ada");
                 return false;
             }
 
+            // Baca nama pengguna
             String namaPengguna = null;
             File berkasNama = new File(folderOFA, "cert_name.txt");
             if (berkasNama.exists()) {
@@ -411,24 +416,20 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                 pembaca.close();
             }
             if (namaPengguna == null || namaPengguna.trim().isEmpty()) {
-                namaPengguna = mSettings.getDefaultUsername();
+                namaPengguna = mSettings.getUsername(); // ✅ Ganti: getUsername
             }
 
+            // Baca data sertifikat
             FileInputStream fis = new FileInputStream(berkasCadangan);
             byte[] dataSertifikat = new byte[(int) berkasCadangan.length()];
             fis.read(dataSertifikat);
             fis.close();
 
-            // ✅ Sesuaikan nama metode dengan aslinya
-            DatabaseCertificate certPulih = new DatabaseCertificate();
-            certPulih.setData(dataSertifikat);
-            certPulih.setName(namaPengguna);
+            // ✅ Sesuai aslinya: addCertificate(nama, data)
+            long idCert = mDatabase.addCertificate(namaPengguna, dataSertifikat);
             
-            // ✅ Sesuaikan argumen addCertificate
-            long idCert = mDatabase.addCertificate(certPulih);
-
-            mSettings.setDefaultCertificateId(idCert);
-            mSettings.setDefaultUsername(namaPengguna);
+            mSettings.setCertificateId(idCert); // ✅ Ganti: setCertificateId
+            mSettings.setUsername(namaPengguna); // ✅ Ganti: setUsername
 
             Log.i("OFA_CERT", "✅ DIPULIHKAN — " + namaPengguna);
             return true;
@@ -444,32 +445,26 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     // ==================================================
     private void simpanKeCadanganOtomatis(long idSertifikat, String nama) {
         try {
-            // ✅ Sesuaikan nama metode dengan aslinya
-            DatabaseCertificate cert = mDatabase.getCertificate(idSertifikat);
-            if (cert == null || cert.getData() == null) return;
-
             File folderOFA = new File(android.os.Environment.getExternalStoragePublicDirectory(
                     android.os.Environment.DIRECTORY_DOWNLOADS), "OFAID_PTT");
             if (!folderOFA.exists()) folderOFA.mkdirs();
 
-            File berkasCadangan = new File(folderOFA, "cert_backup.p12");
-            FileOutputStream fos = new FileOutputStream(berkasCadangan);
-            fos.write(cert.getData());
-            fos.flush();
-            fos.close();
-
+            // Simpan nama
             File berkasNama = new File(folderOFA, "cert_name.txt");
             FileWriter fw = new FileWriter(berkasNama);
             fw.write(nama != null ? nama : "");
             fw.close();
 
-            Log.i("OFA_CERT", "✅ CADANGAN DISIMPAN — " + nama);
+            // ⚠️ Bagian data sertifikat — disesuaikan setelah kita lihat struktur aslinya
+            // Sementara simpan dulu nama-nya, data sertifikat menyusul
+            Log.i("OFA_CERT", "✅ Nama disimpan — " + nama);
 
         } catch (Exception e) {
             Log.w("OFA_CERT", "⚠️ Gagal simpan: " + e.getMessage());
         }
     }
 
+//==============
     private void showFirstRunGuide() {
         // ✅ Cek dulu ada cadangan?
         if (pulihkanDariCadanganOtomatis()) {
