@@ -281,18 +281,18 @@ public class ChannelListFragment extends HumlaServiceFragment
             if (mChannelView != null) mChannelView.setAdapter(null);
         }
 
-        // ✅ USER MASUK → OTOMATIS DAFTAR
+        // ✅ USER MASUK → OTOMATIS DAFTAR (sementara dinonaktifkan — tunggu nama metode yang benar)
         @Override
         public void onUserConnected(IUser user) {
             if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
             
-            // DAFTARKAN OTOMATIS JIKA BELUM TERDAFTAR
             if (user.getUserId() < 0 &&
                 user.getHash() != null && !user.getHash().isEmpty() &&
                 getService() != null && getService().isConnected()) {
                 try {
-                    getService().registerUser(user.getSession());
-                    Log.i("OFA_AUTOREG", "📤 Otomatis daftar: " + user.getName());
+                    // TODO: Ganti dengan nama metode yang benar setelah dicek di IHumlaService
+                    Log.i("OFA_AUTOREG", "📤 Siap daftar: " + user.getName());
+                    // getService().registerUser(user.getSession());
                 } catch (Exception e) {
                     Log.e("OFA_AUTOREG", "Gagal daftar: " + user.getName(), e);
                 }
@@ -326,18 +326,18 @@ public class ChannelListFragment extends HumlaServiceFragment
             if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
         }
 
-        // ✅ CEK ULANG SAAT DATA USER BERUBAH
+        // ✅ CEK ULANG SAAT DATA USER BERUBAH (sementara dinonaktifkan)
         @Override
         public void onUserStateUpdated(IUser user) {
             super.onUserStateUpdated(user);
             
-            // Cek ulang kalau belum terdaftar
             if (user != null && user.getUserId() < 0 &&
                 user.getHash() != null && !user.getHash().isEmpty() &&
                 getService() != null && getService().isConnected()) {
                 try {
-                    getService().registerUser(user.getSession());
-                    Log.i("OFA_AUTOREG", "📤 Cek ulang daftar: " + user.getName());
+                    // TODO: Ganti dengan nama metode yang benar
+                    Log.i("OFA_AUTOREG", "📤 Cek ulang siap daftar: " + user.getName());
+                    // getService().registerUser(user.getSession());
                 } catch (Exception e) {
                     Log.e("OFA_AUTOREG", "Gagal daftar: " + user.getName(), e);
                 }
