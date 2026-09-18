@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andrew Comminos <andrew@comminos.com>
- *Ofaid/Ahmad — Sistem Peran + Register Otomatis + Perbaikan Menu
+ *Ofaid/Ahmad — Aman + Otomatis Daftar
  */
  
 package ofaid.ahmad.ptt.channel;
@@ -70,11 +70,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
 
     @Override
     public void onMenuPrepare(Menu menu, int permissions) {
-        // ✅ HAPUS DULU → TIDAK DOBEL LAGI
-        menu.removeItem(R.id.menu_pilih_status);
-        menu.removeItem(R.id.menu_registrasi);
-        menu.removeItem(R.id.menu_tetapkan_peran);
-
+        // === KODE ASLI — TETAP UTUH, TIDAK DIHAPUS 🛡️ ===
         boolean self;
         try {
             self = mUser.getSession() == mService.getSessionId();
@@ -90,7 +86,6 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         }
         int channelPerms = channel.getId() != 0 ? channel.getPermissions() : perms;
 
-        // === MENU ASLI — TETAP UTUH ===
         menu.findItem(R.id.context_kick).setVisible(
                 !self && (perms & (Permissions.Kick | Permissions.Ban | Permissions.Write)) > 0);
         menu.findItem(R.id.context_ban).setVisible(
@@ -119,7 +114,9 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         menu.findItem(R.id.context_local_mute).setVisible(!self);
         menu.findItem(R.id.context_ignore_messages).setVisible(!self);
 
-        // ✅ DAFTAR OTOMATIS KE APLIKASI
+        // =============================================
+        // ✅ DAFTARKAN OTOMATIS KE APLIKASI
+        // =============================================
         String ofaIdTarget = ambilOfaIdDariUser(mUser);
         if (ofaIdTarget != null) {
             if (!OfaRole.sudahTerdaftar(mContext, ofaIdTarget)) {
@@ -128,36 +125,49 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             }
         }
 
-        // ✅ OTOMATIS DAFTAR KE SERVER — SEBELUM MENU MUNCUL!
+        // =============================================
+        // ✅ OTOMATIS DAFTAR KE SERVER — TANPA HAPUS MENU APAPUN
+        // =============================================
         if (mUser.getUserId() < 0 &&
             mUser.getHash() != null && !mUser.getHash().isEmpty() &&
             (perms & ((self ? Permissions.SelfRegister : Permissions.Register) | Permissions.Write)) > 0) {
 
             if (mService != null && mService.isConnected()) {
                 mService.registerUser(mUser.getSession());
-                Log.i("OFA_AUTOREG", "📤 Otomatis daftar ke server: " + mUser.getName());
+                Log.i("OFA_AUTOREG", "📤 Kirim daftar ke server: " + mUser.getName());
             }
         }
 
-        // ✅ TAMBAHKAN MENU SATU KALI SAJA
-        MenuItem itemPilihStatus = menu.add(0, R.id.menu_pilih_status, 0, R.string.pilih_status);
-        itemPilihStatus.setVisible(self);
-
-        MenuItem itemRegistrasi = menu.add(0, R.id.menu_registrasi, 1, "Registrasi");
-        boolean sudahDaftar = ofaIdTarget != null && OfaRole.sudahTerdaftar(mContext, ofaIdTarget);
-        itemRegistrasi.setVisible(sudahDaftar);
-
-        boolean adalahPemilik = false;
-        try {
-            String idSaya = OfaIdentity.getGlobalOfaId(mContext);
-            adalahPemilik = OfaRole.adalahPemilikUtama(idSaya);
-        } catch (Exception e) {
-            adalahPemilik = false;
+        // =============================================
+        // ✅ TAMBAH MENU KITA — CEK DULU SUDAH ADA ATAU BELUM
+        // =============================================
+        MenuItem itemStatus = menu.findItem(R.id.menu_pilih_status);
+        if (itemStatus == null) {
+            itemStatus = menu.add(0, R.id.menu_pilih_status, 0, R.string.pilih_status);
         }
-        MenuItem itemTetapkanPeran = menu.add(0, R.id.menu_tetapkan_peran, 2, "📋 Tetapkan Peran");
-        itemTetapkanPeran.setVisible(adalahPemilik);
+        itemStatus.setVisible(self);
 
-        // Highlight asli
+        MenuItem itemRegOfa = menu.findItem(R.id.menu_registrasi);
+        if (itemRegOfa == null) {
+            itemRegOfa = menu.add(0, R.id.menu_registrasi, 1, "Registrasi");
+        }
+        boolean sudahDaftar = ofaIdTarget != null && OfaRole.sudahTerdaftar(mContext, ofaIdTarget);
+        itemRegOfa.setVisible(sudahDaftar);
+
+        MenuItem itemPeran = menu.findItem(R.id.menu_tetapkan_peran);
+        if (itemPeran == null) {
+            boolean adalahPemilik = false;
+            try {
+                String idSaya = OfaIdentity.getGlobalOfaId(mContext);
+                adalahPemilik = OfaRole.adalahPemilikUtama(idSaya);
+            } catch (Exception e) {
+                adalahPemilik = false;
+            }
+            itemPeran = menu.add(0, R.id.menu_tetapkan_peran, 2, "📋 Tetapkan Peran");
+            itemPeran.setVisible(adalahPemilik);
+        }
+
+        // Highlight asli — tetap aman
         menu.findItem(R.id.context_mute).setChecked(mUser.isMuted() || mUser.isSuppressed());
         menu.findItem(R.id.context_deafen).setChecked(mUser.isDeafened());
         menu.findItem(R.id.context_priority).setChecked(mUser.isPrioritySpeaker());
