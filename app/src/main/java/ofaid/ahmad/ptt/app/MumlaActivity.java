@@ -1,6 +1,6 @@
 /*
- * Copyright (C) 2014 Andrew Comminos
- * OFAID/AHMAD (C) 2026 — Simpan&Pulih Otomatis + Izin Penyimpanan
+ * Copyright (C) 2014 Andrew Comminos--Kembali ke komit 38f2e42
+ * OFAID/AHMAD (C) 2026 — Simpan&Pulih + Izin Penyimpanan
  */
 package ofaid.ahmad.ptt.app;
 
@@ -53,12 +53,6 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import org.jetbrains.annotations.NotNull;
 import org.spongycastle.util.encoders.Hex;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
 import java.net.InetSocketAddress;
 import java.net.MalformedURLException;
 import java.net.Socket;
@@ -379,146 +373,11 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     private void lanjutKeAwal() {
-        // ✅ Selalu cek cadangan saat mulai
-        pulihkanDariCadanganOtomatis();
-        
         if (mSettings.isFirstRun()) {
             showFirstRunGuide();
         } else {
             new StartupAction().execute(MumlaActivity.this);
         }
-    }
-
-    // ==================================================
-    // ✅ CEK OTOMATIS — PULIHKAN DARI CADANGAN
-    // ==================================================
-        // ==================================================
-    // ✅ PULIHKAN DARI CADANGAN — SUDAH SESUAI 100%
-    // ==================================================
-    private boolean pulihkanDariCadanganOtomatis() {
-        try {
-            File folderOFA = new File(android.os.Environment.getExternalStoragePublicDirectory(
-                    android.os.Environment.DIRECTORY_DOWNLOADS), "OFAID_PTT");
-            if (!folderOFA.exists()) {
-                Log.i("OFA_CERT", "ℹ️ Folder cadangan belum ada");
-                return false;
-            }
-            
-            File berkasCadangan = new File(folderOFA, "cert_backup.p12");
-            if (!berkasCadangan.exists() || berkasCadangan.length() < 500) {
-                Log.i("OFA_CERT", "ℹ️ Cadangan belum ada");
-                return false;
-            }
-
-            // Baca nama pengguna
-            String namaPengguna = null;
-            File berkasNama = new File(folderOFA, "cert_name.txt");
-            if (berkasNama.exists()) {
-                BufferedReader pembaca = new BufferedReader(new FileReader(berkasNama));
-                namaPengguna = pembaca.readLine();
-                pembaca.close();
-            }
-            if (namaPengguna == null || namaPengguna.trim().isEmpty()) {
-                namaPengguna = mSettings.getDefaultUsername(); // ✅ BENAR
-            }
-
-            // Baca data sertifikat
-            FileInputStream fis = new FileInputStream(berkasCadangan);
-            byte[] dataSertifikat = new byte[(int) berkasCadangan.length()];
-            fis.read(dataSertifikat);
-            fis.close();
-
-            // Masukkan ke database
-            DatabaseCertificate cert = mDatabase.addCertificate(namaPengguna, dataSertifikat);
-            mSettings.setDefaultCertificateId(cert.getId()); // ✅ BENAR
-
-            Log.i("OFA_CERT", "✅ DIPULIHKAN — " + namaPengguna);
-            return true;
-
-        } catch (Exception e) {
-            Log.w("OFA_CERT", "⚠️ Gagal pulihkan: " + e.getMessage());
-            return false;
-        }
-    }
-
-    // ==================================================
-    // ✅ SIMPAN KE CADANGAN — SUDAH LENGKAP
-    // ==================================================
-    private void simpanKeCadanganOtomatis(long idSertifikat, String nama) {
-        try {
-            // Ambil data sertifikat dari database
-            byte[] dataSert = mDatabase.getCertificateData(idSertifikat);
-            if (dataSert == null || dataSert.length < 500) {
-                Log.w("OFA_CERT", "⚠️ Data sertifikat kosong, tidak disimpan");
-                return;
-            }
-
-            File folderOFA = new File(android.os.Environment.getExternalStoragePublicDirectory(
-                    android.os.Environment.DIRECTORY_DOWNLOADS), "OFAID_PTT");
-            if (!folderOFA.exists()) folderOFA.mkdirs();
-
-            // Simpan file sertifikat
-            FileOutputStream fos = new FileOutputStream(new File(folderOFA, "cert_backup.p12"));
-            fos.write(dataSert);
-            fos.close();
-
-            // Simpan nama
-            FileWriter fw = new FileWriter(new File(folderOFA, "cert_name.txt"));
-            fw.write(nama != null ? nama : "");
-            fw.close();
-
-            Log.i("OFA_CERT", "✅ DISIMPAN — " + nama + " | " + dataSert.length + " byte");
-
-        } catch (Exception e) {
-            Log.w("OFA_CERT", "⚠️ Gagal simpan: " + e.getMessage());
-        }
-    }
-
-//==============
-    private void showFirstRunGuide() {
-        // ✅ Cek dulu ada cadangan?
-        if (pulihkanDariCadanganOtomatis()) {
-            mSettings.setFirstRun(false);
-            new StartupAction().execute(MumlaActivity.this);
-            return;
-        }
-
-        if (mSettings.isUsingCertificate()) {
-            mSettings.setFirstRun(false);
-            new StartupAction().execute(MumlaActivity.this);
-            return;
-        }
-
-        tampilkanDialogBuatBaru();
-    }
-
-    private void tampilkanDialogBuatBaru() {
-        String msg = getString(R.string.first_run_generate_certificate);
-        if (BuildConfig.FLAVOR.equals("donation")) {
-            msg = getString(R.string.donation_thanks) + "\n\n" + msg;
-        }
-        new MaterialAlertDialogBuilder(this)
-                .setTitle(R.string.first_run_generate_certificate_title)
-                .setMessage(msg)
-                .setPositiveButton(R.string.generate, (DialogInterface dialog, int which) -> {
-                    MumlaCertificateGenerateTask generateTask = new MumlaCertificateGenerateTask(MumlaActivity.this) {
-                        @Override
-                        protected void onPostExecute(DatabaseCertificate result) {
-                            super.onPostExecute(result);
-                            if (result != null) {
-                                mSettings.setDefaultCertificateId(result.getId());
-                                mSettings.setFirstRun(false);
-                                
-                                // ✅ Langsung simpan ke cadangan
-                                simpanKeCadanganOtomatis(result.getId(), mSettings.getDefaultUsername());
-                                
-                                new StartupAction().execute(MumlaActivity.this);
-                            }
-                        }
-                    };
-                    generateTask.execute();
-                })
-                .show();
     }
 
     @Override
@@ -532,9 +391,9 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.i("OFA_PERM", "✅ Izin penyimpanan DIBERIKAN");
             } else {
-                Log.w("OFA_PERM", "⚠️ Izin penyimpanan DITOLAK — tetap berjalan tanpa cadangan otomatis");
+                Log.w("OFA_PERM", "⚠️ Izin penyimpanan DITOLAK — sertifikat tetap bekerja");
                 new MaterialAlertDialogBuilder(this)
-                        .setMessage("Tanpa izin akses file, saat pasang ulang akan buat sertifikat baru. Fitur tetap berjalan.")
+                        .setMessage("Tanpa izin akses file, saat install ulang akan buat sertifikat baru. Fitur tetap berjalan.")
                         .setPositiveButton("Mengerti", null)
                         .show();
             }
@@ -651,6 +510,55 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     public void onItemClick(AdapterView<?> parent, View view, int position, long id) {
         mDrawerLayout.closeDrawers();
         loadDrawerFragment((int) id);
+    }
+
+    private void showFirstRunGuide() {
+        if (mSettings.isUsingCertificate()) {
+            mSettings.setFirstRun(false);
+            new StartupAction().execute(MumlaActivity.this);
+            return;
+        }
+
+        MumlaCertificateGenerateTask pulihkanTask = new MumlaCertificateGenerateTask(this) {
+            @Override
+            protected void onPostExecute(DatabaseCertificate result) {
+                super.onPostExecute(result);
+                if (result != null) {
+                    mSettings.setDefaultCertificateId(result.getId());
+                    mSettings.setFirstRun(false);
+                    Log.i("OFA_CERT", "✅ Dipulihkan dari cadangan — ID: " + result.getId());
+                    new StartupAction().execute(MumlaActivity.this);
+                    return;
+                }
+                tampilkanDialogBuatBaru();
+            }
+        };
+        pulihkanTask.execute();
+    }
+
+    private void tampilkanDialogBuatBaru() {
+        String msg = getString(R.string.first_run_generate_certificate);
+        if (BuildConfig.FLAVOR.equals("donation")) {
+            msg = getString(R.string.donation_thanks) + "\n\n" + msg;
+        }
+        new MaterialAlertDialogBuilder(this)
+                .setTitle(R.string.first_run_generate_certificate_title)
+                .setMessage(msg)
+                .setPositiveButton(R.string.generate, (DialogInterface dialog, int which) -> {
+                    MumlaCertificateGenerateTask generateTask = new MumlaCertificateGenerateTask(MumlaActivity.this) {
+                        @Override
+                        protected void onPostExecute(DatabaseCertificate result) {
+                            super.onPostExecute(result);
+                            if (result != null) {
+                                mSettings.setDefaultCertificateId(result.getId());
+                                mSettings.setFirstRun(false);
+                                new StartupAction().execute(MumlaActivity.this);
+                            }
+                        }
+                    };
+                    generateTask.execute();
+                })
+                .show();
     }
 
     private void loadDrawerFragment(int fragmentId) {
@@ -932,7 +840,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     // ==================================================
-    // ✅ StartupAction
+    // ✅ KELAS StartupAction — DIPERBAIKI TOTAL
     // ==================================================
     private static class StartupAction extends android.os.AsyncTask<MumlaActivity, Void, Void> {
         private MumlaActivity mActivity;
