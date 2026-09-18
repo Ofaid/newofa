@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Andrew Comminos <andrew@comminos.com>
+ * Modif By Ofaid 2026 — Format .ofa12
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -46,9 +47,6 @@ import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.db.MumlaDatabase;
 import ofaid.ahmad.ptt.db.MumlaSQLiteDatabase;
 
-/**
- * Created by andrew on 11/01/16.
- */
 public class CertificateImportActivity extends AppCompatActivity {
     public static final int REQUEST_FILE = 0;
 
@@ -80,7 +78,6 @@ public class CertificateImportActivity extends AppCompatActivity {
             is = getContentResolver().openInputStream(uri);
         } catch (FileNotFoundException e) {
             e.printStackTrace();
-            // FIXME(acomminos)
             finish();
             return;
         }
@@ -89,8 +86,13 @@ public class CertificateImportActivity extends AppCompatActivity {
         Cursor cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null);
         if (cursor != null && cursor.moveToFirst()) {
             displayName = cursor.getString(0);
+            // ✅ Pastikan berakhiran .ofa12
+            if (displayName != null && !displayName.endsWith(".ofa12")) {
+                displayName = displayName + ".ofa12";
+            }
         } else {
-            displayName = UUID.randomUUID().toString() + "ofa12";
+            // ✅ Nama baru otomatis pakai .ofa12
+            displayName = UUID.randomUUID().toString() + ".ofa12";
         }
         if (cursor != null)
             cursor.close();
@@ -104,9 +106,6 @@ public class CertificateImportActivity extends AppCompatActivity {
             keyStore = KeyStore.getInstance("PKCS12", new BouncyCastleProvider());
             keyStore.load(input, password);
         } catch (CertificateException e) {
-            // A problem occurred when reading the stream; interpret this as a password being
-            // required. Request a password from the user and reattempt decryption.
-            // FIXME(acomminos): examine p12 file's SafeBags to determine the presence of a password
             final EditText passwordField = new EditText(this);
             passwordField.setHint(R.string.password);
             passwordField.setInputType(InputType.TYPE_TEXT_VARIATION_PASSWORD);
