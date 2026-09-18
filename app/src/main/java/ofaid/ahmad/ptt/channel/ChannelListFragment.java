@@ -56,7 +56,6 @@ import se.lublin.humla.IHumlaService;
 import se.lublin.humla.IHumlaSession;
 import se.lublin.humla.model.IChannel;
 import se.lublin.humla.model.IUser;
-import se.lublin.humla.util.HumlaDisconnectedException;
 import se.lublin.humla.util.HumlaException;
 import se.lublin.humla.util.HumlaObserver;
 import se.lublin.humla.util.IHumlaObserver;
@@ -281,18 +280,18 @@ public class ChannelListFragment extends HumlaServiceFragment
             if (mChannelView != null) mChannelView.setAdapter(null);
         }
 
-        // ✅ USER MASUK → OTOMATIS DAFTAR (sementara dinonaktifkan — tunggu nama metode yang benar)
         @Override
         public void onUserConnected(IUser user) {
             if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
             
+            // ✅ OTOMATIS DAFTAR JIKA BELUM TERDAFTAR
             if (user.getUserId() < 0 &&
                 user.getHash() != null && !user.getHash().isEmpty() &&
                 getService() != null && getService().isConnected()) {
                 try {
-                    // TODO: Ganti dengan nama metode yang benar setelah dicek di IHumlaService
-                    Log.i("OFA_AUTOREG", "📤 Siap daftar: " + user.getName());
-                    // getService().registerUser(user.getSession());
+                    IHumlaSession sesi = getService().HumlaSession();
+                    sesi.registerUser(user.getSession());
+                    Log.i("OFA_AUTOREG", "📤 Otomatis daftar: " + user.getName());
                 } catch (Exception e) {
                     Log.e("OFA_AUTOREG", "Gagal daftar: " + user.getName(), e);
                 }
@@ -326,23 +325,24 @@ public class ChannelListFragment extends HumlaServiceFragment
             if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
         }
 
-        // ✅ CEK ULANG SAAT DATA USER BERUBAH (sementara dinonaktifkan)
         @Override
         public void onUserStateUpdated(IUser user) {
             super.onUserStateUpdated(user);
             
+            // ✅ CEK ULANG & DAFTARKAN JIKA BELUM TERDAFTAR
             if (user != null && user.getUserId() < 0 &&
                 user.getHash() != null && !user.getHash().isEmpty() &&
                 getService() != null && getService().isConnected()) {
                 try {
-                    // TODO: Ganti dengan nama metode yang benar
-                    Log.i("OFA_AUTOREG", "📤 Cek ulang siap daftar: " + user.getName());
-                    // getService().registerUser(user.getSession());
+                    IHumlaSession sesi = getService().HumlaSession();
+                    sesi.registerUser(user.getSession());
+                    Log.i("OFA_AUTOREG", "📤 Cek ulang daftar: " + user.getName());
                 } catch (Exception e) {
                     Log.e("OFA_AUTOREG", "Gagal daftar: " + user.getName(), e);
                 }
             }
             
+            // ✅ PERBARUI TAMPILAN
             if (mChannelListAdapter != null && mChannelView != null && user != null) {
                 mChannelListAdapter.refreshUserStatus(user.getSession());
                 int posisi = mChannelListAdapter.getUserPositionBySession(user.getSession());
