@@ -11,8 +11,8 @@ public class OfaRole {
     public static final int ROLE_PEMIMPIN_CH = 3;
     public static final int ROLE_PEMILIK_UTAMA = 99; // 👑 HANYA KAMU
 
-    // === 🔒 ID PEMILIK UTAMA — GANTI DENGAN ID-MU SENDIRI ===
-    private static final String ID_PEMILIK_UTAMA = "OFA-10000-SU";
+ //=== 🔒 ID PEMILIK UTAMA
+private static final String ID_PEMILIK_UTAMA = "OFA-67206";
 
     // === PENYIMPANAN ===
     private static final String PREF_NAMA = "OfaRolePrefs";
