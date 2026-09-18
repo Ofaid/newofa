@@ -1,5 +1,6 @@
 /*
- * Copyright (C) 2014 Andrew Comminos
+ * Copyright (C) 2014 Andrew Comminos / Ofaid 2026
+ * Identitas disesuaikan untuk OFA-ID PTT
  */
 
 package se.lublin.humla.net;
@@ -31,7 +32,8 @@ import java.util.Calendar;
 import java.util.Date;
 
 public class HumlaCertificateGenerator {
-    private static final String ISSUER = "CN=Humla Client";
+    // ✅ IDENTITAS SENDIRI — BUKAN HUMLA LAGI 🔒
+    private static final String ISSUER = "CN=OFA-ID PTT";
     private static final Integer YEARS_VALID = 20;
 
     public static X509Certificate generateCertificate(OutputStream output)
@@ -63,7 +65,9 @@ public class HumlaCertificateGenerator {
 
         KeyStore keyStore = KeyStore.getInstance("PKCS12", provider);
         keyStore.load(null, null);
-        keyStore.setKeyEntry("Humla Key", keyPair.getPrivate(), null, new X509Certificate[] { certificate });
+        
+        // ✅ NAMA KUNCI SENDIRI — TIDAK CAMPUR HUMLA 🔒
+        keyStore.setKeyEntry("OFAID Key", keyPair.getPrivate(), null, new X509Certificate[] { certificate });
 
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
         keyStore.store(baos, "".toCharArray());
