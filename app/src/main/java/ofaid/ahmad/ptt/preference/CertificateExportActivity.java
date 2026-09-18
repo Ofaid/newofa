@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2016 Andrew Comminos <andrew@comminos.com>
+ * Modif By Ofaid 2026 — Folder Sendiri + Format .ofa12
  *
  * This program is free software: you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,16 +53,11 @@ import ofaid.ahmad.ptt.db.DatabaseCertificate;
 import ofaid.ahmad.ptt.db.MumlaDatabase;
 import ofaid.ahmad.ptt.db.MumlaSQLiteDatabase;
 
-/**
- * Created by andrew on 12/01/16.
- */
 public class CertificateExportActivity extends AppCompatActivity implements DialogInterface.OnClickListener {
     private static final String TAG = CertificateExportActivity.class.getName();
 
-    /**
-     * The name of the directory to export to on external storage.
-     */
-    private static final String EXTERNAL_STORAGE_DIR = "Mumla";
+    // ✅ FOLDER SENDIRI — TIDAK CAMPUR MUMBLE/MUMLA 🔒
+    private static final String EXTERNAL_STORAGE_DIR = "OFAID_PTT";
 
     private MumlaDatabase mDatabase;
     private List<DatabaseCertificate> mCertificates;
@@ -99,9 +95,13 @@ public class CertificateExportActivity extends AppCompatActivity implements Dial
     public void onClick(DialogInterface dialog, int which) {
         DatabaseCertificate certificate = mCertificates.get(which);
         if (SDK_INT >= Build.VERSION_CODES.R) {
-            // TODO Should always use this method?
             mCertificatePending = certificate;
-            documentCreator.launch(certificate.getName());
+            // ✅ Tambahkan akhiran .ofa12 saat ekspor
+            String namaFile = certificate.getName();
+            if (!namaFile.endsWith(".ofa12")) {
+                namaFile = namaFile + ".ofa12";
+            }
+            documentCreator.launch(namaFile);
         } else {
             saveCertificateClassic(certificate);
         }
@@ -127,7 +127,7 @@ public class CertificateExportActivity extends AppCompatActivity implements Dial
         if (ContextCompat.checkSelfPermission(CertificateExportActivity.this,
                 Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(CertificateExportActivity.this,
+            ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE},
                     PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE);
             mCertificatePending = certificate;
@@ -139,12 +139,17 @@ public class CertificateExportActivity extends AppCompatActivity implements Dial
             return;
         }
         File storageDirectory = Environment.getExternalStorageDirectory();
-        File mumlaDirectory = new File(storageDirectory, EXTERNAL_STORAGE_DIR);
-        if (!mumlaDirectory.exists() && !mumlaDirectory.mkdir()) {
+        File ofaDirectory = new File(storageDirectory, EXTERNAL_STORAGE_DIR);
+        if (!ofaDirectory.exists() && !ofaDirectory.mkdirs()) {
             showErrorDialog(R.string.externalStorageUnavailable);
             return;
         }
-        File outputFile = new File(mumlaDirectory, certificate.getName());
+        // ✅ Nama file dengan .ofa12
+        String namaFile = certificate.getName();
+        if (!namaFile.endsWith(".ofa12")) {
+            namaFile = namaFile + ".ofa12";
+        }
+        File outputFile = new File(ofaDirectory, namaFile);
         FileOutputStream fos;
         try {
             fos = new FileOutputStream(outputFile);
@@ -157,7 +162,7 @@ public class CertificateExportActivity extends AppCompatActivity implements Dial
     }
 
     @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+    public void onRequestPermissionsResult(int requestCode, @NonNull int[] permissions,
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (requestCode == PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE) {
