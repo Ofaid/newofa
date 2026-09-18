@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andrew Comminos <andrew@comminos.com>
- *Ofaid/Ahmad — Aman + Otomatis Daftar
+ *Ofaid/Ahmad — Sinkron ID + Sistem Peran
  */
  
 package ofaid.ahmad.ptt.channel;
@@ -10,7 +10,6 @@ import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
-import android.view.View;
 import android.widget.EditText;
 
 import androidx.appcompat.widget.PopupMenu;
@@ -59,10 +58,22 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         this.mPeranListener = pendengar;
     }
 
+    // =============================================
+    // ✅ AMBIL ID — DIRI SENDIRI PAKAI YANG TERKUNCI
+    // =============================================
     private String ambilOfaIdDariUser(IUser user) {
         try {
-            int uid = user.getUserId();
-            return "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
+            int sesiUser = user.getSession();
+            int sesiSaya = mService.getSessionId();
+            
+            if (sesiUser == sesiSaya) {
+                // ✅ DIRI SENDIRI — SAMA DENGAN DAFTAR CHANNEL
+                return OfaIdentity.getSingkat(mContext);
+            } else {
+                // ORANG LAIN — dari nomor server
+                int uid = user.getUserId();
+                return "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
+            }
         } catch (Exception e) {
             return null;
         }
@@ -126,7 +137,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         }
 
         // =============================================
-        // ✅ OTOMATIS DAFTAR KE SERVER — TANPA HAPUS MENU APAPUN
+        // ✅ OTOMATIS DAFTAR KE SERVER
         // =============================================
         if (mUser.getUserId() < 0 &&
             mUser.getHash() != null && !mUser.getHash().isEmpty() &&
@@ -139,7 +150,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         }
 
         // =============================================
-        // ✅ TAMBAH MENU KITA — CEK DULU SUDAH ADA ATAU BELUM
+        // ✅ TAMBAH MENU KITA
         // =============================================
         MenuItem itemStatus = menu.findItem(R.id.menu_pilih_status);
         if (itemStatus == null) {
