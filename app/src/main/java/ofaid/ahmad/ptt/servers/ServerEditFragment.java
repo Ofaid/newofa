@@ -156,7 +156,7 @@ public class ServerEditFragment extends DialogFragment {
         LayoutInflater inflater = LayoutInflater.from(getActivity());
         View view = inflater.inflate(R.layout.dialog_server_edit, null, false);
 
-        // =============================================
+            // =============================================
         // ✅ INISIALISASI SEMUA KOLOM
         // =============================================
         TextView titleLabel = view.findViewById(R.id.server_edit_name_title);
@@ -164,11 +164,27 @@ public class ServerEditFragment extends DialogFragment {
         mHostEdit = view.findViewById(R.id.server_edit_host);
         mPortEdit = view.findViewById(R.id.server_edit_port);
         mUsernameEdit = view.findViewById(R.id.server_edit_username);
-        mUsernameEdit.setHint(settings.getDefaultUsername());
         mPasswordEdit = view.findViewById(R.id.server_edit_password);
 
         // =============================================
-        // 🔒 ISI OTOMATIS SERVER PATEN — TIDAK BISA DIUBAH
+        // 🔒 SEMBUNYIKAN KOLOM YANG TIDAK PERLU — TIDAK TERLIHAT SAMA SEKALI
+        // =============================================
+        // Sembunyikan Nama Server
+        if (titleLabel != null) titleLabel.setVisibility(View.GONE);
+        mNameEdit.setVisibility(View.GONE);
+
+        // Sembunyikan Alamat Host + Label-nya
+        View hostLabel = view.findViewById(R.id.server_edit_host_title);
+        if (hostLabel != null) hostLabel.setVisibility(View.GONE);
+        mHostEdit.setVisibility(View.GONE);
+
+        // Sembunyikan Port + Label-nya
+        View portLabel = view.findViewById(R.id.server_edit_port_title);
+        if (portLabel != null) portLabel.setVisibility(View.GONE);
+        mPortEdit.setVisibility(View.GONE);
+
+        // =============================================
+        // 🔒 ISI OTOMATIS — Tetap Bekerja Walau Tersembunyi
         // =============================================
         Server oldServer = getServer();
         if (oldServer != null) {
@@ -181,30 +197,24 @@ public class ServerEditFragment extends DialogFragment {
             mUsernameEdit.setText(oldServer.getUsername());
             mPasswordEdit.setText(oldServer.getPassword());
         } else {
-            // Server baru → ISI OTOMATIS DENGAN SERVER PATEN
+            // Server baru → isi otomatis server paten
             mNameEdit.setText(SERVER_PATEN_NAMA);
             mHostEdit.setText(SERVER_PATEN_HOST);
             mPortEdit.setText(String.valueOf(SERVER_PATEN_PORT));
-            // Nama pengguna dikosongkan → user isi sendiri
         }
 
-        // 🔒 KUNCI ALAMAT & PORT — TIDAK BISA DIUBAH
-        mHostEdit.setFocusable(false);
-        mHostEdit.setFocusableInTouchMode(false);
-        mHostEdit.setEnabled(false);
-        mHostEdit.setTextColor(0xFF888888); // warna abu-abu → terlihat terkunci
-
-        mPortEdit.setFocusable(false);
-        mPortEdit.setFocusableInTouchMode(false);
-        mPortEdit.setEnabled(false);
-        mPortEdit.setTextColor(0xFF888888);
-
-        // ✅ Nama pengguna — SATU-SATUNYA YANG DIISI USER
+        // ✅ Hanya Nama Pengguna yang Terlihat & Diisi User
         mUsernameEdit.setHint("Masukkan nama Anda");
+        mUsernameEdit.setVisibility(View.VISIBLE);
+        
+        // Password tetap tampilkan / bisa disembunyikan juga kalau tidak perlu
+        mPasswordEdit.setHint("Kata sandi (kosongkan jika tidak ada)");
+        mPasswordEdit.setVisibility(View.VISIBLE);
 
         // =============================================
         // 📋 DAFTAR SERVER TAMBAHAN DARI WEB (untuk masa depan)
         // =============================================
+
         LinearLayout rootLayout = (LinearLayout) view.getParent();
         if (rootLayout != null && getAction() == Action.ADD_ACTION) {
             LinearLayout panelDaftar = new LinearLayout(requireActivity());
