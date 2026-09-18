@@ -98,7 +98,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
     };
     
-    // ✅ VARIABEL BERSIH — TIDAK ADA DUPLIKAT
     private BroadcastReceiver mPenerimaLevel;
     private BroadcastReceiver mPenerimaMonitor;
     private NeonVisualizerView mVisualNeon;
@@ -253,7 +252,7 @@ public class ChannelListFragment extends HumlaServiceFragment
             mChannelListAdapter.setLokasiSaya(lokasiTerbaca);
         }
     }
-//=================kirim Lokasi
+
     private void kirimLokasiKeServer(String teksLokasi) {
          if (getService() == null || !getService().isConnected()) return;
          try {
@@ -263,16 +262,11 @@ public class ChannelListFragment extends HumlaServiceFragment
              int sesiSaya = saya.getSession();
              String keteranganLama = saya.getComment();
              
-             // Kalau belum ada → simpan
              if (keteranganLama == null || keteranganLama.trim().isEmpty()) {
                  sesi.setUserComment(sesiSaya, teksLokasi);
-             }
-             // Kalau sama persis → jangan tambah
-             else if (keteranganLama.trim().equals(teksLokasi.trim())) {
+             } else if (keteranganLama.trim().equals(teksLokasi.trim())) {
                  return;
-             }
-             // Kalau beda → ganti yang baru
-             else {
+             } else {
                  sesi.setUserComment(sesiSaya, teksLokasi);
              }
          } catch (Exception e) {
@@ -285,6 +279,24 @@ public class ChannelListFragment extends HumlaServiceFragment
         @Override
         public void onDisconnected(HumlaException e) {
             if (mChannelView != null) mChannelView.setAdapter(null);
+        }
+
+        // ✅ USER MASUK → OTOMATIS DAFTAR
+        @Override
+        public void onUserConnected(IUser user) {
+            if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
+            
+            // DAFTARKAN OTOMATIS JIKA BELUM TERDAFTAR
+            if (user.getUserId() < 0 &&
+                user.getHash() != null && !user.getHash().isEmpty() &&
+                getService() != null && getService().isConnected()) {
+                try {
+                    getService().registerUser(user.getSession());
+                    Log.i("OFA_AUTOREG", "📤 Otomatis daftar: " + user.getName());
+                } catch (Exception e) {
+                    Log.e("OFA_AUTOREG", "Gagal daftar: " + user.getName(), e);
+                }
+            }
         }
 
         @Override
@@ -310,16 +322,27 @@ public class ChannelListFragment extends HumlaServiceFragment
         @Override public void onChannelStateUpdated(IChannel channel) {
             if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
         }
-        @Override public void onUserConnected(IUser user) {
-            if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
-        }
         @Override public void onUserRemoved(IUser user, String reason) {
             if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
         }
 
+        // ✅ CEK ULANG SAAT DATA USER BERUBAH
         @Override
         public void onUserStateUpdated(IUser user) {
             super.onUserStateUpdated(user);
+            
+            // Cek ulang kalau belum terdaftar
+            if (user != null && user.getUserId() < 0 &&
+                user.getHash() != null && !user.getHash().isEmpty() &&
+                getService() != null && getService().isConnected()) {
+                try {
+                    getService().registerUser(user.getSession());
+                    Log.i("OFA_AUTOREG", "📤 Cek ulang daftar: " + user.getName());
+                } catch (Exception e) {
+                    Log.e("OFA_AUTOREG", "Gagal daftar: " + user.getName(), e);
+                }
+            }
+            
             if (mChannelListAdapter != null && mChannelView != null && user != null) {
                 mChannelListAdapter.refreshUserStatus(user.getSession());
                 int posisi = mChannelListAdapter.getUserPositionBySession(user.getSession());
@@ -403,7 +426,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         super.onViewCreated(view, savedInstanceState);
         mintaIzinLokasiOtomatis();
         
-        // 🎤 Penerima untuk Neon (suara sendiri)
         mPenerimaLevel = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -417,31 +439,27 @@ public class ChannelListFragment extends HumlaServiceFragment
         };
         requireContext().registerReceiver(mPenerimaLevel, new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA"));
 
-      // 📊 Penerima untuk Monitor (suara teman dari AudioOutput)
-mPenerimaMonitor = new BroadcastReceiver() {
-    @Override
-    public void onReceive(Context context, Intent intent) {
-        if ("ofaid.ahmad.ptt.LEVEL_MONITOR".equals(intent.getAction())) {
-            float level = intent.getFloatExtra("level", 0f);
-            
-            // ✅ PERBESAR DI SINI — TIDAK UBAH LOGIKA
-            level = level * 5f;  // 5 kali lipat, kalau masih kecil naik ke 6f / 7f
-            if (level > 1f) level = 1f; // batasi maksimal, jangan lewat
-            
-            // Ubah level jadi bentuk data batang
-            byte[] data = new byte[32];
-            byte nilai = (byte)(level * 127);
-            for (int i = 0; i < 32; i++) {
-                data[i] = nilai;
+        mPenerimaMonitor = new BroadcastReceiver() {
+            @Override
+            public void onReceive(Context context, Intent intent) {
+                if ("ofaid.ahmad.ptt.LEVEL_MONITOR".equals(intent.getAction())) {
+                    float level = intent.getFloatExtra("level", 0f);
+                    
+                    level = level * 5f;
+                    if (level > 1f) level = 1f;
+                    
+                    byte[] data = new byte[32];
+                    byte nilai = (byte)(level * 127);
+                    for (int i = 0; i < 32; i++) {
+                        data[i] = nilai;
+                    }
+                    
+                    if (mVisualMonitor != null) {
+                        mVisualMonitor.updateVisualizer(data);
+                    }
+                }
             }
-            
-            if (mVisualMonitor != null) {
-                mVisualMonitor.updateVisualizer(data);
-            }
-        }
-    }
-};
-
+        };
         requireContext().registerReceiver(mPenerimaMonitor, new IntentFilter("ofaid.ahmad.ptt.LEVEL_MONITOR"));
     }
 
