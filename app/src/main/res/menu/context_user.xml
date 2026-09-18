@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-
 <!--
   ~ Copyright (C) 2014 Andrew Comminos
   ~
@@ -19,6 +18,7 @@
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto">
+    
     <item android:id="@+id/context_kick"
         android:title="@string/user_menu_kick"
         android:icon="@drawable/ic_action_delete_dark"
@@ -87,4 +87,19 @@
         android:icon="@drawable/ic_registered"
         app:showAsAction="never"
         />
+    
+    <!-- ✅ TAMBAHAN MENU OFA -->
+    <item android:id="@+id/menu_pilih_status"
+        android:title="Pilih Status"
+        app:showAsAction="never"
+        />
+    <item android:id="@+id/menu_registrasi"
+        android:title="Registrasi"
+        app:showAsAction="never"
+        />
+    <item android:id="@+id/menu_tetapkan_peran"
+        android:title="Tetapkan Peran"
+        app:showAsAction="never"
+        />
+        
 </menu>
