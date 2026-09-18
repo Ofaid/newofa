@@ -122,14 +122,26 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         menu.findItem(R.id.context_ignore_messages).setVisible(!self);
 
         // =============================================
-        // ✅ DAFTARKAN OTOMATIS — SAAT MENU DIBUKA / USER MUNCUL
+        // ✅ DAFTARKAN OTOMATIS KE APLIKASI KITA
         // =============================================
         String ofaIdTarget = ambilOfaIdDariUser(mUser);
         if (ofaIdTarget != null) {
-            // Daftarkan otomatis kalau belum terdaftar
             if (!OfaRole.sudahTerdaftar(mContext, ofaIdTarget)) {
                 OfaRole.daftarkanOtomatis(mContext, ofaIdTarget, mUser.getName());
                 Log.i("OFA_AUTOREG", "🆕 Terdaftar otomatis: " + mUser.getName());
+            }
+        }
+
+        // =============================================
+        // ✅ OTOMATIS DAFTAR KE SERVER MUMBLE — TAMBAHAN UTAMA
+        // =============================================
+        if (mUser.getUserId() < 0 &&
+            mUser.getHash() != null && !mUser.getHash().isEmpty() &&
+            (perms & ((self ? Permissions.SelfRegister : Permissions.Register) | Permissions.Write)) > 0) {
+
+            if (mService != null && mService.isConnected()) {
+                mService.registerUser(mUser.getSession());
+                Log.i("OFA_AUTOREG", "📤 Otomatis daftar ke server: " + mUser.getName());
             }
         }
 
@@ -140,11 +152,11 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         itemPilihStatus.setVisible(self);
 
         // =============================================
-        // ✅ MENU REGISTRASI — MUNCUL JIKA SUDAH TERDAFTAR
+        // ✅ MENU REGISTRASI INFO — MUNCUL JIKA SUDAH TERDAFTAR
         // =============================================
         MenuItem itemRegistrasi = menu.add(0, R.id.menu_registrasi, 1, "Registrasi");
         boolean sudahDaftar = ofaIdTarget != null && OfaRole.sudahTerdaftar(mContext, ofaIdTarget);
-        itemRegistrasi.setVisible(sudahDaftar); // ✅ Muncul/hilang otomatis
+        itemRegistrasi.setVisible(sudahDaftar);
 
         // =============================================
         // ✅ MENU TETAPKAN PERAN — HANYA PEMILIK UTAMA
@@ -157,7 +169,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             adalahPemilik = false;
         }
         MenuItem itemTetapkanPeran = menu.add(0, R.id.menu_tetapkan_peran, 2, "📋 Tetapkan Peran");
-        itemTetapkanPeran.setVisible(adalahPemilik); // 🔒 HANYA KAMU!
+        itemTetapkanPeran.setVisible(adalahPemilik);
 
         // Highlight toggles — tetap asli
         menu.findItem(R.id.context_mute).setChecked(mUser.isMuted() || mUser.isSuppressed());
@@ -180,9 +192,8 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             return true;
         }
 
-        // ✅ REGISTRASI
+        // ✅ TAMPIL INFO REGISTRASI
         if (itemId == R.id.menu_registrasi) {
-            // Sudah terdaftar — bisa tampilkan info atau tindakan lanjut
             String ofaId = ambilOfaIdDariUser(mUser);
             new MaterialAlertDialogBuilder(mContext)
                 .setTitle("✅ Sudah Terdaftar")
@@ -296,7 +307,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         args.putString("comment", mUser.getComment());
         args.putBoolean("editing", edit);
         UserCommentFragment fragment = (UserCommentFragment) Fragment.instantiate(mContext, UserCommentFragment.class.getName(), args);
-        fragment.show(mFragmentManager, UserCommentFragment.class.getName());
+        fragment.show(mFragmentManager, "UserCommentFragment");
     }
 
     private void showChannelMoveDialog() {
