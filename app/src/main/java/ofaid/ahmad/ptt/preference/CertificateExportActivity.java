@@ -160,25 +160,26 @@ public class CertificateExportActivity extends AppCompatActivity implements Dial
         writeCertificate(fos, certificate, outputFile.getAbsolutePath());
         finish();
     }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull int[] permissions,
-                                           @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE) {
-            if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                if (mCertificatePending != null) {
-                    saveCertificateClassic(mCertificatePending);
-                } else {
-                    Log.w(TAG, "No pending certificate after permission was granted");
-                }
+// Boleh pakai @Override atau tidak, tidak masalah
+public void onRequestPermissionsResult(int requestCode, @NonNull int[] permissions,
+                                       @NonNull int[] grantResults) {
+    super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+    
+    if (requestCode == PERMISSIONS_REQUEST_WRITE_EXTERNAL_STORAGE) {
+        if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+            if (mCertificatePending != null) {
+                saveCertificateClassic(mCertificatePending);
             } else {
-                Toast.makeText(CertificateExportActivity.this, getString(R.string.grant_perm_storage),
-                        Toast.LENGTH_LONG).show();
+                Log.w(TAG, "No pending certificate after permission was granted");
             }
-            mCertificatePending = null;
+        } else {
+            Toast.makeText(CertificateExportActivity.this, getString(R.string.grant_perm_storage),
+                    Toast.LENGTH_LONG).show();
         }
+        mCertificatePending = null;
     }
+}
+
 
     private void writeCertificate(OutputStream fos, DatabaseCertificate cert, String path) {
         byte[] data = mDatabase.getCertificateData(cert.getId());
