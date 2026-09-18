@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2015 Andrew Comminos <andrew@comminos.com>
- *Ofaid/Ahmad — Sistem Peran & Label + Register Otomatis
+ *Ofaid/Ahmad — Sistem Peran + Register Otomatis + Perbaikan Menu
  */
  
 package ofaid.ahmad.ptt.channel;
@@ -26,16 +26,12 @@ import se.lublin.humla.model.IUser;
 import se.lublin.humla.net.Permissions;
 import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.channel.comment.UserCommentFragment;
-// ✅ IMPOR Fitur OFA
 import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.OfaRole;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.util.ModelUtils;
 
-/**
- * OFA: Sistem Peran + Register Otomatis — tidak ganggu fungsi asli
- */
 public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, PopupMenu.OnMenuItemClickListener {
     private static final String TAG = UserMenu.class.getName();
 
@@ -63,9 +59,6 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         this.mPeranListener = pendengar;
     }
 
-    // =============================================
-    // ✅ AMBIL OFA-ID DARI USER — SERAGAM DI MANA SAJA
-    // =============================================
     private String ambilOfaIdDariUser(IUser user) {
         try {
             int uid = user.getUserId();
@@ -77,7 +70,11 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
 
     @Override
     public void onMenuPrepare(Menu menu, int permissions) {
-        // === KODE ASLI — TETAP UTUH 🛡️ ===
+        // ✅ HAPUS DULU → TIDAK DOBEL LAGI
+        menu.removeItem(R.id.menu_pilih_status);
+        menu.removeItem(R.id.menu_registrasi);
+        menu.removeItem(R.id.menu_tetapkan_peran);
+
         boolean self;
         try {
             self = mUser.getSession() == mService.getSessionId();
@@ -93,6 +90,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         }
         int channelPerms = channel.getId() != 0 ? channel.getPermissions() : perms;
 
+        // === MENU ASLI — TETAP UTUH ===
         menu.findItem(R.id.context_kick).setVisible(
                 !self && (perms & (Permissions.Kick | Permissions.Ban | Permissions.Write)) > 0);
         menu.findItem(R.id.context_ban).setVisible(
@@ -121,9 +119,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         menu.findItem(R.id.context_local_mute).setVisible(!self);
         menu.findItem(R.id.context_ignore_messages).setVisible(!self);
 
-        // =============================================
-        // ✅ DAFTARKAN OTOMATIS KE APLIKASI KITA
-        // =============================================
+        // ✅ DAFTAR OTOMATIS KE APLIKASI
         String ofaIdTarget = ambilOfaIdDariUser(mUser);
         if (ofaIdTarget != null) {
             if (!OfaRole.sudahTerdaftar(mContext, ofaIdTarget)) {
@@ -132,9 +128,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             }
         }
 
-        // =============================================
-        // ✅ OTOMATIS DAFTAR KE SERVER MUMBLE — TAMBAHAN UTAMA
-        // =============================================
+        // ✅ OTOMATIS DAFTAR KE SERVER — SEBELUM MENU MUNCUL!
         if (mUser.getUserId() < 0 &&
             mUser.getHash() != null && !mUser.getHash().isEmpty() &&
             (perms & ((self ? Permissions.SelfRegister : Permissions.Register) | Permissions.Write)) > 0) {
@@ -145,22 +139,14 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             }
         }
 
-        // =============================================
-        // ✅ MENU PILIH STATUS — HANYA DIRI SENDIRI
-        // =============================================
+        // ✅ TAMBAHKAN MENU SATU KALI SAJA
         MenuItem itemPilihStatus = menu.add(0, R.id.menu_pilih_status, 0, R.string.pilih_status);
         itemPilihStatus.setVisible(self);
 
-        // =============================================
-        // ✅ MENU REGISTRASI INFO — MUNCUL JIKA SUDAH TERDAFTAR
-        // =============================================
         MenuItem itemRegistrasi = menu.add(0, R.id.menu_registrasi, 1, "Registrasi");
         boolean sudahDaftar = ofaIdTarget != null && OfaRole.sudahTerdaftar(mContext, ofaIdTarget);
         itemRegistrasi.setVisible(sudahDaftar);
 
-        // =============================================
-        // ✅ MENU TETAPKAN PERAN — HANYA PEMILIK UTAMA
-        // =============================================
         boolean adalahPemilik = false;
         try {
             String idSaya = OfaIdentity.getGlobalOfaId(mContext);
@@ -171,7 +157,7 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         MenuItem itemTetapkanPeran = menu.add(0, R.id.menu_tetapkan_peran, 2, "📋 Tetapkan Peran");
         itemTetapkanPeran.setVisible(adalahPemilik);
 
-        // Highlight toggles — tetap asli
+        // Highlight asli
         menu.findItem(R.id.context_mute).setChecked(mUser.isMuted() || mUser.isSuppressed());
         menu.findItem(R.id.context_deafen).setChecked(mUser.isDeafened());
         menu.findItem(R.id.context_priority).setChecked(mUser.isPrioritySpeaker());
@@ -183,7 +169,6 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
     public boolean onMenuItemClick(final MenuItem menuItem) {
         int itemId = menuItem.getItemId();
         
-        // ✅ PILIH STATUS
         if (itemId == R.id.menu_pilih_status) {
             int idPengguna = mUser.getSession();
             String namaPengguna = mUser.getName();
@@ -192,7 +177,6 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             return true;
         }
 
-        // ✅ TAMPIL INFO REGISTRASI
         if (itemId == R.id.menu_registrasi) {
             String ofaId = ambilOfaIdDariUser(mUser);
             new MaterialAlertDialogBuilder(mContext)
@@ -203,13 +187,12 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             return true;
         }
 
-        // ✅ TETAPKAN PERAN
         if (itemId == R.id.menu_tetapkan_peran) {
             tampilkanPilihanPeran();
             return true;
         }
 
-        // === KODE ASLI — TETAP UTUH 🛡️ ===
+        // === KLIK ASLI — TETAP UTUH ===
         if (itemId == R.id.context_ban || itemId == R.id.context_kick) {
             final EditText reasonField = new EditText(mContext);
             reasonField.setHint(R.string.hint_reason);
@@ -253,7 +236,6 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         return true;
     }
 
-    // ✅ PILIHAN PERAN — HANYA PEMILIK
     private void tampilkanPilihanPeran() {
         String idSaya;
         try {
@@ -300,7 +282,6 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             .show();
     }
 
-    // === METODE ASLI — TETAP UTUH 🛡️ ===
     private void showUserComment(final boolean edit) {
         Bundle args = new Bundle();
         args.putInt("session", mUser.getSession());
