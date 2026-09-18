@@ -12,80 +12,48 @@ public class OfaIdentity {
     private static final String PREF_OFA_ID_PREFIX = "ofa_id_";
     private static final String PREF_DEVICE_FINGERPRINT = "device_fingerprint";
     private static final String PREF_GLOBAL_OFA_ID = "global_ofa_id";
-    private static final String PREF_ID_LOCKED = "id_locked"; // 🔒 KUNCI
+    private static final String PREF_ID_LOCKED = "id_locked";
+    private static final String PREF_IS_OWNER = "is_owner_device";
+    private static String sCachedOwnerId = null;
 
-    // === 1. SIDIK JARI PERANGKAT — TETAP SEUMUR HIDUP ===
+    // === 1. SIDIK JARI PERANGKAT ===
     private static String getDeviceFingerprint(Context context) {
         SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        
         if (sp.contains(PREF_DEVICE_FINGERPRINT)) {
             return sp.getString(PREF_DEVICE_FINGERPRINT, null);
         }
-        
-        // Buat sekali, tidak pernah berubah
         String fingerprint = Build.BRAND + "_" + Build.MODEL + "_" +
                              (Build.SERIAL != null ? Build.SERIAL : "NO_SERIAL") + "_" +
                              UUID.randomUUID().toString().substring(0, 8);
-        
         sp.edit().putString(PREF_DEVICE_FINGERPRINT, fingerprint).apply();
         return fingerprint;
     }
 
-    // === 2. DAPATKAN ID UTAMA — TERKUNCI, TIDAK BISA DIUBAH ===
+    // === 2. ID UTAMA — TERKUNCI ===
     public static String getGlobalOfaId(Context context) {
         SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        
-        // 🔒 SUDAH DIKUNCI → KEMBALIKAN YANG LAMA
         if (sp.getBoolean(PREF_ID_LOCKED, false) && sp.contains(PREF_GLOBAL_OFA_ID)) {
             return sp.getString(PREF_GLOBAL_OFA_ID, null);
         }
-        
-        // BELUM ADA → BUAT BARU & KUNCI SEKARANG
         String perangkat = getDeviceFingerprint(context);
         String idBaru = "OFA-" +
                         String.format(Locale.ROOT, "%05d", Math.abs(perangkat.hashCode() % 90000 + 10000)) + "-" +
                         UUID.randomUUID().toString().substring(0, 4).toUpperCase();
-        
-        // 🔒 SIMPAN & KUNCI — TIDAK BISA DIUBAH LAGI
         sp.edit()
                 .putString(PREF_GLOBAL_OFA_ID, idBaru)
-                .putBoolean(PREF_ID_LOCKED, true) // DIKUNCI!
+                .putBoolean(PREF_ID_LOCKED, true)
                 .apply();
-        
         return idBaru;
     }
 
-    // === 3. TAMPILAN SINGKAT — HAPUS 4 KARAKTER BELAKANG ===
-    public static String getSingkat(Context context) {
-        String penuh = getGlobalOfaId(context);
-        if (penuh == null) return "OFA-00000";
-        
-        // OFA-32549-24A1 → ambil sampai OFA-32549 saja
-        if (penuh.contains("-")) {
-            String[] bagian = penuh.split("-");
-            if (bagian.length >= 2) {
-                return bagian[0] + "-" + bagian[1]; // OFA-32549
-            }
-        }
-        return penuh;
-    }
-
-    // === 4. ID PER SERVER — MENGIKUTI ID UTAMA YANG TERKUNCI ===
+    // === 3. SINKRON ID KE SERVER ===
     public static void saveForServer(Context context, String host, int port, String ofaId) {
         if (context == null || host == null || host.trim().isEmpty() || ofaId == null) return;
-        
-        // 🔒 TIDAK BOLEH SIMPAN ID YANG BEDA DARI MILIK PERANGKAT INI
         String idBenar = getGlobalOfaId(context);
-        if (!ofaId.equals(idBenar)) {
-            // Dipaksa balik ke ID yang benar — tidak bisa pakai ID lain!
-            ofaId = idBenar;
-        }
-        
+        if (!ofaId.equals(idBenar)) ofaId = idBenar;
         String key = PREF_OFA_ID_PREFIX + host.toLowerCase(Locale.ROOT) + "_" + port;
         context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
-                .edit()
-                .putString(key, ofaId)
-                .apply();
+                .edit().putString(key, ofaId).apply();
     }
 
     public static String getExistingForServer(Context context, String host, int port) {
@@ -93,40 +61,38 @@ public class OfaIdentity {
         String key = PREF_OFA_ID_PREFIX + host.toLowerCase(Locale.ROOT) + "_" + port;
         String existing = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getString(key, null);
-        
-        // Belum ada → pakai ID utama yang terkunci
         if (existing == null || existing.trim().isEmpty()) {
             String globalId = getGlobalOfaId(context);
             saveForServer(context, host, port, globalId);
             return globalId;
         }
-        
-        // 🔒 PASTIKAN TETAP ID YANG BENAR — KOREKSI OTOMATIS JIKA SALAH
         String idBenar = getGlobalOfaId(context);
         if (!existing.equals(idBenar)) {
             saveForServer(context, host, port, idBenar);
             return idBenar;
         }
-        
         return existing;
     }
 
-    public static void removeForServer(Context context, String host, int port) {
-        if (context == null || host == null) return;
-        String key = PREF_OFA_ID_PREFIX + host.toLowerCase(Locale.ROOT) + "_" + port;
-        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit().remove(key).apply();
-        // ⚠️ Catatan: ID utama TIDAK dihapus — tetap terkunci milik perangkat ini
+    // === 4. TANDA PEMILIK ===
+    public static void tetapkanSebagaiPemilik(Context context) {
+        SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        if (sp.getBoolean(PREF_IS_OWNER, false)) return;
+        sp.edit().putBoolean(PREF_IS_OWNER, true).apply();
+        sCachedOwnerId = getGlobalOfaId(context);
     }
 
-    // === 🔒 CEK APAKAH SUDAH TERKUNCI ===
+    public static boolean isPerangkatPemilik(Context context) {
+        SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        boolean ditetapkan = sp.getBoolean(PREF_IS_OWNER, false);
+        if (!ditetapkan) return false;
+        String idSaatIni = getGlobalOfaId(context);
+        if (sCachedOwnerId == null) sCachedOwnerId = idSaatIni;
+        return sCachedOwnerId.equals(idSaatIni);
+    }
+
     public static boolean isIdLocked(Context context) {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean(PREF_ID_LOCKED, false);
-    }
-
-    // === 🔒 COCOKKAN APAKAH ID INI MILIK PERANGKAT INI ===
-    public static boolean isMyId(Context context, String ofaId) {
-        String idSaya = getGlobalOfaId(context);
-        return idSaya != null && idSaya.equals(ofaId);
     }
 }
