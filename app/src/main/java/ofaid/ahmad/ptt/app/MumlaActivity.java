@@ -106,7 +106,6 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
 
     public static final String EXTRA_DRAWER_FRAGMENT = "drawer_fragment";
 
-    // ✅ KODE PERMINTAAN IZIN — SESUAI POLA ASLI
     private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
     private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 2;
     private static final int PERMISSIONS_REQUEST_STORAGE = 917;
@@ -243,7 +242,6 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     protected void onCreate(Bundle savedInstanceState) {
         mSettings = Settings.getInstance(this);
 
-        // === FORCE DEFAULT PTT SAAT PERTAMA KALI — TETAP SAMA ===
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
             SharedPreferences.Editor editor = prefs.edit();
@@ -253,7 +251,6 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             editor.putBoolean("first_run_ptt_setup_done", true);
             editor.commit();
         }
-        // ========================================================
 
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
@@ -333,7 +330,6 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
 
-        // ✅ CEK IZIN PENYIMPANAN DULU, BARU LANJUT
         if (savedInstanceState == null) {
             if (cekIzinPenyimpanan()) {
                 lanjutKeAwal();
@@ -356,9 +352,6 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                 AudioManager.STREAM_VOICE_CALL : AudioManager.STREAM_MUSIC);
     }
 
-    // ==================================================
-    // ✅ CEK IZIN PENYIMPANAN
-    // ==================================================
     private boolean cekIzinPenyimpanan() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             return true;
@@ -383,7 +376,6 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         if (mSettings.isFirstRun()) {
             showFirstRunGuide();
         } else {
-            // ✅ PERBAIKAN UTAMA — SESUAI TIPE ASLI
             new StartupAction().execute(MumlaActivity.this);
         }
     }
@@ -395,7 +387,6 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
 
         if (grantResults.length == 0) return;
 
-        // ✅ IZIN PENYIMPANAN
         if (requestCode == PERMISSIONS_REQUEST_STORAGE) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                 Log.i("OFA_PERM", "✅ Izin penyimpanan DIBERIKAN");
@@ -410,7 +401,6 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             return;
         }
 
-        // ✅ IZIN LAIN — TETAP SAMA
         switch (requestCode) {
             case PERMISSIONS_REQUEST_RECORD_AUDIO:
                 if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -522,13 +512,9 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         loadDrawerFragment((int) id);
     }
 
-    // ==================================================
-    // ✅ PANDUAN AWAL & PULIHKAN SERTIFIKAT
-    // ==================================================
     private void showFirstRunGuide() {
         if (mSettings.isUsingCertificate()) {
             mSettings.setFirstRun(false);
-            // ✅ PERBAIKAN — TIPE SESUAI
             new StartupAction().execute(MumlaActivity.this);
             return;
         }
@@ -541,7 +527,6 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                     mSettings.setDefaultCertificateId(result.getId());
                     mSettings.setFirstRun(false);
                     Log.i("OFA_CERT", "✅ Dipulihkan dari cadangan — ID: " + result.getId());
-                    // ✅ PERBAIKAN — TIPE SESUAI
                     new StartupAction().execute(MumlaActivity.this);
                     return;
                 }
@@ -567,7 +552,6 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                             if (result != null) {
                                 mSettings.setDefaultCertificateId(result.getId());
                                 mSettings.setFirstRun(false);
-                                // ✅ PERBAIKAN — TIPE SESUAI
                                 new StartupAction().execute(MumlaActivity.this);
                             }
                         }
@@ -775,7 +759,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                             (error.getReject().getType() == Mumble.Reject.RejectType.WrongUserPW ||
                              error.getReject().getType() == Mumble.Reject.RejectType.WrongServerPW)) {
                         final EditText passwordField = new EditText(this);
-                        passwordField.setInputType(android.text.InputType.TYPE_CLASS_TEXT | android.text.InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                        passwordField.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
                         passwordField.setHint(R.string.password);
                         builder.setTitle(R.string.invalid_password);
                         builder.setMessage(error.getMessage());
@@ -856,23 +840,25 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     // ==================================================
-    // ✅ KELAS StartupAction — DIPERBAIKI TIPE & KONSTRUKTOR
+    // ✅ KELAS StartupAction — DIPERBAIKI TOTAL
     // ==================================================
     private static class StartupAction extends android.os.AsyncTask<MumlaActivity, Void, Void> {
+        private MumlaActivity mActivity;
 
         @Override
         protected Void doInBackground(MumlaActivity... activities) {
+            if (activities != null && activities.length > 0) {
+                mActivity = activities[0];
+            }
             return null;
         }
 
         @Override
         protected void onPostExecute(Void aVoid) {
             super.onPostExecute(aVoid);
-            // Ambil activity dari parameter pertama
-            if (isCancelled()) return;
-            MumlaActivity activity = (MumlaActivity) getParams()[0];
-            if (activity == null || activity.isFinishing() || activity.isDestroyed()) return;
-            activity.loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
+            if (isCancelled() || mActivity == null) return;
+            if (mActivity.isFinishing() || mActivity.isDestroyed()) return;
+            mActivity.loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
         }
     }
 }
