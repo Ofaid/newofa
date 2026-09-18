@@ -95,4 +95,17 @@ public class OfaIdentity {
         return context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE)
                 .getBoolean(PREF_ID_LOCKED, false);
     }
+
+    // === ✅ TAMPILAN SINGKAT — OFA-XXXXX SAJA ===
+    public static String getSingkat(Context context) {
+        String penuh = getGlobalOfaId(context);
+        if (penuh == null) return "OFA-00000";
+        if (penuh.contains("-")) {
+            String[] bagian = penuh.split("-");
+            if (bagian.length >= 2) {
+                return bagian[0] + "-" + bagian[1];
+            }
+        }
+        return penuh;
+    }
 }
