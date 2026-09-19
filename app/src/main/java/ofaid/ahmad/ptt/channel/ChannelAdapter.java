@@ -5,7 +5,6 @@
 package ofaid.ahmad.ptt.channel;
 
 import android.content.Context;
-import android.os.RemoteException;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -113,7 +112,7 @@ public class ChannelAdapter extends BaseAdapter {
                         }
                     }
                 }
-            } catch (RemoteException | IllegalStateException ignored) {}
+            } catch (IllegalStateException ignored) {}
 
             if (sesiUser == sesiSaya) {
                 // ✅ DIRI SENDIRI — ID TETAP TERKUNCI 🔒
