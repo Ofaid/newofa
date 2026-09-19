@@ -1,22 +1,16 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="Base.Theme.Mumla" parent="Theme.Material3.DayNight.NoActionBar">
-        <!-- === WARNA & PENGATURAN ASLI — TETAP UTUH! === -->
+    <style name="Base.Theme.Mumla" parent="Theme.Material3.DayNight.DarkActionBar">
+        <!-- === WARNA ASLI — TETAP === -->
         <item name="colorPrimary">@color/md_theme_light_primary</item>
         <item name="colorOnPrimary">@color/md_theme_light_onPrimary</item>
-        <item name="pttPressed">@color/md_theme_light_primary_darker</item>
-        <item name="popupOverlay">@style/ThemeOverlay.Material3.Light</item>
+        
         <item name="windowActionModeOverlay">true</item>
         <item name="actionModeStyle">@style/App.Widget.ActionMode</item>
-
-        <!-- ================================================== -->
-        <!-- ✅ HILANGKAN APP BAR / BILAH JUDUL — TAMBAH INI! -->
-        <!-- ================================================== -->
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
-        <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
-        <item name="android:fitsSystemWindows">true</item>
-        <!-- ================================================== -->
+        
+        <!-- ✅ APP BAR DIPULIHKAN — TIDAK DIHILANGKAN LAGI -->
+        <item name="windowActionBar">true</item>
+        <item name="windowNoTitle">false</item>
     </style>
 
     <style name="TweakedAppBarLayout" parent="">
