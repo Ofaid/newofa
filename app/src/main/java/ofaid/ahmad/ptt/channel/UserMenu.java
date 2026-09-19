@@ -59,8 +59,8 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
         this.mPeranListener = pendengar;
     }
 
-    // =============================================
-    // ✅ AMBIL ID — DIRI SENDIRI PAKAI YANG TERKUNCI
+      // =============================================
+    // ✅ AMBIL ID — DIRI SENDIRI PAKAI YANG TERKUNCI 100%
     // =============================================
     private String ambilOfaIdDariUser(IUser user) {
         try {
@@ -68,17 +68,24 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             int sesiSaya = mService.getSessionId();
             
             if (sesiUser == sesiSaya) {
-                // ✅ DIRI SENDIRI — SAMA DENGAN DAFTAR CHANNEL
-                return OfaIdentity.getSingkat(mContext);
+                // ✅ DIRI SENDIRI — LANGSUNG DARI SUMBER TETAP 🔒
+                String idPenuh = OfaIdentity.getGlobalOfaId(mContext);
+                // Bentuk singkat tampilan
+                if (idPenuh != null && idPenuh.length() > 10) {
+                    return idPenuh.substring(0, 10);
+                }
+                return idPenuh;
             } else {
                 // ORANG LAIN — dari nomor server
                 int uid = user.getUserId();
                 return "OFA-" + (Math.abs((uid * 7591 + uid * 31)) % 90000 + 10000);
             }
         } catch (Exception e) {
+            Log.e(TAG, "Gagal ambil ID", e);
             return null;
         }
     }
+
 
     @Override
     public void onMenuPrepare(Menu menu, int permissions) {
@@ -199,15 +206,16 @@ public class UserMenu implements PermissionsPopupMenu.IOnMenuPrepareListener, Po
             return true;
         }
 
-        if (itemId == R.id.menu_registrasi) {
-            String ofaId = ambilOfaIdDariUser(mUser);
-            new MaterialAlertDialogBuilder(mContext)
-                .setTitle("✅ Sudah Terdaftar")
-                .setMessage("ID: " + ofaId + "\nNama: " + mUser.getName())
-                .setPositiveButton("Oke", null)
-                .show();
-            return true;
-        }
+      if (itemId == R.id.menu_registrasi) {
+    String ofaId = ambilOfaIdDariUser(mUser);
+    new MaterialAlertDialogBuilder(mContext)
+        .setTitle("✅ Sudah Terdaftar")
+        .setMessage("ID: " + ofaId + "\nNama: " + mUser.getName())
+        .setPositiveButton("Oke", null)
+        .show();
+    return true;
+}
+
 
         if (itemId == R.id.menu_tetapkan_peran) {
             tampilkanPilihanPeran();
