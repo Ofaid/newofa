@@ -121,14 +121,15 @@ public class ChannelListFragment extends HumlaServiceFragment
     private ActionMode mActionMode;
     private Settings mSettings;
 
-    private String getMyOfaId() {
-        Context ctx = getContext();
-        if (ctx == null) return null;
-        return ctx.getSharedPreferences("ofa_identity_prefs", Context.MODE_PRIVATE)
-                .getString("ofa_id", null);
-    }
+   private String getMyOfaId() {
+    Context ctx = getContext();
+    if (ctx == null) return null;
+    // ✅ Ambil dari SATU SUMBER — sama dengan adapter & tampilan lain
+    return OfaIdentity.getGlobalOfaId(ctx);
+}
 
-    private void kirimStatusPengguna(String statusTeks) {
+
+  private void kirimStatusPengguna(String statusTeks) {
         String idOFA = getMyOfaId();
         if (idOFA == null || idOFA.trim().isEmpty()) {
             Log.w(TAG, "ID OFA belum tersedia");
