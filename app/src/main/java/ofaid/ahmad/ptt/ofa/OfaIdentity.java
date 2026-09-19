@@ -1,9 +1,16 @@
-/*Edit By Ofaid/Ahmd-jr 9-9-2026 — SISTEM ID TETAP TERKUNCI*/
+/*Edit By Ofaid/Ahmd-jr 9-9-2026 — SISTEM ID TETAP TERKUNCI + CADANGAN LUAR*/
 package ofaid.ahmad.ptt.ofa;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
+import android.os.Environment;
+import android.util.Log;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.util.Locale;
 import java.util.UUID;
 
@@ -14,7 +21,47 @@ public class OfaIdentity {
     private static final String PREF_GLOBAL_OFA_ID = "global_ofa_id";
     private static final String PREF_ID_LOCKED = "id_locked";
     private static final String PREF_IS_OWNER = "is_owner_device";
+    private static final String NAMA_FILE_CADANGAN = "ofa_id_backup.dat";
     private static String sCachedOwnerId = null;
+
+    // === LOKASI FILE CADANGAN ===
+    private static File getFileCadangan(Context context) {
+        File folder = context.getExternalFilesDir(null);
+        if (folder == null || !folder.canWrite()) {
+            folder = context.getFilesDir();
+        }
+        return new File(folder, NAMA_FILE_CADANGAN);
+    }
+
+    // === SIMPAN ID KE FILE CADANGAN ===
+    private static void simpanKeCadangan(Context context, String ofaId) {
+        File file = getFileCadangan(context);
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(ofaId.getBytes());
+            fos.getFD().sync();
+            Log.i("OfaIdentity", "✅ ID tersimpan di cadangan: " + ofaId);
+        } catch (IOException e) {
+            Log.w("OfaIdentity", "⚠️ Gagal simpan cadangan", e);
+        }
+    }
+
+    // === BACA ID DARI FILE CADANGAN ===
+    private static String bacaDariCadangan(Context context) {
+        File file = getFileCadangan(context);
+        if (!file.exists() || file.length() == 0) return null;
+        try (FileInputStream fis = new FileInputStream(file)) {
+            byte[] data = new byte[(int) file.length()];
+            int dibaca = fis.read(data);
+            if (dibaca > 0) {
+                String idPulih = new String(data).trim();
+                Log.i("OfaIdentity", "✅ ID dipulihkan dari cadangan: " + idPulih);
+                return idPulih;
+            }
+        } catch (IOException e) {
+            Log.w("OfaIdentity", "⚠️ Gagal baca cadangan", e);
+        }
+        return null;
+    }
 
     // === 1. SIDIK JARI PERANGKAT ===
     private static String getDeviceFingerprint(Context context) {
@@ -29,20 +76,43 @@ public class OfaIdentity {
         return fingerprint;
     }
 
-    // === 2. ID UTAMA — TERKUNCI ===
+    // === 2. ID UTAMA — TERKUNCI + PULIH DARI CADANGAN ===
     public static String getGlobalOfaId(Context context) {
         SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
+        
+        // ✅ Langkah 1: Cek dulu di penyimpanan dalam
         if (sp.getBoolean(PREF_ID_LOCKED, false) && sp.contains(PREF_GLOBAL_OFA_ID)) {
             return sp.getString(PREF_GLOBAL_OFA_ID, null);
         }
+
+        // ✅ Langkah 2: Tidak ada → cek dari file cadangan
+        String idDariCadangan = bacaDariCadangan(context);
+        if (idDariCadangan != null && !idDariCadangan.trim().isEmpty()) {
+            // Pulihkan kembali ke penyimpanan dalam
+            sp.edit()
+                .putString(PREF_GLOBAL_OFA_ID, idDariCadangan)
+                .putBoolean(PREF_ID_LOCKED, true)
+                .apply();
+            Log.i("OfaIdentity", "🔒 ID dipulihkan & dikunci: " + idDariCadangan);
+            return idDariCadangan;
+        }
+
+        // ✅ Langkah 3: Tidak ada sama sekali → buat BARU
         String perangkat = getDeviceFingerprint(context);
         String idBaru = "OFA-" +
                         String.format(Locale.ROOT, "%05d", Math.abs(perangkat.hashCode() % 90000 + 10000)) + "-" +
                         UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        
+        // Simpan ke penyimpanan dalam
         sp.edit()
-                .putString(PREF_GLOBAL_OFA_ID, idBaru)
-                .putBoolean(PREF_ID_LOCKED, true)
-                .apply();
+            .putString(PREF_GLOBAL_OFA_ID, idBaru)
+            .putBoolean(PREF_ID_LOCKED, true)
+            .apply();
+        
+        // Simpan juga ke cadangan luar
+        simpanKeCadangan(context, idBaru);
+        
+        Log.i("OfaIdentity", "🆔 ID baru dibuat & dicadangkan: " + idBaru);
         return idBaru;
     }
 
