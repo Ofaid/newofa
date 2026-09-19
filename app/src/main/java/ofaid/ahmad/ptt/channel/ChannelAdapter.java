@@ -1,10 +1,11 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Modif By Ofaid/Ahmad 12-9-2026
+ * Modif By Ofaid/Ahmad 12-9-2026 — ID Tetap Diri Sendiri
  */
 package ofaid.ahmad.ptt.channel;
 
 import android.content.Context;
+import android.os.RemoteException;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -12,18 +13,21 @@ import android.widget.BaseAdapter;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import se.lublin.humla.IHumlaService;
 import se.lublin.humla.model.IChannel;
 import se.lublin.humla.model.IUser;
 import se.lublin.humla.model.TalkState;
 import se.lublin.humla.model.User;
 import ofaid.ahmad.ptt.R;
+import ofaid.ahmad.ptt.ofa.OfaIdentity;
 import ofaid.ahmad.ptt.ofa.OfaLokasi;
+import ofaid.ahmad.ptt.service.MumlaService;
 
 public class ChannelAdapter extends BaseAdapter {
 
     private Context mContext;
     private IChannel mChannel;
-    private String lokasiSaya = null; // ✅ Simpan lokasi dari luar
+    private String lokasiSaya = null;
 
     static class ViewHolder {
         TextView userName;
@@ -38,7 +42,6 @@ public class ChannelAdapter extends BaseAdapter {
         mChannel = channel;
     }
 
-    // ✅ Terima lokasi dari luar & perbarui tampilan
     public void setLokasiTeks(String teksLokasi) {
         this.lokasiSaya = teksLokasi;
         notifyDataSetChanged();
@@ -86,11 +89,41 @@ public class ChannelAdapter extends BaseAdapter {
         User user = (User) getItem(position);
 
         // === NAMA ===
-        holder.userName.setText(user.getName());
+        if (holder.userName != null) {
+            holder.userName.setText(user.getName());
+        }
 
-        // === ID OFA ===
+        // =============================================
+        // ✅ ID OFA — DIRI SENDIRI PAKAI YANG TERKUNCI
+        // =============================================
         if (holder.userId != null) {
-            holder.userId.setText("OFA-" + Integer.toHexString(user.getUserId()).toUpperCase());
+            String ofaId = null;
+            int sesiUser = user.getSession();
+            int sesiSaya = -1;
+
+            try {
+                if (mContext instanceof android.app.Activity) {
+                    android.app.Activity act = (android.app.Activity) mContext;
+                    Object service = act.getApplicationContext()
+                        .getSystemService("mumla_service");
+                    if (service instanceof MumlaService) {
+                        IHumlaService humla = (IHumlaService) service;
+                        if (humla.isConnected()) {
+                            sesiSaya = humla.HumlaSession().getSessionId();
+                        }
+                    }
+                }
+            } catch (RemoteException | IllegalStateException ignored) {}
+
+            if (sesiUser == sesiSaya) {
+                // ✅ DIRI SENDIRI — ID TETAP TERKUNCI 🔒
+                ofaId = OfaIdentity.getSingkat(mContext);
+            } else {
+                // ORANG LAIN — tampilkan dari server seperti biasa
+                ofaId = "OFA-" + Integer.toHexString(user.getUserId()).toUpperCase();
+            }
+
+            holder.userId.setText(ofaId);
         }
 
         // === STATUS ===
