@@ -241,24 +241,13 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
             }
 
             // =============================================
-            // ✅ PERAN — PEMILIK / WARGA / LURAH / KETUA CH
+            // ✅ PERAN — TANPA CEK PEMILIK DULU
             // =============================================
             if (uvh.mUserStatusView != null && ofaId != null) {
-                String peranTeks;
-                int warnaPeran;
-                
-                if (diriSendiri && OfaIdentity.isPerangkatPemilik(mContext)) {
-                    peranTeks = "[Pemilik]";
-                    warnaPeran = 0xFFFFD700; // Emas
-                } else {
-                    int peran = OfaRole.getPeranUser(mContext, ofaId);
-                    peranTeks = OfaRole.getNamaPeran(peran);
-                    warnaPeran = OfaRole.getWarnaPeran(peran);
-                }
-                
-                uvh.mUserStatusView.setText(peranTeks);
+                int peran = OfaRole.getPeranUser(mContext, ofaId);
+                uvh.mUserStatusView.setText(OfaRole.getNamaPeran(peran));
+                uvh.mUserStatusView.setTextColor(OfaRole.getWarnaPeran(peran));
                 uvh.mUserStatusView.setVisibility(View.VISIBLE);
-                uvh.mUserStatusView.setTextColor(warnaPeran);
             }
 
             // =============================================
@@ -448,7 +437,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                             if (holder instanceof UserViewHolder) {
                                 UserViewHolder uvh = (UserViewHolder) holder;
                                 if (uvh.mUserStatusView != null) {
-                                    // ✅ CEK DIRI SENDIRI → PAKAI ID TERKUNCI
+                                    // ✅ CEK DIRI SENDIRI → AMBIL OFA-ID
                                     int sesiSayaRefresh = -1;
                                     try {
                                         if (mService != null && mService.isConnected()) {
@@ -475,6 +464,7 @@ public class ChannelListAdapter extends RecyclerView.Adapter<RecyclerView.ViewHo
                                         ofaIdRefresh = null;
                                     }
                                     
+                                    // ✅ BACA PERAN — TANPA CEK PEMILIK
                                     if (ofaIdRefresh != null) {
                                         int peran = OfaRole.getPeranUser(mContext, ofaIdRefresh);
                                         uvh.mUserStatusView.setText(OfaRole.getNamaPeran(peran));
