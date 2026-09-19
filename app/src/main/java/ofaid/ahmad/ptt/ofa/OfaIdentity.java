@@ -1,10 +1,11 @@
-/*Edit By Ofaid/Ahmd-jr 9-9-2026 — SISTEM ID TETAP TERKUNCI + CADANGAN LUAR*/
+/*Edit By Ofaid/Ahmd-jr 9-9-2026 — SISTEM ID TETAP TERKUNCI + ANDROID_ID*/
 package ofaid.ahmad.ptt.ofa;
 
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.os.Build;
 import android.os.Environment;
+import android.provider.Settings;
 import android.util.Log;
 
 import java.io.File;
@@ -63,56 +64,52 @@ public class OfaIdentity {
         return null;
     }
 
-    // === 1. SIDIK JARI PERANGKAT ===
-    private static String getDeviceFingerprint(Context context) {
-        SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        if (sp.contains(PREF_DEVICE_FINGERPRINT)) {
-            return sp.getString(PREF_DEVICE_FINGERPRINT, null);
+    // === 🔒 SUMBER UTAMA: ANDROID_ID — TETAP UNTUK HP INI ===
+    private static String getAndroidIdHash(Context context) {
+        String androidId = Settings.Secure.getString(
+            context.getContentResolver(),
+            Settings.Secure.ANDROID_ID);
+        if (androidId == null || androidId.isEmpty()) {
+            androidId = "OFAFIXEDDEFAULT";
         }
-        String fingerprint = Build.BRAND + "_" + Build.MODEL + "_" +
-                             (Build.SERIAL != null ? Build.SERIAL : "NO_SERIAL") + "_" +
-                             UUID.randomUUID().toString().substring(0, 8);
-        sp.edit().putString(PREF_DEVICE_FINGERPRINT, fingerprint).apply();
-        return fingerprint;
+        // Buat angka tetap dari ANDROID_ID → SELALU SAMA
+        long nilaiTetap = Math.abs(androidId.hashCode() * 7591L + 31L);
+        int kodeUtama = (int) (nilaiTetap % 90000) + 10000;
+        return String.format(Locale.ROOT, "%05d", kodeUtama);
     }
 
     // === 2. ID UTAMA — TERKUNCI + PULIH DARI CADANGAN ===
     public static String getGlobalOfaId(Context context) {
         SharedPreferences sp = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         
-        // ✅ Langkah 1: Cek dulu di penyimpanan dalam
+        // ✅ Langkah 1: Sudah dikunci? Langsung pakai
         if (sp.getBoolean(PREF_ID_LOCKED, false) && sp.contains(PREF_GLOBAL_OFA_ID)) {
             return sp.getString(PREF_GLOBAL_OFA_ID, null);
         }
 
-        // ✅ Langkah 2: Tidak ada → cek dari file cadangan
+        // ✅ Langkah 2: Cek cadangan luar
         String idDariCadangan = bacaDariCadangan(context);
         if (idDariCadangan != null && !idDariCadangan.trim().isEmpty()) {
-            // Pulihkan kembali ke penyimpanan dalam
             sp.edit()
                 .putString(PREF_GLOBAL_OFA_ID, idDariCadangan)
                 .putBoolean(PREF_ID_LOCKED, true)
                 .apply();
-            Log.i("OfaIdentity", "🔒 ID dipulihkan & dikunci: " + idDariCadangan);
+            Log.i("OfaIdentity", "🔒 ID dipulihkan dari cadangan: " + idDariCadangan);
             return idDariCadangan;
         }
 
-        // ✅ Langkah 3: Tidak ada sama sekali → buat BARU
-        String perangkat = getDeviceFingerprint(context);
-        String idBaru = "OFA-" +
-                        String.format(Locale.ROOT, "%05d", Math.abs(perangkat.hashCode() % 90000 + 10000)) + "-" +
-                        UUID.randomUUID().toString().substring(0, 4).toUpperCase();
+        // ✅ Langkah 3: Buat DARI ANDROID_ID → TIDAK PERNAH BERUBAH 🔒
+        String kodeTetap = getAndroidIdHash(context);
+        String idBaru = "OFA-" + kodeTetap;
         
-        // Simpan ke penyimpanan dalam
         sp.edit()
             .putString(PREF_GLOBAL_OFA_ID, idBaru)
             .putBoolean(PREF_ID_LOCKED, true)
             .apply();
         
-        // Simpan juga ke cadangan luar
         simpanKeCadangan(context, idBaru);
         
-        Log.i("OfaIdentity", "🆔 ID baru dibuat & dicadangkan: " + idBaru);
+        Log.i("OfaIdentity", "🆔 ID BARU DIBUAT & DIKUNCI: " + idBaru);
         return idBaru;
     }
 
@@ -166,7 +163,7 @@ public class OfaIdentity {
                 .getBoolean(PREF_ID_LOCKED, false);
     }
 
-    // === ✅ TAMPILAN SINGKAT — OFA-XXXXX SAJA ===
+    // === ✅ TAMPILAN SINGKAT ===
     public static String getSingkat(Context context) {
         String penuh = getGlobalOfaId(context);
         if (penuh == null) return "OFA-00000";
