@@ -1,7 +1,8 @@
 /*
- * Copyright (C) 2014 Andrew Comminos--Kembali ke komit 38f2e42
- * OFAID/AHMAD (C) 2026 — Simpan&Pulih + Izin Penyimpanan
+ * Copyright (C) 2014 Andrew Comminos
+ * OFAID/AHMAD (C) 2026 — Diperbaiki Android 13–15 & Pengaman Null
  */
+
 package ofaid.ahmad.ptt.app;
 
 import static java.util.Objects.requireNonNull;
@@ -50,7 +51,6 @@ import androidx.preference.PreferenceManager;
 
 import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 
-import org.jetbrains.annotations.NotNull;
 import org.spongycastle.util.encoders.Hex;
 
 import java.net.InetSocketAddress;
@@ -81,7 +81,6 @@ import ofaid.ahmad.ptt.channel.AccessTokenFragment;
 import ofaid.ahmad.ptt.channel.ChannelFragment;
 import ofaid.ahmad.ptt.channel.ServerInfoFragment;
 import ofaid.ahmad.ptt.db.DatabaseCertificate;
-import ofaid.ahmad.ptt.db.DatabaseProvider;
 import ofaid.ahmad.ptt.db.MumlaDatabase;
 import ofaid.ahmad.ptt.db.MumlaSQLiteDatabase;
 import ofaid.ahmad.ptt.db.PublicServer;
@@ -90,7 +89,6 @@ import ofaid.ahmad.ptt.preference.SettingsActivity;
 import ofaid.ahmad.ptt.servers.FavouriteServerListFragment;
 import ofaid.ahmad.ptt.servers.PublicServerListFragment;
 import ofaid.ahmad.ptt.servers.ServerEditFragment;
-import ofaid.ahmad.ptt.service.IMumlaService;
 import ofaid.ahmad.ptt.service.MumlaService;
 import ofaid.ahmad.ptt.util.HumlaServiceFragment;
 import ofaid.ahmad.ptt.util.HumlaServiceProvider;
@@ -98,17 +96,13 @@ import ofaid.ahmad.ptt.util.MumlaTrustStore;
 import ofaid.ahmad.ptt.ofa.PilihStatusDialog;
 
 public class MumlaActivity extends AppCompatActivity implements ListView.OnItemClickListener,
-        FavouriteServerListFragment.ServerConnectHandler, HumlaServiceProvider, DatabaseProvider,
+        FavouriteServerListFragment.ServerConnectHandler, HumlaServiceProvider,
         SharedPreferences.OnSharedPreferenceChangeListener, DrawerAdapter.DrawerDataProvider,
         ServerEditFragment.ServerEditListener,
         PilihStatusDialog.PadaStatusDiubahListener {
+
     private static final String TAG = MumlaActivity.class.getName();
-
     public static final String EXTRA_DRAWER_FRAGMENT = "drawer_fragment";
-
-    private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
-    private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 2;
-    private static final int PERMISSIONS_REQUEST_STORAGE = 917;
 
     private IMumlaService mService;
     private MumlaDatabase mDatabase;
@@ -118,13 +112,13 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     private DrawerLayout mDrawerLayout;
     private DrawerAdapter mDrawerAdapter;
 
+    private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
+    private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 2;
     private Server mServerPendingPerm = null;
     private boolean mPermPostNotificationsAsked = false;
 
     private AlertDialog mConnectingDialog;
     private AlertDialog mErrorDialog;
-
-    private boolean mIzinPenyimpananDiproses = false;
 
     private final List<HumlaServiceFragment> mServiceFragments = new ArrayList<>();
 
@@ -135,16 +129,17 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             mService.setSuppressNotifications(true);
             mService.registerObserver(mObserver);
             mService.clearChatNotifications();
-            mDrawerAdapter.notifyDataSetChanged();
-
-            for (HumlaServiceFragment fragment : mServiceFragments)
+            if (mDrawerAdapter != null) {
+                mDrawerAdapter.notifyDataSetChanged();
+            }
+            for (HumlaServiceFragment fragment : mServiceFragments) {
                 fragment.setServiceBound(true);
-
-            if (getSupportFragmentManager().findFragmentById(R.id.content_frame) instanceof HumlaServiceFragment &&
-                    !mService.isConnected()) {
+            }
+            if (getSupportFragmentManager().findFragmentById(R.id.content_frame) instanceof HumlaServiceFragment
+                    && (mService == null || !mService.isConnected())) {
                 loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
             }
-            updateConnectionState(getService());
+            updateConnectionState();
         }
 
         @Override
@@ -156,19 +151,22 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     private final HumlaObserver mObserver = new HumlaObserver() {
         @Override
         public void onConnected() {
+            if (mSettings == null) return;
             if (mSettings.shouldStartUpInPinnedMode()) {
                 loadDrawerFragment(DrawerAdapter.ITEM_PINNED_CHANNELS);
             } else {
                 loadDrawerFragment(DrawerAdapter.ITEM_SERVER);
             }
-            mDrawerAdapter.notifyDataSetChanged();
+            if (mDrawerAdapter != null) {
+                mDrawerAdapter.notifyDataSetChanged();
+            }
             supportInvalidateOptionsMenu();
-            updateConnectionState(getService());
+            updateConnectionState();
         }
 
         @Override
         public void onConnecting() {
-            updateConnectionState(getService());
+            updateConnectionState();
         }
 
         @Override
@@ -176,19 +174,24 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             if (getSupportFragmentManager().findFragmentById(R.id.content_frame) instanceof HumlaServiceFragment) {
                 loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
             }
-            mDrawerAdapter.notifyDataSetChanged();
+            if (mDrawerAdapter != null) {
+                mDrawerAdapter.notifyDataSetChanged();
+            }
             supportInvalidateOptionsMenu();
-            updateConnectionState(getService());
+            updateConnectionState();
         }
 
         @Override
         public void onTLSHandshakeFailed(X509Certificate[] chain) {
-            if (chain.length == 0) return;
-            final Server lastServer = getService().getTargetServer();
+            if (chain.length == 0 || mService == null) return;
+            final Server lastServer = mService.getTargetServer();
+            if (lastServer == null) return;
+
             try {
                 final X509Certificate x509 = chain[0];
                 View layout = getLayoutInflater().inflate(R.layout.certificate_info, null);
                 TextView textView = layout.findViewById(R.id.certificate_info_text);
+
                 try {
                     MessageDigest digest1 = MessageDigest.getInstance("SHA-1");
                     MessageDigest digest2 = MessageDigest.getInstance("SHA-256");
@@ -196,36 +199,36 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                             .replaceAll("(..)", "$1:");
                     String hexDigest2 = new String(Hex.encode(digest2.digest(x509.getEncoded())))
                             .replaceAll("(..)", "$1:");
+
                     textView.setText(getString(R.string.certificate_info,
                             x509.getSubjectDN().getName(),
-                            x509.getNotBefore().toString(),
-                            x509.getNotAfter().toString(),
+                            x509.getNotBefore(),
+                            x509.getNotAfter(),
                             hexDigest1.substring(0, hexDigest1.length() - 1),
                             hexDigest2.substring(0, hexDigest2.length() - 1)));
-                } catch (NoSuchAlgorithmException ex) {
-                    ex.printStackTrace();
+                } catch (NoSuchAlgorithmException nsae) {
                     textView.setText(x509.toString());
                 }
-                new MaterialAlertDialogBuilder(MumlaActivity.this)
+
+                new MaterialAlertDialogBuilder(this)
                         .setTitle(R.string.untrusted_certificate)
                         .setView(layout)
                         .setPositiveButton(R.string.allow, (dialog, which) -> {
                             try {
                                 String alias = lastServer.getHost();
-                                KeyStore trustStore = MumlaTrustStore.getTrustStore(MumlaActivity.this);
+                                KeyStore trustStore = MumlaTrustStore.getTrustStore(this);
                                 trustStore.setCertificateEntry(alias, x509);
-                                MumlaTrustStore.saveTrustStore(MumlaActivity.this, trustStore);
-                                Toast.makeText(MumlaActivity.this, R.string.trust_added, Toast.LENGTH_LONG).show();
+                                MumlaTrustStore.saveTrustStore(this, trustStore);
+                                Toast.makeText(this, R.string.trust_added, Toast.LENGTH_LONG).show();
                                 connectToServer(lastServer);
                             } catch (Exception ex) {
-                                ex.printStackTrace();
-                                Toast.makeText(MumlaActivity.this, R.string.trust_add_failed, Toast.LENGTH_LONG).show();
+                                Toast.makeText(this, R.string.trust_add_failed, Toast.LENGTH_LONG).show();
                             }
                         })
                         .setNegativeButton(android.R.string.cancel, null)
                         .show();
-            } catch (CertificateException ex) {
-                ex.printStackTrace();
+            } catch (CertificateException ce) {
+                Log.e(TAG, "Sertifikat error", ce);
             }
         }
 
@@ -242,6 +245,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     protected void onCreate(Bundle savedInstanceState) {
         mSettings = Settings.getInstance(this);
 
+        // === PTT DEFAULT SAAT PERTAMA KALI ===
         SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
         if (!prefs.contains(Settings.PREF_INPUT_METHOD)) {
             SharedPreferences.Editor editor = prefs.edit();
@@ -263,7 +267,8 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             public void handleOnBackPressed() {
                 if (mService != null && mService.isConnected()) {
                     new MaterialAlertDialogBuilder(MumlaActivity.this)
-                            .setMessage(getString(R.string.disconnectSure, mService.getTargetServer().getName()))
+                            .setMessage(getString(R.string.disconnectSure,
+                                    mService.getTargetServer().getName()))
                             .setPositiveButton(R.string.confirm, (dialog, which) -> {
                                 mService.disconnect();
                                 loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
@@ -293,14 +298,14 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         mDrawerList.addHeaderView(headerView, null, false);
 
         if (BuildConfig.FLAVOR.equals("foss")) {
-            final int layoutResId = getResources().getIdentifier("list_drawer_headerdonate_foss", "xml", getPackageName());
-            final int stringResId = getResources().getIdentifier("donate_link_foss", "string", getPackageName());
-            if ((layoutResId != 0) && (stringResId != 0)) {
+            int layoutResId = getResources().getIdentifier("list_drawer_headerdonate_foss", "xml", getPackageName());
+            int stringResId = getResources().getIdentifier("donate_link_foss", "string", getPackageName());
+            if (layoutResId != 0 && stringResId != 0) {
                 View footerView = getLayoutInflater().inflate(layoutResId, mDrawerList, false);
                 mDrawerList.addHeaderView(footerView, null, true);
                 footerView.setOnClickListener(v -> {
-                    Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(getString(stringResId)));
-                    startActivity(intent);
+                    startActivity(new Intent(Intent.ACTION_VIEW,
+                            Uri.parse(getString(stringResId))));
                     mDrawerLayout.closeDrawers();
                 });
             }
@@ -309,30 +314,41 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         mDrawerList.setOnItemClickListener(this);
         mDrawerAdapter = new DrawerAdapter(this, this);
         mDrawerList.setAdapter(mDrawerAdapter);
-        mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout, toolbar, R.string.drawer_open, R.string.drawer_close) {
+
+        mDrawerToggle = new ActionBarDrawerToggle(this, mDrawerLayout, toolbar,
+                R.string.drawer_open, R.string.drawer_close) {
             @Override
-            public void onDrawerClosed(View drawerView) { supportInvalidateOptionsMenu(); }
+            public void onDrawerClosed(View drawerView) {
+                supportInvalidateOptionsMenu();
+            }
+
             @Override
             public void onDrawerStateChanged(int newState) {
                 super.onDrawerStateChanged(newState);
-                if (getService() != null && getService().isConnected()) {
-                    IHumlaSession session = getService().HumlaSession();
-                    if (session.isTalking() && !mSettings.isPushToTalkToggle()) {
+                if (mService != null && mService.isConnected()) {
+                    IHumlaSession session = mService.HumlaSession();
+                    if (session != null && session.isTalking() && !mSettings.isPushToTalkToggle()) {
                         session.setTalkingState(false);
                     }
                 }
             }
+
             @Override
-            public void onDrawerOpened(View drawerView) { supportInvalidateOptionsMenu(); }
+            public void onDrawerOpened(View drawerView) {
+                supportInvalidateOptionsMenu();
+            }
         };
 
-        mDrawerLayout.setDrawerListener(mDrawerToggle);
+        mDrawerLayout.addDrawerListener(mDrawerToggle);
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
 
         if (savedInstanceState == null) {
-            if (cekIzinPenyimpanan()) {
-                lanjutKeAwal();
+            if (getIntent() != null && getIntent().hasExtra(EXTRA_DRAWER_FRAGMENT)) {
+                loadDrawerFragment(getIntent().getIntExtra(EXTRA_DRAWER_FRAGMENT,
+                        DrawerAdapter.ITEM_FAVOURITES));
+            } else {
+                loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
             }
         }
 
@@ -341,86 +357,22 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
             try {
                 Server server = MumbleURLParser.parseURL(url);
                 DialogFragment fragment = ServerEditFragment.createServerEditDialog(
-                        MumlaActivity.this, server, ServerEditFragment.Action.CONNECT_ACTION, true);
+                        this, server, ServerEditFragment.Action.CONNECT_ACTION, true);
                 fragment.show(getSupportFragmentManager(), "url_edit");
             } catch (MalformedURLException e) {
-                Toast.makeText(this, getString(R.string.mumble_url_parse_failed), Toast.LENGTH_LONG).show();
+                Toast.makeText(this, R.string.mumble_url_parse_failed, Toast.LENGTH_LONG).show();
             }
         }
 
         setVolumeControlStream(mSettings.isHandsetMode() ?
                 AudioManager.STREAM_VOICE_CALL : AudioManager.STREAM_MUSIC);
-    }
 
-    private boolean cekIzinPenyimpanan() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            return true;
-        }
-        
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-                == PackageManager.PERMISSION_GRANTED) {
-            return true;
-        }
-
-        if (!mIzinPenyimpananDiproses) {
-            mIzinPenyimpananDiproses = true;
-            ActivityCompat.requestPermissions(this,
-                    new String[]{Manifest.permission.READ_EXTERNAL_STORAGE,
-                                 Manifest.permission.WRITE_EXTERNAL_STORAGE},
-                    PERMISSIONS_REQUEST_STORAGE);
-        }
-        return false;
-    }
-
-    private void lanjutKeAwal() {
-        if (mSettings.isFirstRun()) {
-            showFirstRunGuide();
-        } else {
-            new StartupAction().execute(MumlaActivity.this);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                           @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-
-        if (grantResults.length == 0) return;
-
-        if (requestCode == PERMISSIONS_REQUEST_STORAGE) {
-            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                Log.i("OFA_PERM", "✅ Izin penyimpanan DIBERIKAN");
+        if (savedInstanceState == null) {
+            if (mSettings.isFirstRun()) {
+                showFirstRunGuide();
             } else {
-                Log.w("OFA_PERM", "⚠️ Izin penyimpanan DITOLAK — sertifikat tetap bekerja");
-                new MaterialAlertDialogBuilder(this)
-                        .setMessage("Tanpa izin akses file, saat install ulang akan buat sertifikat baru. Fitur tetap berjalan.")
-                        .setPositiveButton("Mengerti", null)
-                        .show();
+                new StartupAction().execute(this);
             }
-            lanjutKeAwal();
-            return;
-        }
-
-        switch (requestCode) {
-            case PERMISSIONS_REQUEST_RECORD_AUDIO:
-                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    connectToServerWithPerm();
-                } else {
-                    Toast.makeText(MumlaActivity.this, getString(R.string.grant_perm_microphone),
-                            Toast.LENGTH_LONG).show();
-                }
-                break;
-            case PERMISSIONS_REQUEST_POST_NOTIFICATIONS:
-                mPermPostNotificationsAsked = true;
-                if (grantResults[0] == PackageManager.PERMISSION_DENIED) {
-                    if (ActivityCompat.shouldShowRequestPermissionRationale(MumlaActivity.this,
-                            Manifest.permission.POST_NOTIFICATIONS)) {
-                        Toast.makeText(MumlaActivity.this,
-                                getString(R.string.grant_perm_notifications), Toast.LENGTH_LONG).show();
-                    }
-                }
-                connectToServerWithPerm();
-                break;
         }
     }
 
@@ -442,9 +394,11 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         super.onPause();
         if (mErrorDialog != null) mErrorDialog.dismiss();
         if (mConnectingDialog != null) mConnectingDialog.dismiss();
+
         if (mService != null) {
-            for (HumlaServiceFragment fragment : mServiceFragments)
+            for (HumlaServiceFragment fragment : mServiceFragments) {
                 fragment.setServiceBound(false);
+            }
             mService.unregisterObserver(mObserver);
             mService.setSuppressNotifications(false);
         }
@@ -453,16 +407,16 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
 
     @Override
     protected void onDestroy() {
-        SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
-        preferences.unregisterOnSharedPreferenceChangeListener(this);
-        mDatabase.close();
+        SharedPreferences prefs = PreferenceManager.getDefaultSharedPreferences(this);
+        prefs.unregisterOnSharedPreferenceChangeListener(this);
+        if (mDatabase != null) mDatabase.close();
         super.onDestroy();
     }
 
     @Override
     public boolean onPrepareOptionsMenu(Menu menu) {
-        MenuItem disconnectButton = menu.findItem(R.id.action_disconnect);
-        disconnectButton.setVisible(mService != null && mService.isConnected());
+        MenuItem disconnectBtn = menu.findItem(R.id.action_disconnect);
+        disconnectBtn.setVisible(mService != null && mService.isConnected());
         return super.onPrepareOptionsMenu(menu);
     }
 
@@ -473,17 +427,17 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     @Override
-    public boolean onOptionsItemSelected(@NotNull MenuItem item) {
+    public boolean onOptionsItemSelected(MenuItem item) {
         if (mDrawerToggle.onOptionsItemSelected(item)) return true;
-        if (item.getItemId() == R.id.action_disconnect) {
-            getService().disconnect();
+        if (item.getItemId() == R.id.action_disconnect && mService != null) {
+            mService.disconnect();
             return true;
         }
-        return false;
+        return super.onOptionsItemSelected(item);
     }
 
     @Override
-    public void onConfigurationChanged(@NotNull Configuration newConfig) {
+    public void onConfigurationChanged(Configuration newConfig) {
         super.onConfigurationChanged(newConfig);
         mDrawerToggle.onConfigurationChanged(newConfig);
     }
@@ -515,28 +469,8 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     private void showFirstRunGuide() {
         if (mSettings.isUsingCertificate()) {
             mSettings.setFirstRun(false);
-            new StartupAction().execute(MumlaActivity.this);
             return;
         }
-
-        MumlaCertificateGenerateTask pulihkanTask = new MumlaCertificateGenerateTask(this) {
-            @Override
-            protected void onPostExecute(DatabaseCertificate result) {
-                super.onPostExecute(result);
-                if (result != null) {
-                    mSettings.setDefaultCertificateId(result.getId());
-                    mSettings.setFirstRun(false);
-                    Log.i("OFA_CERT", "✅ Dipulihkan dari cadangan — ID: " + result.getId());
-                    new StartupAction().execute(MumlaActivity.this);
-                    return;
-                }
-                tampilkanDialogBuatBaru();
-            }
-        };
-        pulihkanTask.execute();
-    }
-
-    private void tampilkanDialogBuatBaru() {
         String msg = getString(R.string.first_run_generate_certificate);
         if (BuildConfig.FLAVOR.equals("donation")) {
             msg = getString(R.string.donation_thanks) + "\n\n" + msg;
@@ -544,26 +478,25 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         new MaterialAlertDialogBuilder(this)
                 .setTitle(R.string.first_run_generate_certificate_title)
                 .setMessage(msg)
-                .setPositiveButton(R.string.generate, (DialogInterface dialog, int which) -> {
-                    MumlaCertificateGenerateTask generateTask = new MumlaCertificateGenerateTask(MumlaActivity.this) {
+                .setPositiveButton(R.string.generate, (dialog, which) -> {
+                    new MumlaCertificateGenerateTask(this) {
                         @Override
                         protected void onPostExecute(DatabaseCertificate result) {
                             super.onPostExecute(result);
                             if (result != null) {
                                 mSettings.setDefaultCertificateId(result.getId());
-                                mSettings.setFirstRun(false);
-                                new StartupAction().execute(MumlaActivity.this);
                             }
                         }
-                    };
-                    generateTask.execute();
+                    }.execute();
+                    mSettings.setFirstRun(false);
                 })
                 .show();
     }
 
     private void loadDrawerFragment(int fragmentId) {
-        Class<? extends Fragment> fragmentClass = null;
+        Class<? extends Fragment> fragmentClass;
         Bundle args = new Bundle();
+
         switch (fragmentId) {
             case DrawerAdapter.ITEM_SERVER:
                 fragmentClass = ChannelFragment.class;
@@ -573,9 +506,11 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                 break;
             case DrawerAdapter.ITEM_ACCESS_TOKENS:
                 fragmentClass = AccessTokenFragment.class;
-                Server connectedServer = getService().getTargetServer();
-                args.putLong("server", connectedServer.getId());
-                args.putStringArrayList("access_tokens", (ArrayList<String>) mDatabase.getAccessTokens(connectedServer.getId()));
+                if (mService == null || !mService.isConnected()) return;
+                Server connected = mService.getTargetServer();
+                args.putLong("server", connected.getId());
+                args.putStringArrayList("access_tokens",
+                        (ArrayList<String>) mDatabase.getAccessTokens(connected.getId()));
                 break;
             case DrawerAdapter.ITEM_PINNED_CHANNELS:
                 fragmentClass = ChannelFragment.class;
@@ -588,12 +523,12 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                 fragmentClass = PublicServerListFragment.class;
                 break;
             case DrawerAdapter.ITEM_SETTINGS:
-                Intent prefIntent = new Intent(this, SettingsActivity.class);
-                startActivity(prefIntent);
+                startActivity(new Intent(this, SettingsActivity.class));
                 return;
             default:
                 return;
         }
+
         Fragment fragment = Fragment.instantiate(this, fragmentClass.getName(), args);
         getSupportFragmentManager().beginTransaction()
                 .replace(R.id.content_frame, fragment, fragmentClass.getName())
@@ -608,18 +543,18 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     public void connectToServerWithPerm() {
-        if (ContextCompat.checkSelfPermission(MumlaActivity.this,
-                Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(MumlaActivity.this,
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this,
                     new String[]{Manifest.permission.RECORD_AUDIO},
                     PERMISSIONS_REQUEST_RECORD_AUDIO);
             return;
         }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && !mPermPostNotificationsAsked) {
-            if (ContextCompat.checkSelfPermission(MumlaActivity.this,
-                    Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(MumlaActivity.this,
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this,
                         new String[]{Manifest.permission.POST_NOTIFICATIONS},
                         PERMISSIONS_REQUEST_POST_NOTIFICATIONS);
                 return;
@@ -627,11 +562,11 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         }
 
         if (mServerPendingPerm == null) {
-            Log.w(TAG, "No pending server after getting permissions");
+            Log.w(TAG, "Tidak ada server yang akan disambungkan");
             return;
         }
 
-        Server server = mServerPendingPerm;
+        final Server server = mServerPendingPerm;
         mServerPendingPerm = null;
 
         if (mService != null && mService.isConnected()) {
@@ -655,24 +590,48 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         if (mSettings.isTorEnabled()) {
             if (!OrbotHelper.isOrbotInstalled(this)) {
                 mSettings.disableTor();
-                new MaterialAlertDialogBuilder(MumlaActivity.this)
+                new MaterialAlertDialogBuilder(this)
                         .setMessage(R.string.orbot_not_installed)
                         .setPositiveButton(android.R.string.ok, null)
                         .show();
                 return;
-            } else {
-                if (!isPortOpen(HumlaConnection.TOR_HOST, HumlaConnection.TOR_PORT, 2000)) {
-                    new MaterialAlertDialogBuilder(MumlaActivity.this)
-                            .setMessage(getString(R.string.orbot_tor_failed, HumlaConnection.TOR_PORT))
-                            .setPositiveButton(android.R.string.ok, null)
-                            .show();
-                    return;
-                }
+            }
+            if (!isPortOpen(HumlaConnection.TOR_HOST, HumlaConnection.TOR_PORT, 2000)) {
+                new MaterialAlertDialogBuilder(this)
+                        .setMessage(getString(R.string.orbot_tor_failed, HumlaConnection.TOR_PORT))
+                        .setPositiveButton(android.R.string.ok, null)
+                        .show();
+                return;
             }
         }
 
-        ServerConnectTask connectTask = new ServerConnectTask(this, mDatabase);
-        connectTask.execute(server);
+        new ServerConnectTask(this, mDatabase).execute(server);
+    }
+
+    @Override
+    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
+                                           @NonNull int[] grantResults) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+        if (grantResults.length == 0) return;
+
+        switch (requestCode) {
+            case PERMISSIONS_REQUEST_RECORD_AUDIO:
+                if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    connectToServerWithPerm();
+                } else {
+                    Toast.makeText(this, R.string.grant_perm_microphone, Toast.LENGTH_LONG).show();
+                }
+                break;
+            case PERMISSIONS_REQUEST_POST_NOTIFICATIONS:
+                mPermPostNotificationsAsked = true;
+                if (grantResults[0] == PackageManager.PERMISSION_DENIED
+                        && ActivityCompat.shouldShowRequestPermissionRationale(this,
+                        Manifest.permission.POST_NOTIFICATIONS)) {
+                    Toast.makeText(this, R.string.grant_perm_notifications, Toast.LENGTH_LONG).show();
+                }
+                connectToServerWithPerm();
+                break;
+        }
     }
 
     private boolean isPortOpen(final String host, final int port, final int timeout) {
@@ -684,181 +643,212 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                     socket.connect(new InetSocketAddress(host, port), timeout);
                     socket.close();
                     open.set(true);
-                } catch (Exception e) {
-                    Log.d(TAG, "isPortOpen() run(): " + e);
-                }
+                } catch (Exception ignored) {}
             });
             thread.start();
             thread.join();
-        } catch (Exception e) {
-            Log.d(TAG, "isPortOpen(): " + e);
-        }
+        } catch (Exception ignored) {}
         return open.get();
     }
 
     public void connectToPublicServer(final PublicServer server) {
-        final Settings settings = Settings.getInstance(this);
         final EditText usernameField = new EditText(this);
-        usernameField.setHint(settings.getDefaultUsername());
+        usernameField.setHint(mSettings.getDefaultUsername());
         FrameLayout layout = new FrameLayout(this);
+        layout.setPadding(
+                (int) getResources().getDimension(R.dimen.padding_medium), 0,
+                (int) getResources().getDimension(R.dimen.padding_medium), 0);
         layout.addView(usernameField);
-        int horizontalPadding = (int) getResources().getDimension(R.dimen.padding_medium);
-        layout.setPadding(horizontalPadding, 0, horizontalPadding, 0);
+
         new MaterialAlertDialogBuilder(this)
                 .setView(layout)
                 .setTitle(R.string.connectToServer)
                 .setPositiveButton(R.string.connect, (dialog, which) -> {
                     String username = usernameField.getText().toString();
-                    if (username.isEmpty()) username = settings.getDefaultUsername();
-                    server.setUsername(username);
+                    server.setUsername(username.isEmpty() ? mSettings.getDefaultUsername() : username);
                     connectToServer(server);
                 })
                 .show();
     }
 
     private void setStayAwake(boolean stayAwake) {
-        if (stayAwake) getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
-        else getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        if (stayAwake) {
+            getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        } else {
+            getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+        }
     }
 
-    private void updateConnectionState(IHumlaService service) {
+    private void updateConnectionState() {
         if (mConnectingDialog != null) mConnectingDialog.dismiss();
         if (mErrorDialog != null) mErrorDialog.dismiss();
 
+        if (mService == null) {
+            Log.d(TAG, "⏳ Service belum siap — lewati pembaruan status");
+            return;
+        }
+
         switch (mService.getConnectionState()) {
             case CONNECTING:
-                Server server = service.getTargetServer();
+                Server server = mService.getTargetServer();
                 mConnectingDialog = new MaterialAlertDialogBuilder(this)
-                        .setTitle(getString(R.string.connecting_to_server, server.getHost()) + (mSettings.isTorEnabled() ? " (Tor)" : ""))
+                        .setTitle(getString(R.string.connecting_to_server,
+                                server != null ? server.getHost() : "")
+                                + (mSettings.isTorEnabled() ? " (Tor)" : ""))
                         .setView(R.layout.dialog_progress)
                         .setCancelable(true)
                         .setOnCancelListener(dialog -> {
-                            mService.disconnect();
+                            if (mService != null) mService.disconnect();
                             Toast.makeText(this, R.string.cancelled, Toast.LENGTH_SHORT).show();
                         })
                         .create();
                 mConnectingDialog.show();
                 break;
+
             case CONNECTION_LOST:
-                if (getService() != null && !getService().isErrorShown()) {
-                    if (getService() == null) break;
-                    MaterialAlertDialogBuilder builder = new MaterialAlertDialogBuilder(this);
-                    builder.setTitle(getString(R.string.connectionRefused) + (mSettings.isTorEnabled() ? " (Tor)" : ""));
-                    HumlaException error = getService().getConnectionError();
-                    if (error != null && mService.isReconnecting()) {
-                        builder.setMessage(error.getMessage() + "\n\n" +
-                                getString(R.string.attempting_reconnect,
-                                        error.getCause() != null ? error.getCause().getMessage() : "unknown"));
-                        builder.setPositiveButton(R.string.cancel_reconnect, (dialog, which) -> {
-                            if (getService() != null) {
-                                getService().cancelReconnect();
-                                getService().markErrorShown();
-                            }
-                        });
-                    } else if (error != null && error.getReason() == HumlaException.HumlaDisconnectReason.REJECT &&
-                            (error.getReject().getType() == Mumble.Reject.RejectType.WrongUserPW ||
-                             error.getReject().getType() == Mumble.Reject.RejectType.WrongServerPW)) {
-                        final EditText passwordField = new EditText(this);
-                        passwordField.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_PASSWORD);
-                        passwordField.setHint(R.string.password);
+                if (mService.isErrorShown()) break;
+
+                AlertDialog.Builder builder = new MaterialAlertDialogBuilder(this);
+                builder.setTitle(getString(R.string.connectionRefused)
+                        + (mSettings.isTorEnabled() ? " (Tor)" : ""));
+
+                HumlaException error = mService.getConnectionError();
+                if (error != null && mService.isReconnecting()) {
+                    builder.setMessage(error.getMessage() + "\n\n"
+                            + getString(R.string.attempting_reconnect,
+                            error.getCause() != null ? error.getCause().getMessage() : "tidak diketahui"));
+                    builder.setPositiveButton(R.string.cancel_reconnect, (dialog, which) -> {
+                        if (mService != null) {
+                            mService.cancelReconnect();
+                            mService.markErrorShown();
+                        }
+                    });
+                } else if (error != null && error.getReason() == HumlaException.HumlaDisconnectReason.REJECT) {
+                    Mumble.Reject.RejectType type = error.getReject().getType();
+                    if (type == Mumble.Reject.RejectType.WrongUserPW
+                            || type == Mumble.Reject.RejectType.WrongServerPW) {
+                        final EditText passField = new EditText(this);
+                        passField.setInputType(InputType.TYPE_CLASS_TEXT
+                                | InputType.TYPE_TEXT_VARIATION_PASSWORD);
+                        passField.setHint(R.string.password);
                         builder.setTitle(R.string.invalid_password);
                         builder.setMessage(error.getMessage());
-                        builder.setView(passwordField);
+                        builder.setView(passField);
                         builder.setPositiveButton(R.string.reconnect, (dialog, which) -> {
-                            Server srv = getService().getTargetServer();
+                            Server srv = mService.getTargetServer();
                             if (srv == null) return;
-                            srv.setPassword(passwordField.getText().toString());
+                            srv.setPassword(passField.getText().toString());
                             if (srv.isSaved()) mDatabase.updateServer(srv);
                             connectToServer(srv);
                         });
                         builder.setNegativeButton(android.R.string.cancel, (dialog, which) -> {
-                            if (getService() != null) getService().markErrorShown();
+                            if (mService != null) mService.markErrorShown();
                         });
                     } else {
-                        String msg = error != null ? error.getMessage() : getString(R.string.unknown);
-                        builder.setMessage(msg);
+                        builder.setMessage(error.getMessage());
                         builder.setPositiveButton(android.R.string.ok, (dialog, which) -> {
-                            if (getService() != null) getService().markErrorShown();
+                            if (mService != null) mService.markErrorShown();
                         });
                     }
-                    builder.setCancelable(false);
-                    mErrorDialog = builder.show();
+                } else {
+                    builder.setMessage(error != null ? error.getMessage() : getString(R.string.unknown));
+                    builder.setPositiveButton(android.R.string.ok, (dialog, which) -> {
+                        if (mService != null) mService.markErrorShown();
+                    });
                 }
+                builder.setCancelable(false);
+                mErrorDialog = builder.show();
                 break;
         }
     }
 
     @Override
-    public IMumlaService getService() { return mService; }
+    public IMumlaService getService() {
+        return mService;
+    }
+
     @Override
-    public MumlaDatabase getDatabase() { return mDatabase; }
+    public MumlaDatabase getDatabase() {
+        return mDatabase;
+    }
+
     @Override
-    public void addServiceFragment(HumlaServiceFragment fragment) { mServiceFragments.add(fragment); }
+    public void addServiceFragment(HumlaServiceFragment fragment) {
+        mServiceFragments.add(fragment);
+    }
+
     @Override
-    public void removeServiceFragment(HumlaServiceFragment fragment) { mServiceFragments.remove(fragment); }
+    public void removeServiceFragment(HumlaServiceFragment fragment) {
+        mServiceFragments.remove(fragment);
+    }
+
     @Override
-    public void onSharedPreferenceChanged(SharedPreferences sp, @Nullable String key) {
-        if (key == null) return;
+    public void onSharedPreferenceChanged(SharedPreferences sharedPreferences, @Nullable String key) {
+        if (key == null || mSettings == null) return;
+
         switch (key) {
-            case Settings.PREF_STAY_AWAKE: setStayAwake(mSettings.shouldStayAwake()); break;
-            case Settings.PREF_HANDSET_MODE: setVolumeControlStream(mSettings.isHandsetMode() ?
-                    AudioManager.STREAM_VOICE_CALL : AudioManager.STREAM_MUSIC); break;
+            case Settings.PREF_STAY_AWAKE:
+                setStayAwake(mSettings.shouldStayAwake());
+                break;
+            case Settings.PREF_HANDSET_MODE:
+                setVolumeControlStream(mSettings.isHandsetMode() ?
+                        AudioManager.STREAM_VOICE_CALL : AudioManager.STREAM_MUSIC);
+                break;
         }
     }
+
     @Override
-    public boolean isConnected() { return mService != null && mService.isConnected(); }
+    public boolean isConnected() {
+        return mService != null && mService.isConnected();
+    }
+
     @Override
     public String getConnectedServerName() {
         if (mService != null && mService.isConnected()) {
-            Server s = mService.getTargetServer();
-            return s.getName().isEmpty() ? s.getHost() : s.getName();
+            Server server = mService.getTargetServer();
+            String name = server.getName();
+            return name.isEmpty() ? server.getHost() : name;
+        }
+        if (BuildConfig.DEBUG) {
+            throw new IllegalStateException("Hanya panggil saat tersambung!");
         }
         return "";
     }
+
     @Override
     public void onServerEdited(ServerEditFragment.Action action, Server server) {
         switch (action) {
-            case ADD_ACTION: mDatabase.addServer(server); loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES); break;
-            case EDIT_ACTION: mDatabase.updateServer(server); loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES); break;
-            case CONNECT_ACTION: connectToServer(server); break;
+            case ADD_ACTION:
+                mDatabase.addServer(server);
+                loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
+                break;
+            case EDIT_ACTION:
+                mDatabase.updateServer(server);
+                loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
+                break;
+            case CONNECT_ACTION:
+                connectToServer(server);
+                break;
         }
     }
 
+    // === PERBARUI STATUS TANPA KELUAR HALAMAN ===
     @Override
     public void padaStatusDiubah(int idPengguna, String kodeStatusBaru) {
-        Log.d("OFA_STATUS", "Status berubah — id: " + idPengguna + ", kode: " + kodeStatusBaru);
-        if (isFinishing() || isDestroyed()) return;
-        try {
-            runOnUiThread(() -> {
-                View root = findViewById(R.id.content_frame);
-                if (root != null) { root.invalidate(); root.requestLayout(); }
-                supportInvalidateOptionsMenu();
-            });
-        } catch (Exception e) {
-            Log.w("OFA_STATUS", "Pembaruan tertunda: " + e.getMessage());
+        Log.d("OFA_STATUS", "Status diubah — ID: " + idPengguna + ", kode: " + kodeStatusBaru);
+
+        if (isFinishing() || isDestroyed()) {
+            Log.d("OFA_STATUS", "Activity sudah ditutup — batalkan");
+            return;
         }
-    }
 
-    // ==================================================
-    // ✅ KELAS StartupAction — DIPERBAIKI TOTAL
-    // ==================================================
-    private static class StartupAction extends android.os.AsyncTask<MumlaActivity, Void, Void> {
-        private MumlaActivity mActivity;
-
-        @Override
-        protected Void doInBackground(MumlaActivity... activities) {
-            if (activities != null && activities.length > 0) {
-                mActivity = activities[0];
+        runOnUiThread(() -> {
+            View root = findViewById(R.id.content_frame);
+            if (root != null) {
+                root.invalidate();
+                root.requestLayout();
             }
-            return null;
-        }
-
-        @Override
-        protected void onPostExecute(Void aVoid) {
-            super.onPostExecute(aVoid);
-            if (isCancelled() || mActivity == null) return;
-            if (mActivity.isFinishing() || mActivity.isDestroyed()) return;
-            mActivity.loadDrawerFragment(DrawerAdapter.ITEM_FAVOURITES);
-        }
+            supportInvalidateOptionsMenu();
+        });
     }
 }
