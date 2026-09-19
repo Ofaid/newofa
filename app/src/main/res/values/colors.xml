@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+<color name="colorAccent">#FF4081</color>
+
     <color name="md_theme_light_primary">#3949ab</color>
     <color name="md_theme_light_primary_darker">#212b64</color> <!-- for pttPressed -->
     <color name="md_theme_light_onPrimary">#ffffff</color>
