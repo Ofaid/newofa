@@ -1,5 +1,5 @@
-name: Bangun Mumla (Unsigned)
-run-name: Bangun Mumla - APK Unsigned
+name: Bangun Mumla (Debug)
+run-name: Bangun Mumla - APK Debug Lengkap
 
 on:
   push:
@@ -11,7 +11,6 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      # Signing tidak lagi dibutuhkan di sini
       ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
@@ -57,13 +56,15 @@ jobs:
           ../../../../gradlew jar --no-daemon
           cd ../../../../
 
-      - name: Bangun APK UNSIGNED
+      # PERUBAHAN UTAMA DI SINI: Ganti assembleRelease jadi assembleDebug
+      - name: Bangun APK DEBUG
         run: |
-          ./gradlew assembleRelease \
+          ./gradlew assembleDebug \
             --stacktrace --no-daemon
 
-      - name: Simpan APK Unsigned
+      # Ubah nama artifact agar tidak tertukar dengan versi release
+      - name: Simpan APK Debug
         uses: actions/upload-artifact@v4
         with:
-          name: OFAID-UNSIGNED-APK
-          path: "**/*release*.apk"
+          name: OFAID-DEBUG-APK-Lengkap
+          path: "**/*debug*.apk"
