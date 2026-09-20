@@ -12,50 +12,40 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04   # ✅ Pakai versi yang dulu dipakai!
+    runs-on: ubuntu-22.04
     steps:
-      - name: Info perubahan
+      - name: Info
         run: |
           echo "Pengirim: ${{ github.actor }}"
-          echo "Pesan: ${{ github.event.head_commit.message }}"
           echo "Cabang: ${{ github.ref_name }}"
-          echo "Komit: ${{ github.sha }}"
 
-      - name: Ambil kode & submodul
+      - name: Ambil kode
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Bersihkan cache
+      - name: Bersihkan
         run: |
           rm -rf ~/.gradle/caches
-          rm -rf ~/.gradle/wrapper
           ./gradlew clean --no-daemon || true
 
-      - name: Siapkan Java
+      - name: Java 21
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Siapkan Android SDK
+      - name: Android SDK
         uses: android-actions/setup-android@v3
 
-      # ✅ Pakai NDK versi yang dulu sudah terbukti berfungsi
-      - name: Pasang NDK
-        run: |
-          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653" || true
-
-      - name: Tulis lokasi SDK & NDK
+      # ✅ TIDAK PASANG NDK SAMA SEKALI — biarkan otomatis
+      - name: Tulis lokasi SDK
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-          if [ -d "$ANDROID_SDK_ROOT/ndk/25.2.9519653" ]; then
-            echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> local.properties
-          fi
 
-      - name: Beri izin Gradle
+      - name: Beri izin
         run: chmod +x gradlew libraries/humla/gradlew
 
       - name: Bangun SpongyCastle
@@ -64,11 +54,11 @@ jobs:
           ../../../../gradlew jar
           cd ../../../../
 
-      - name: Bangun APK
+      - name: Bangun APK Debug
         run: ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
-          name: OFA-PTT-Hasil
-          path: "**/*.apk"
+          name: OFA-PTT-DEBUG
+          path: "**/*-debug.apk"
