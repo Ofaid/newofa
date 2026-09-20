@@ -48,7 +48,7 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> local.properties
 
-      # === PENGATURAN SIGNING OTOMATIS KE SUBFOLDER APP ===
+      # === PENGATURAN TANDA TANGAN & BLOKIR PEMOTONGAN KODE SUB-MODUL ===
       - name: Siapkan tanda tangan
         run: |
           # 1. Dekode kunci keystore langsung ke dalam subfolder 'app'
@@ -66,16 +66,28 @@ jobs:
                   }
               }
               
-              // PAKSA: Menimpa logika pengecekan hasProperty lama di build.gradle utama
+              // PAKSA: Menimpa tanda tangan rilis dan matikan minify untuk sub-modul humla
               buildTypes {
                   release {
                       signingConfig signingConfigs.release
+                      minifyEnabled false
+                      shrinkResources false
+                  }
+              }
+          }
+          subprojects {
+              afterEvaluate { project ->
+                  if (project.hasProperty('android')) {
+                      project.android.buildTypes.release {
+                          minifyEnabled false
+                          shrinkResources false
+                      }
                   }
               }
           }
           EOF
           
-          echo "Memverifikasi file konfigurasi tanda tangan di folder app:"
+          echo "Memverifikasi berkas konfigurasi di folder app:"
           ls -la app/signing.gradle app/ofaid_ptt_key.jks
 
       - name: Izin Gradle
