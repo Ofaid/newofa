@@ -34,7 +34,7 @@ jobs:
           SDK_DIR="/usr/local/lib/android/sdk"
           mkdir -p "$SDK_DIR/cmdline-tools"
           cd "$SDK_DIR/cmdline-tools"
-          wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          wget -O tools.zip https://google.com
           unzip -q tools.zip
           rm tools.zip
           mv cmdline-tools latest
@@ -48,12 +48,14 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> local.properties
 
-      # === HANYA TAMBAHKAN INI — TIDAK UBAH KODE ===
+      # === PENGATURAN SIGNING OTOMATIS KE SUBFOLDER APP ===
       - name: Siapkan tanda tangan
         run: |
-          echo "$KEYSTORE_CONTENT" | base64 -d > ofaid_ptt_key.jks
+          # 1. Dekode kunci keystore langsung ke dalam subfolder 'app'
+          echo "$KEYSTORE_CONTENT" | base64 -d > app/ofaid_ptt_key.jks
           
-          cat > signing.gradle << 'EOF'
+          # 2. Buat skrip signing.gradle langsung di dalam subfolder 'app'
+          cat > app/signing.gradle << 'EOF'
           android {
               signingConfigs {
                   release {
@@ -63,10 +65,18 @@ jobs:
                       keyPassword System.getenv("SIGN_KEY_PASSWORD")
                   }
               }
+              
+              // PAKSA: Menimpa logika pengecekan hasProperty lama di build.gradle utama
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
           }
           EOF
           
-          ls -la signing.gradle ofaid_ptt_key.jks
+          echo "Memverifikasi file konfigurasi tanda tangan di folder app:"
+          ls -la app/signing.gradle app/ofaid_ptt_key.jks
 
       - name: Izin Gradle
         run: chmod +x gradlew libraries/humla/gradlew
@@ -77,12 +87,12 @@ jobs:
           ../../../../gradlew jar
           cd ../../../../
 
-      # === TANPA PEMOTONGAN APA-APA ===
       - name: Bangun APK — KODE UTUH
         run: ./gradlew assembleRelease --stacktrace --no-daemon
 
+      # === PENGAMBILAN ARTIFACT KHUSUS APK YANG SUDAH TER-SIGN ===
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
           name: OFAID-RILIS
-          path: "**/*.apk"
+          path: "app/build/outputs/apk/goog/release/*.apk"
