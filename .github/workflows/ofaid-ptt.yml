@@ -39,11 +39,11 @@ jobs:
           rm tools.zip
           mv cmdline-tools latest
           
-          # Install NDK versi stabil yang kompatibel
-          ./latest/bin/sdkmanager --install "ndk;25.2.9519653"
+          # Install NDK versi 25.1.8937393 sesuai permintaan project
+          ./latest/bin/sdkmanager --install "ndk;25.1.8937393"
           
           echo "ANDROID_SDK_ROOT=$SDK_DIR" >> $GITHUB_ENV
-          echo "NDK_PATH=$SDK_DIR/ndk/25.2.9519653" >> $GITHUB_ENV
+          echo "NDK_PATH=$SDK_DIR/ndk/25.1.8937393" >> $GITHUB_ENV
 
       - name: Buat local.properties
         run: |
@@ -82,13 +82,11 @@ jobs:
       - name: Bangun SpongyCastle (Library Native)
         run: |
           cd libraries/humla/libs/humla-spongycastle
-          # Pastikan path gradlew benar sesuai struktur folder Cak
           ../../../../gradlew jar --no-daemon
           cd ../../../../
 
       - name: Bangun APK RILIS
         run: |
-          # Build dengan inject signing config via CLI sebagai backup
           ./gradlew assembleRelease \
             -Pandroid.injected.signing.store.file=${GITHUB_WORKSPACE}/ofaid_ptt_key.jks \
             -Pandroid.injected.signing.store.password=$SIGN_STORE_PASSWORD \
