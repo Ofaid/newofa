@@ -1,4 +1,9 @@
-# Keep SpongyCastle & NetCipher
+# PAKSA SEMUA CLASS TETAP MASUK (ANTI-DISCARD)
+-keep class * { *; }
+-keepclassmembers class * { *; }
+-keepresources *
+
+# Keep SpongyCastle & NetCipher (ATURAN LAMA CAK TETAP DIPAKAI)
 -keep class org.spongycastle.** { *; }
 -keep class info.guardianproject.netcipher.** { *; }
 -dontwarn org.spongycastle.**
