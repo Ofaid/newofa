@@ -82,7 +82,6 @@ android {
 
     buildTypes {
         release {
-            // ✅ DIMATIKAN — KODE UTUH TANPA DIPOTONG
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
@@ -99,7 +98,6 @@ android {
         }
         debug {
             versionNameSuffix "-debug"
-            // ✅ DIMATIKAN — KODE UTUH TANPA DIPOTONG
             minifyEnabled false
             shrinkResources false
             if (android.hasProperty("signingConfigs")) {
@@ -142,6 +140,5 @@ dependencies {
     implementation 'com.android.billingclient:billing:7.1.1'
     implementation 'com.google.code.gson:gson:2.10.1'
 
-    // ✅ GIF — TETAP AMAN
     implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.25'
 }
