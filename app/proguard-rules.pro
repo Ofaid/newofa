@@ -1,46 +1,62 @@
 # ==================================================
-# 🔒 SEMUA DILINDUNGI TAPI TETAP ADA — TIDAK ADA YANG DIHAPUS!
+# 🔒 OFAID — DILINDUNGI, NAMA BOLEH BERUBAH
 # ==================================================
-
-# ✅ HUMLA ASLI — SEMUA TETAP UTUH, TIDAK DIUBAH SATU PUN!
--keep class se.lublin.humla.** { *; }
--keep interface se.lublin.humla.** { *; }
--keepnames class se.lublin.humla.** { *; }
--keepclassmembers class se.lublin.humla.** { *; }
-
-# ✅ PUNYA KITA — NAMA BOLEH BERUBAH TAPI ISI TETAP
 -keepnames class ofaid.ahmad.ptt.** { *; }
 -keepnames class ofaid.ahmad.ptt.ofa.** { *; }
 -keepclassmembers class ofaid.ahmad.ptt.** { *; }
 
-# ✅ PUSTAKA PENDUKUNG — SEMUA TETAP BERFUNGSI
+# ==================================================
+# ✅ MUMLA/HUMLA — TETAP UTUH
+# ==================================================
+-keep class se.lublin.humla.** { *; }
+-keep interface se.lublin.humla.** { *; }
+-keepclassmembers class se.lublin.humla.** { *; }
+
+# ==================================================
+# ✅ SPONGYCASTLE — TETAP UTUH + TAMBAHAN KELAS
+# ==================================================
 -keep class org.spongycastle.** { *; }
--keepnames class org.spongycastle.** { *; }
+-keepclassmembers class org.spongycastle.** { *; }
+-dontwarn org.spongycastle.**
+
+# Kelas pendukung yang hilang
+-keep class javax.naming.** { *; }
+-keep class javax.naming.directory.** { *; }
+-dontwarn javax.naming.**
+-dontwarn javax.naming.directory.**
+
+# ==================================================
+# ✅ PUSTAKA LAINNYA
+# ==================================================
 -keep class pl.droidsonroids.gif.** { *; }
 -dontwarn pl.droidsonroids.gif.**
 
-# ✅ FUNGSI SAMBUNG SERVER — TIDAK BOLEH HILANG!
--keepclassmembers class se.lublin.humla.model.ServerInfo {
+# ==================================================
+# ✅ FUNGSI SAMBUNG SERVER
+# ==================================================
+-keepclassmembers class se.lublin.humla.model.** {
     public java.lang.String getAddress();
     public int getPort();
-}
--keepclassmembers class se.lublin.humla.model.** { *; }
-
-# ✅ SEMUA METODE & BAGIAN YANG DIJALANKAN — TETAP ADA!
--keepclasseswithmembers class * {
-    public <init>(android.content.Context);
-}
--keepclassmembers class * {
-    void on*(...);
     <methods>;
-    <fields>;
 }
 
-# ✅ LAYANAN & AKTIVITAS — TETAP BISA DIBUKA
+# ==================================================
+# ✅ AKTIVITAS & LAYANAN — TETAP BISA DIBUKA
+# ==================================================
 -keep class * extends android.app.Activity { *; }
 -keep class * extends android.app.Service { *; }
 -keep class * extends androidx.fragment.app.Fragment { *; }
+-keep class * extends android.content.BroadcastReceiver { *; }
 
+# Semua metode tetap bisa dipanggil
+-keepclassmembers class * {
+    <methods>;
+    <fields>;
+    void on*(...);
+}
+
+# ==================================================
 # ✅ PELACAKAN
+# ==================================================
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SumberOFAID
