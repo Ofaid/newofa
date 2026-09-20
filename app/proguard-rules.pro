@@ -1,48 +1,30 @@
 # ==================================================
-# 🔒 OFAID — DILINDUNGI, NAMA BOLEH BERUBAH
+# ✅ SEMUA TETAP UTUH — TIDAK ADA YANG DIHAPUS
 # ==================================================
--keepnames class ofaid.ahmad.ptt.** { *; }
--keepnames class ofaid.ahmad.ptt.ofa.** { *; }
--keepclassmembers class ofaid.ahmad.ptt.** { *; }
 
-# ==================================================
-# ✅ MUMLA/HUMLA — TETAP UTUH
-# ==================================================
+# Humla/Mumla — SEMUA
 -keep class se.lublin.humla.** { *; }
 -keep interface se.lublin.humla.** { *; }
 -keepclassmembers class se.lublin.humla.** { *; }
 
-# ==================================================
-# ✅ SPONGYCASTLE — TETAP UTUH + TAMBAHAN KELAS
-# ==================================================
+# Punya Kita
+-keep class ofaid.ahmad.ptt.** { *; }
+-keep class ofaid.ahmad.ptt.ofa.** { *; }
+
+# SpongyCastle + kelas pendukung
 -keep class org.spongycastle.** { *; }
--keepclassmembers class org.spongycastle.** { *; }
 -dontwarn org.spongycastle.**
 
-# Kelas pendukung yang hilang
 -keep class javax.naming.** { *; }
 -keep class javax.naming.directory.** { *; }
 -dontwarn javax.naming.**
 -dontwarn javax.naming.directory.**
 
-# ==================================================
-# ✅ PUSTAKA LAINNYA
-# ==================================================
+# Pustaka lain
 -keep class pl.droidsonroids.gif.** { *; }
 -dontwarn pl.droidsonroids.gif.**
 
-# ==================================================
-# ✅ FUNGSI SAMBUNG SERVER
-# ==================================================
--keepclassmembers class se.lublin.humla.model.** {
-    public java.lang.String getAddress();
-    public int getPort();
-    <methods>;
-}
-
-# ==================================================
-# ✅ AKTIVITAS & LAYANAN — TETAP BISA DIBUKA
-# ==================================================
+# Komponen aplikasi
 -keep class * extends android.app.Activity { *; }
 -keep class * extends android.app.Service { *; }
 -keep class * extends androidx.fragment.app.Fragment { *; }
@@ -55,8 +37,8 @@
     void on*(...);
 }
 
-# ==================================================
-# ✅ PELACAKAN
-# ==================================================
--keepattributes SourceFile,LineNumberTable
--renamesourcefileattribute SumberOFAID
+# Sambung server
+-keepclassmembers class se.lublin.humla.model.ServerInfo {
+    public java.lang.String getAddress();
+    public int getPort();
+}
