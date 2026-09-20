@@ -82,9 +82,9 @@ android {
 
     buildTypes {
         release {
-            // ✅ RILIS — Lindungi nama, TAPI JANGAN buang berkas!
-            minifyEnabled true
-            shrinkResources false  // ← SUDAH DIPERBAIKI!
+            // ✅ RILIS — Sementara matikan minify biar TIDAK FC dulu
+            minifyEnabled false       // ← DIMATIKAN DULU sampai lancar!
+            shrinkResources false     // ← TETAP false — JANGAN buang berkas!
 
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
                           'proguard-rules.pro'
