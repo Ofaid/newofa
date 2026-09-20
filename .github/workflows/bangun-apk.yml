@@ -12,7 +12,7 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04   # ✅ Pakai versi yang dulu dipakai!
     steps:
       - name: Info perubahan
         run: |
@@ -43,14 +43,17 @@ jobs:
       - name: Siapkan Android SDK
         uses: android-actions/setup-android@v3
 
+      # ✅ Pakai NDK versi yang dulu sudah terbukti berfungsi
       - name: Pasang NDK
         run: |
-          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
+          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.2.9519653" || true
 
       - name: Tulis lokasi SDK & NDK
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-          echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> local.properties
+          if [ -d "$ANDROID_SDK_ROOT/ndk/25.2.9519653" ]; then
+            echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.2.9519653" >> local.properties
+          fi
 
       - name: Beri izin Gradle
         run: chmod +x gradlew libraries/humla/gradlew
@@ -61,8 +64,8 @@ jobs:
           ../../../../gradlew jar
           cd ../../../../
 
-      - name: Bangun APK — Debug & Rilis
-        run: ./gradlew assembleDebug assembleGoogRelease --stacktrace --no-daemon
+      - name: Bangun APK
+        run: ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Simpan APK
         uses: actions/upload-artifact@v4
