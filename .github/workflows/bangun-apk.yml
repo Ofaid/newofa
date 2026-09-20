@@ -13,6 +13,12 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    env:
+      SIGN_STORE_PASSWORD: ${{ secrets.SIGN_STORE_PASSWORD }}
+      SIGN_KEY_PASSWORD: ${{ secrets.SIGN_KEY_PASSWORD }}
+      SIGN_KEY_ALIAS: ${{ secrets.SIGN_KEY_ALIAS }}
+      KEYSTORE_CONTENT: ${{ secrets.KEYSTORE_CONTENT }}
+
     steps:
       - name: Info perubahan
         run: |
@@ -41,14 +47,12 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # ✅ Hapus yang rusak → pasang yang versi terbukti baik
       - name: Pasang Android SDK Tools
         run: |
           SDK_DIR="/usr/local/lib/android/sdk"
           mkdir -p "$SDK_DIR/cmdline-tools"
           cd "$SDK_DIR/cmdline-tools"
           
-          # Unduh versi yang alamatnya benar
           wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q tools.zip
           rm tools.zip
@@ -65,6 +69,28 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> local.properties
 
+      - name: Pulihkan berkas kunci & buat signing.gradle
+        run: |
+          echo "$KEYSTORE_CONTENT" | base64 -d > ofaid_ptt_key.jks
+          
+          cat > signing.gradle << 'EOF'
+          android {
+              signingConfigs {
+                  release {
+                      storeFile file("ofaid_ptt_key.jks")
+                      storePassword System.getenv("SIGN_STORE_PASSWORD")
+                      keyAlias System.getenv("SIGN_KEY_ALIAS")
+                      keyPassword System.getenv("SIGN_KEY_PASSWORD")
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          EOF
+
       - name: Beri izin Gradle
         run: chmod +x gradlew libraries/humla/gradlew
 
@@ -74,11 +100,11 @@ jobs:
           ../../../../gradlew jar
           cd ../../../../
 
-      - name: Bangun APK
-        run: ./gradlew assembleDebug --stacktrace --no-daemon
+      - name: Bangun APK — MODE RILIS + TANDATANGAN ✅
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
 
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
-          name: AHMAD-APK
+          name: AHMAD-APK-RILIS
           path: "**/*.apk"
