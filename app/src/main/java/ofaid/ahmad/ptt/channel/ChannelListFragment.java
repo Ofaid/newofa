@@ -100,7 +100,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                     bannerActiveSpeaker.setVisibility(View.GONE);
                     if (tvSpeakerName != null) tvSpeakerName.setText("");
                     if (tvSpeakerId != null) tvSpeakerId.setText("");
-                    if (imgSpeakerAvatar != null) imgSpeakerAvatar.setImageResource(R.drawable.ic_launcher);
+                    if (imgSpeakerAvatar != null) imgSpeakerAvatar.setImageResource(R.drawable.ic_action_microphone);
                     currentSpeakerSessionId = -1;
                 })
                 .start();
@@ -393,10 +393,10 @@ public class ChannelListFragment extends HumlaServiceFragment
                                 if (bmp != null) {
                                     imgSpeakerAvatar.setImageBitmap(bmp);
                                 } else {
-                                    imgSpeakerAvatar.setImageResource(R.drawable.ic_launcher);
+                                    imgSpeakerAvatar.setImageResource(R.drawable.ic_action_microphone);
                                 }
                             } else {
-                                imgSpeakerAvatar.setImageResource(R.drawable.ic_launcher);
+                                imgSpeakerAvatar.setImageResource(R.drawable.ic_action_microphone);
                             }
                         }
                     }
