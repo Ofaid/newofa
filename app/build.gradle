@@ -82,9 +82,10 @@ android {
 
     buildTypes {
         release {
-            // ✅ RILIS — Aman & Kecil
+            // ✅ RILIS — Lindungi nama, TAPI JANGAN buang berkas!
             minifyEnabled true
-            shrinkResources true
+            shrinkResources false  // ← SUDAH DIPERBAIKI!
+
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
                           'proguard-rules.pro'
 
@@ -96,8 +97,6 @@ android {
         }
 
         debug {
-            // ✅ Nama paket SAMA dengan rilis — biar semua HP bisa pasang
-            // versionNameSuffix "-debug"  // ← DIMATIKAN biar tidak beda nama
             if (android.hasProperty("signingConfigs")) {
                 if (signingConfigs.hasProperty("beta")) {
                     signingConfig = signingConfigs.beta
