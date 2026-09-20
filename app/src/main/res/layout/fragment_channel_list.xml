@@ -32,6 +32,7 @@
             android:layout_height="40dp"
             android:background="@drawable/bg_tombol_biru"
             android:src="@drawable/ic_action_microphone"
+           android:visibility="gone"
             android:tint="#FFFFFF"
             android:contentDescription="Mikrofon" />
 
@@ -57,37 +58,58 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="@drawable/bg_tombol_biru"
+           android:visibility="gone">
             android:src="@android:drawable/ic_menu_preferences"
             android:tint="#FFFFFF"
             android:contentDescription="Pengaturan" />
 
     </LinearLayout>
+<FrameLayout
+    android:id="@+id/bannerActiveSpeaker"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:layout_gravity="top"
+    android:layout_marginTop="52dp"
+    android:background="#212B64"
+    android:padding="12dp"
+    android:visibility="gone">
 
-    <!-- ✅ BANNER NAMA PEMBICARA -->
-    <FrameLayout
-        android:id="@+id/bannerActiveSpeaker"
+    <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_gravity="top"
-        android:layout_marginTop="52dp"
-        android:background="#D32F2F"
-        android:paddingTop="4dp"
-        android:paddingBottom="4dp"
-        android:paddingLeft="16dp"
-        android:paddingRight="16dp"
-        android:visibility="gone">
+        android:orientation="horizontal"
+        android:gravity="center_vertical">
 
-        <TextView
-            android:id="@+id/tvSpeakerName"
-            android:layout_width="wrap_content"
+        <ImageView
+            android:id="@+id/imgSpeakerAvatar"
+            android:layout_width="40dp"
+            android:layout_height="40dp"
+            android:layout_marginEnd="12dp"
+            android:src="@drawable/ic_launcher" />
+
+        <LinearLayout
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:textColor="@android:color/white"
-            android:textSize="15sp"
-            android:textStyle="bold"
-            android:drawablePadding="8dp"
-            android:gravity="center_vertical" />
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-    </FrameLayout>
+            <TextView
+                android:id="@+id/tvSpeakerName"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#FFFFFF"
+                android:textSize="15sp"
+                android:textStyle="bold" />
+
+            <TextView
+                android:id="@+id/tvSpeakerId"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:textColor="#B0BEC5"
+                android:textSize="12sp" />
+        </LinearLayout>
+    </LinearLayout>
+</FrameLayout>
+
 
 </FrameLayout>
