@@ -29,69 +29,75 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
-      - name: Pasang Android SDK
+      - name: Pasang Android SDK & NDK
         run: |
           SDK_DIR="/usr/local/lib/android/sdk"
           mkdir -p "$SDK_DIR/cmdline-tools"
           cd "$SDK_DIR/cmdline-tools"
-          wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
           unzip -q tools.zip
           rm tools.zip
           mv cmdline-tools latest
+          
+          # Install NDK versi stabil yang kompatibel
+          ./latest/bin/sdkmanager --install "ndk;25.2.9519653"
+          
           echo "ANDROID_SDK_ROOT=$SDK_DIR" >> $GITHUB_ENV
+          echo "NDK_PATH=$SDK_DIR/ndk/25.2.9519653" >> $GITHUB_ENV
 
-      - name: Pasang NDK
-        run: $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
-
-      - name: Lokasi SDK
+      - name: Buat local.properties
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
-          echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> local.properties
+          echo "ndk.dir=$NDK_PATH" >> local.properties
 
-      # ==============================================
-      # ✅ VERSI DIPERBAIKI — DI TEMPAT YANG BENAR
-      # ==============================================
-      - name: Siapkan tanda tangan — dipastikan di tempat yang benar
+      - name: Siapkan Tanda Tangan (Signing)
         run: |
-          # Pindah ke folder utama tempat build.gradle berada
           cd "${GITHUB_WORKSPACE}"
-          
-          # Buat berkas kunci di sini
+          # Decode keystore dari secret
           echo "$KEYSTORE_CONTENT" | base64 -d > ofaid_ptt_key.jks
           
-          # Buat signing.gradle DI SINI — tempat yang dicari build.gradle
-          cat > signing.gradle << 'EOF'
+          # Buat file signing.gradle dinamis
+          cat > signing.gradle << EOF
           android {
               signingConfigs {
                   release {
-                      storeFile file("ofaid_ptt_key.jks")
+                      storeFile file("${GITHUB_WORKSPACE}/ofaid_ptt_key.jks")
                       storePassword System.getenv("SIGN_STORE_PASSWORD")
                       keyAlias System.getenv("SIGN_KEY_ALIAS")
                       keyPassword System.getenv("SIGN_KEY_PASSWORD")
                   }
               }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
           }
           EOF
-          
-          # Cek terbukti ada
-          echo "✅ Berkas ada di tempat yang benar:"
-          pwd
-          ls -la signing.gradle ofaid_ptt_key.jks
+          echo "✅ Signing files ready"
 
       - name: Izin Gradle
         run: chmod +x gradlew libraries/humla/gradlew
 
-      - name: Bangun SpongyCastle
+      - name: Bangun SpongyCastle (Library Native)
         run: |
           cd libraries/humla/libs/humla-spongycastle
-          ../../../../gradlew jar
+          # Pastikan path gradlew benar sesuai struktur folder Cak
+          ../../../../gradlew jar --no-daemon
           cd ../../../../
 
       - name: Bangun APK RILIS
-        run: ./gradlew assembleRelease --stacktrace --no-daemon
+        run: |
+          # Build dengan inject signing config via CLI sebagai backup
+          ./gradlew assembleRelease \
+            -Pandroid.injected.signing.store.file=${GITHUB_WORKSPACE}/ofaid_ptt_key.jks \
+            -Pandroid.injected.signing.store.password=$SIGN_STORE_PASSWORD \
+            -Pandroid.injected.signing.key.alias=$SIGN_KEY_ALIAS \
+            -Pandroid.injected.signing.key.password=$SIGN_KEY_PASSWORD \
+            --stacktrace --no-daemon
 
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
-          name: OFAID-RILIS
-          path: "**/*.apk"
+          name: OFAID-RILIS-SIGNED
+          path: "**/*release*.apk"
