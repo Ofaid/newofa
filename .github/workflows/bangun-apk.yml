@@ -34,7 +34,7 @@ jobs:
           SDK_DIR="/usr/local/lib/android/sdk"
           mkdir -p "$SDK_DIR/cmdline-tools"
           cd "$SDK_DIR/cmdline-tools"
-          wget -O tools.zip https://google.com
+          wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q tools.zip
           rm tools.zip
           mv cmdline-tools latest
@@ -48,47 +48,29 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> local.properties
 
-      # === PENGATURAN TANDA TANGAN & BLOKIR PEMOTONGAN KODE SUB-MODUL ===
-      - name: Siapkan tanda tangan
+      # ==============================================
+      # ✅ HANYA BAGIAN INI — BUAT BERKASNYA DI TEMPAT YANG BENAR
+      # ==============================================
+      - name: Buat berkas tanda tangan
         run: |
-          # 1. Dekode kunci keystore langsung ke dalam subfolder 'app'
-          echo "$KEYSTORE_CONTENT" | base64 -d > app/ofaid_ptt_key.jks
+          # Sudah di folder utama, buat langsung di sini
+          echo "$KEYSTORE_CONTENT" | base64 -d > ofaid_ptt_key.jks
           
-          # 2. Buat skrip signing.gradle langsung di dalam subfolder 'app'
-          cat > app/signing.gradle << 'EOF'
-          android {
-              signingConfigs {
-                  release {
-                      storeFile file("ofaid_ptt_key.jks")
-                      storePassword System.getenv("SIGN_STORE_PASSWORD")
-                      keyAlias System.getenv("SIGN_KEY_ALIAS")
-                      keyPassword System.getenv("SIGN_KEY_PASSWORD")
-                  }
-              }
-              
-              // PAKSA: Menimpa tanda tangan rilis dan matikan minify untuk sub-modul humla
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                      minifyEnabled false
-                      shrinkResources false
-                  }
-              }
-          }
-          subprojects {
-              afterEvaluate { project ->
-                  if (project.hasProperty('android')) {
-                      project.android.buildTypes.release {
-                          minifyEnabled false
-                          shrinkResources false
-                      }
-                  }
-              }
-          }
-          EOF
+          cat > signing.gradle << 'EOF'
+android {
+    signingConfigs {
+        release {
+            storeFile file("ofaid_ptt_key.jks")
+            storePassword System.getenv("SIGN_STORE_PASSWORD")
+            keyAlias System.getenv("SIGN_KEY_ALIAS")
+            keyPassword System.getenv("SIGN_KEY_PASSWORD")
+        }
+    }
+}
+EOF
           
-          echo "Memverifikasi berkas konfigurasi di folder app:"
-          ls -la app/signing.gradle app/ofaid_ptt_key.jks
+          # Cek — harus muncul 2 berkas
+          ls -la signing.gradle ofaid_ptt_key.jks
 
       - name: Izin Gradle
         run: chmod +x gradlew libraries/humla/gradlew
@@ -99,12 +81,11 @@ jobs:
           ../../../../gradlew jar
           cd ../../../../
 
-      - name: Bangun APK — KODE UTUH
+      - name: Bangun APK
         run: ./gradlew assembleRelease --stacktrace --no-daemon
 
-      # === PENGAMBILAN ARTIFACT KHUSUS APK YANG SUDAH TER-SIGN ===
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
           name: OFAID-RILIS
-          path: "app/build/outputs/apk/goog/release/*.apk"
+          path: "**/*.apk"
