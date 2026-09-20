@@ -1,5 +1,5 @@
-name: Bangun Mumla
-run-name: Bangun Mumla
+name: Bangun OFA-PTT
+run-name: Bangun OFA-PTT
 
 on:
   push:
@@ -31,7 +31,6 @@ jobs:
         run: |
           rm -rf ~/.gradle/caches
           rm -rf ~/.gradle/wrapper
-          rm -rf /usr/local/lib/android/sdk/cmdline-tools
           ./gradlew clean --no-daemon || true
 
       - name: Siapkan Java
@@ -41,22 +40,12 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Pasang Android SDK Tools
-        run: |
-          SDK_DIR="/usr/local/lib/android/sdk"
-          mkdir -p "$SDK_DIR/cmdline-tools"
-          cd "$SDK_DIR/cmdline-tools"
-          
-          wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
-          unzip -q tools.zip
-          rm tools.zip
-          mv cmdline-tools latest
-          
-          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> $GITHUB_ENV
+      - name: Siapkan Android SDK
+        uses: android-actions/setup-android@v3
 
       - name: Pasang NDK
         run: |
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
+          ${ANDROID_SDK_ROOT}/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
 
       - name: Tulis lokasi SDK & NDK
         run: |
@@ -72,12 +61,11 @@ jobs:
           ../../../../gradlew jar
           cd ../../../../
 
-      # ✅ DIUBAH: RILIS — Bisa dipasang di SEMUA HP
-      - name: Bangun APK
-        run: ./gradlew assembleGoogRelease --stacktrace --no-daemon
+      - name: Bangun APK — Debug & Rilis
+        run: ./gradlew assembleDebug assembleGoogRelease --stacktrace --no-daemon
 
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
-          name: Rilis-APK
+          name: OFA-PTT-Hasil
           path: "**/*.apk"
