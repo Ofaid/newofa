@@ -82,7 +82,7 @@ android {
 
     buildTypes {
         release {
-            // ✅ PELINDUNG: Kaburkan & Kecilkan Kode
+            // ✅ RILIS — Aman & Kecil
             minifyEnabled true
             shrinkResources true
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
@@ -92,13 +92,12 @@ android {
                 if (signingConfigs.hasProperty("release")) {
                     signingConfig = signingConfigs.release
                 }
-                if (signingConfigs.hasProperty("beta")) {
-                    signingConfig = signingConfigs.beta
-                }
             }
         }
+
         debug {
-            versionNameSuffix "-debug"
+            // ✅ Nama paket SAMA dengan rilis — biar semua HP bisa pasang
+            // versionNameSuffix "-debug"  // ← DIMATIKAN biar tidak beda nama
             if (android.hasProperty("signingConfigs")) {
                 if (signingConfigs.hasProperty("beta")) {
                     signingConfig = signingConfigs.beta
@@ -138,7 +137,5 @@ dependencies {
     implementation 'info.guardianproject.netcipher:netcipher:2.1.0'
     implementation 'com.android.billingclient:billing:7.1.1'
     implementation 'com.google.code.gson:gson:2.10.1'
-
-    // ✅ GIF — SUDAH PASANG, TETAP AMAN
     implementation 'pl.droidsonroids.gif:android-gif-drawable:1.2.25'
 }
