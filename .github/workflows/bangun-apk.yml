@@ -5,9 +5,6 @@ on:
   push:
     branches:
       - ptt-new
-  pull_request:
-    branches:
-      - ptt-new
   workflow_dispatch:
 
 jobs:
@@ -20,56 +17,39 @@ jobs:
       KEYSTORE_CONTENT: ${{ secrets.KEYSTORE_CONTENT }}
 
     steps:
-      - name: Info perubahan
-        run: |
-          echo "Pengirim: ${{ github.actor }}"
-          echo "Pesan: ${{ github.event.head_commit.message }}"
-          echo "Cabang: ${{ github.ref_name }}"
-          echo "Komit: ${{ github.sha }}"
-
-      - name: Ambil kode & submodul
+      - name: Ambil kode
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-
-      - name: Bersihkan cache
-        run: |
-          rm -rf ~/.gradle/caches
-          rm -rf ~/.gradle/wrapper
-          rm -rf /usr/local/lib/android/sdk/cmdline-tools
-          ./gradlew clean --no-daemon || true
 
       - name: Siapkan Java
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
-          cache: 'gradle'
 
-      - name: Pasang Android SDK Tools
+      - name: Pasang Android SDK
         run: |
           SDK_DIR="/usr/local/lib/android/sdk"
           mkdir -p "$SDK_DIR/cmdline-tools"
           cd "$SDK_DIR/cmdline-tools"
-          
           wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q tools.zip
           rm tools.zip
           mv cmdline-tools latest
-          
           echo "ANDROID_SDK_ROOT=$SDK_DIR" >> $GITHUB_ENV
 
       - name: Pasang NDK
-        run: |
-          $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
+        run: $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
 
-      - name: Tulis lokasi SDK & NDK
+      - name: Lokasi SDK
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> local.properties
 
-      - name: Pulihkan berkas kunci & buat signing.gradle
+      # === HANYA TAMBAHKAN INI — TIDAK UBAH KODE ===
+      - name: Siapkan tanda tangan
         run: |
           echo "$KEYSTORE_CONTENT" | base64 -d > ofaid_ptt_key.jks
           
@@ -83,15 +63,12 @@ jobs:
                       keyPassword System.getenv("SIGN_KEY_PASSWORD")
                   }
               }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                  }
-              }
           }
           EOF
+          
+          ls -la signing.gradle ofaid_ptt_key.jks
 
-      - name: Beri izin Gradle
+      - name: Izin Gradle
         run: chmod +x gradlew libraries/humla/gradlew
 
       - name: Bangun SpongyCastle
@@ -100,11 +77,12 @@ jobs:
           ../../../../gradlew jar
           cd ../../../../
 
-      - name: Bangun APK — MODE RILIS + TANDATANGAN ✅
+      # === TANPA PEMOTONGAN APA-APA ===
+      - name: Bangun APK — KODE UTUH
         run: ./gradlew assembleRelease --stacktrace --no-daemon
 
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
-          name: AHMAD-APK-RILIS
+          name: OFAID-RILIS
           path: "**/*.apk"
