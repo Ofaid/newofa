@@ -1,0 +1,91 @@
+name: Bangun Mumla
+run-name: Bangun Mumla
+
+on:
+  push:
+    branches:
+      - ptt-new
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    env:
+      SIGN_STORE_PASSWORD: ${{ secrets.SIGN_STORE_PASSWORD }}
+      SIGN_KEY_PASSWORD: ${{ secrets.SIGN_KEY_PASSWORD }}
+      SIGN_KEY_ALIAS: ${{ secrets.SIGN_KEY_ALIAS }}
+      KEYSTORE_CONTENT: ${{ secrets.KEYSTORE_CONTENT }}
+
+    steps:
+      - name: Ambil kode
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+          fetch-depth: 0
+
+      - name: Siapkan Java
+        uses: actions/setup-java@v4
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - name: Pasang Android SDK
+        run: |
+          SDK_DIR="/usr/local/lib/android/sdk"
+          mkdir -p "$SDK_DIR/cmdline-tools"
+          cd "$SDK_DIR/cmdline-tools"
+          wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
+          unzip -q tools.zip
+          rm tools.zip
+          mv cmdline-tools latest
+          echo "ANDROID_SDK_ROOT=$SDK_DIR" >> $GITHUB_ENV
+
+      - name: Pasang NDK
+        run: $ANDROID_SDK_ROOT/cmdline-tools/latest/bin/sdkmanager --install "ndk;25.1.8937393"
+
+      - name: Lokasi SDK
+        run: |
+          echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
+          echo "ndk.dir=$ANDROID_SDK_ROOT/ndk/25.1.8937393" >> local.properties
+
+      # ==============================================
+      # ✅ HANYA BAGIAN INI — BUAT BERKASNYA DI TEMPAT YANG BENAR
+      # ==============================================
+      - name: Buat berkas tanda tangan
+        run: |
+          # Sudah di folder utama, buat langsung di sini
+          echo "$KEYSTORE_CONTENT" | base64 -d > ofaid_ptt_key.jks
+          
+          cat > signing.gradle << 'EOF'
+android {
+    signingConfigs {
+        release {
+            storeFile file("ofaid_ptt_key.jks")
+            storePassword System.getenv("SIGN_STORE_PASSWORD")
+            keyAlias System.getenv("SIGN_KEY_ALIAS")
+            keyPassword System.getenv("SIGN_KEY_PASSWORD")
+        }
+    }
+}
+EOF
+          
+          # Cek — harus muncul 2 berkas
+          ls -la signing.gradle ofaid_ptt_key.jks
+
+      - name: Izin Gradle
+        run: chmod +x gradlew libraries/humla/gradlew
+
+      - name: Bangun SpongyCastle
+        run: |
+          cd libraries/humla/libs/humla-spongycastle
+          ../../../../gradlew jar
+          cd ../../../../
+
+      - name: Bangun APK
+        run: ./gradlew assembleRelease --stacktrace --no-daemon
+
+      - name: Simpan APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: OFAID-RILIS
+          path: "**/*.apk"
