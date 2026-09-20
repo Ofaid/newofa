@@ -1,5 +1,5 @@
-name: Bangun Mumla
-run-name: Bangun Mumla
+name: Bangun Mumla (Unsigned)
+run-name: Bangun Mumla - APK Unsigned
 
 on:
   push:
@@ -11,10 +11,8 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      SIGN_STORE_PASSWORD: ${{ secrets.SIGN_STORE_PASSWORD }}
-      SIGN_KEY_PASSWORD: ${{ secrets.SIGN_KEY_PASSWORD }}
-      SIGN_KEY_ALIAS: ${{ secrets.SIGN_KEY_ALIAS }}
-      KEYSTORE_CONTENT: ${{ secrets.KEYSTORE_CONTENT }}
+      # Signing tidak lagi dibutuhkan di sini
+      ANDROID_SDK_ROOT: /usr/local/lib/android/sdk
 
     steps:
       - name: Ambil kode
@@ -32,19 +30,14 @@ jobs:
       - name: Pasang Android SDK & NDK
         run: |
           SDK_DIR="/usr/local/lib/android/sdk"
-          
-          # Hapus NDK bawaan runner yang konflik
           rm -rf "$SDK_DIR/ndk/25.2.9519653"
           rm -rf "$SDK_DIR/ndk-bundle"
           
           mkdir -p "$SDK_DIR/cmdline-tools"
           cd "$SDK_DIR/cmdline-tools"
           wget -q https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip -O tools.zip
-          unzip -q tools.zip
-          rm tools.zip
-          mv cmdline-tools latest
+          unzip -q tools.zip && rm tools.zip && mv cmdline-tools latest
           
-          # Install NDK versi 25.1.8937393 sesuai permintaan project
           ./latest/bin/sdkmanager --install "ndk;25.1.8937393"
           
           echo "ANDROID_SDK_ROOT=$SDK_DIR" >> $GITHUB_ENV
@@ -55,62 +48,22 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ndk.dir=$NDK_PATH" >> local.properties
 
-      - name: Siapkan Tanda Tangan (Signing)
-        run: |
-          cd "${GITHUB_WORKSPACE}"
-          
-          # Decode keystore tanpa validasi keytool yang ketat
-          echo "$KEYSTORE_CONTENT" | base64 -d > ofaid_ptt_key.jks
-          
-          # Cek apakah file berhasil di-decode dan ukurannya masuk akal (>1KB)
-          if [ ! -s ofaid_ptt_key.jks ]; then
-            echo " ERROR: File keystore kosong atau gagal di-decode!"
-            exit 1
-          fi
-          
-          FILE_SIZE=$(wc -c < ofaid_ptt_key.jks)
-          echo "✅ File keystore berhasil di-decode. Ukuran: ${FILE_SIZE} bytes"
-          
-          # Buat signing.gradle dinamis
-          cat > signing.gradle << EOF
-          android {
-              signingConfigs {
-                  release {
-                      storeFile file("${GITHUB_WORKSPACE}/ofaid_ptt_key.jks")
-                      storePassword System.getenv("SIGN_STORE_PASSWORD")
-                      keyAlias System.getenv("SIGN_KEY_ALIAS")
-                      keyPassword System.getenv("SIGN_KEY_PASSWORD")
-                  }
-              }
-              buildTypes {
-                  release {
-                      signingConfig signingConfigs.release
-                  }
-              }
-          }
-          EOF
-          echo "✅ Signing config siap."
-
       - name: Izin Gradle
         run: chmod +x gradlew libraries/humla/gradlew
 
-      - name: Bangun SpongyCastle (Library Native)
+      - name: Bangun SpongyCastle
         run: |
           cd libraries/humla/libs/humla-spongycastle
           ../../../../gradlew jar --no-daemon
           cd ../../../../
 
-      - name: Bangun APK RILIS
+      - name: Bangun APK UNSIGNED
         run: |
           ./gradlew assembleRelease \
-            -Pandroid.injected.signing.store.file=${GITHUB_WORKSPACE}/ofaid_ptt_key.jks \
-            -Pandroid.injected.signing.store.password="$SIGN_STORE_PASSWORD" \
-            -Pandroid.injected.signing.key.alias="$SIGN_KEY_ALIAS" \
-            -Pandroid.injected.signing.key.password="$SIGN_KEY_PASSWORD" \
             --stacktrace --no-daemon
 
-      - name: Simpan APK
+      - name: Simpan APK Unsigned
         uses: actions/upload-artifact@v4
         with:
-          name: OFAID-RILIS-SIGNED
+          name: OFAID-UNSIGNED-APK
           path: "**/*release*.apk"
