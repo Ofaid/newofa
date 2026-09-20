@@ -12,18 +12,13 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04   # ✅ Pakai versi yang stabil
+    runs-on: ubuntu-22.04
     steps:
       - name: Ambil kode
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
-
-      - name: Bersihkan
-        run: |
-          rm -rf ~/.gradle/caches
-          ./gradlew clean --no-daemon || true
 
       - name: Java 21
         uses: actions/setup-java@v4
@@ -32,17 +27,20 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # ✅ Pakai alat yang sudah ada — TIDAK PERLU UPDATE APA-APA
+      # ✅ PERSIS SARAN GITHUB — TANPA api-level, TANPA build-tools lama
       - name: Android SDK
         uses: android-actions/setup-android@v3
         with:
-          api-level: 34
-          build-tools: "34.0.0"
+          packages: |
+            platform-tools
+            platforms;android-34
+            build-tools;34.0.0
+          accept-android-sdk-licenses: true
 
       - name: Lokasi SDK
         run: echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      - name: Izin
+      - name: Beri izin
         run: chmod +x gradlew libraries/humla/gradlew
 
       - name: Bangun SpongyCastle
@@ -54,12 +52,8 @@ jobs:
       - name: Bangun APK Debug
         run: ./gradlew assembleDebug --no-daemon
 
-      - name: Tampilkan lokasi APK
-        run: find . -name "*-debug.apk" -type f
-
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
           name: OFA-PTT-DEBUG
-          path: "**/*-debug.apk"
-          if-no-files-found: error
+          path: "app/build/outputs/apk/debug/*.apk"
