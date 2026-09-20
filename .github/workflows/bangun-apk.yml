@@ -41,14 +41,12 @@ jobs:
           distribution: 'temurin'
           cache: 'gradle'
 
-      # ✅ Hapus yang rusak → pasang yang versi terbukti baik
       - name: Pasang Android SDK Tools
         run: |
           SDK_DIR="/usr/local/lib/android/sdk"
           mkdir -p "$SDK_DIR/cmdline-tools"
           cd "$SDK_DIR/cmdline-tools"
           
-          # Unduh versi yang alamatnya benar
           wget -O tools.zip https://dl.google.com/android/repository/commandlinetools-linux-11076708_latest.zip
           unzip -q tools.zip
           rm tools.zip
@@ -74,12 +72,12 @@ jobs:
           ../../../../gradlew jar
           cd ../../../../
 
+      # ✅ DIUBAH: RILIS — Bisa dipasang di SEMUA HP
       - name: Bangun APK
-        run: ./gradlew assembleDebug --stacktrace --no-daemon
+        run: ./gradlew assembleGoogRelease --stacktrace --no-daemon
 
       - name: Simpan APK
         uses: actions/upload-artifact@v4
         with:
-          name: AHMAD-APK
+          name: Rilis-APK
           path: "**/*.apk"
-
