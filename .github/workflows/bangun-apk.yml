@@ -12,40 +12,43 @@ on:
 
 jobs:
   build:
-    runs-on: ubuntu-22.04
+    runs-on: ubuntu-latest
     steps:
-      - name: Info
+      - name: Info perubahan
         run: |
           echo "Pengirim: ${{ github.actor }}"
+          echo "Pesan: ${{ github.event.head_commit.message }}"
           echo "Cabang: ${{ github.ref_name }}"
+          echo "Komit: ${{ github.sha }}"
 
-      - name: Ambil kode
+      - name: Ambil kode & submodul
         uses: actions/checkout@v4
         with:
           submodules: recursive
           fetch-depth: 0
 
-      - name: Bersihkan
+      - name: Bersihkan cache
         run: |
           rm -rf ~/.gradle/caches
+          rm -rf ~/.gradle/wrapper
           ./gradlew clean --no-daemon || true
 
-      - name: Java 21
+      - name: Siapkan Java
         uses: actions/setup-java@v4
         with:
           java-version: '21'
           distribution: 'temurin'
           cache: 'gradle'
 
-      - name: Android SDK
+      - name: Siapkan Android SDK
         uses: android-actions/setup-android@v3
 
-      # ✅ TIDAK PASANG NDK SAMA SEKALI — biarkan otomatis
+      # ✅ TANPA PASANG NDK — biarkan otomatis, tidak dipaksa
       - name: Tulis lokasi SDK
         run: |
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
 
-      - name: Beri izin
+      - name: Beri izin Gradle
         run: chmod +x gradlew libraries/humla/gradlew
 
       - name: Bangun SpongyCastle
@@ -54,7 +57,7 @@ jobs:
           ../../../../gradlew jar
           cd ../../../../
 
-      - name: Bangun APK Debug
+      - name: Bangun APK — Debug
         run: ./gradlew assembleDebug --stacktrace --no-daemon
 
       - name: Simpan APK
