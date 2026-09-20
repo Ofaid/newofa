@@ -100,7 +100,7 @@ public class ChannelListFragment extends HumlaServiceFragment
                     bannerActiveSpeaker.setVisibility(View.GONE);
                     if (tvSpeakerName != null) tvSpeakerName.setText("");
                     if (tvSpeakerId != null) tvSpeakerId.setText("");
-                    if (imgSpeakerAvatar != null) imgSpeakerAvatar.setImageResource(R.drawable.ic_action_microphone);
+                    if (imgSpeakerAvatar != null) imgSpeakerAvatar.setImageResource(R.drawable.ic_launcher);
                     currentSpeakerSessionId = -1;
                 })
                 .start();
@@ -333,81 +333,79 @@ public class ChannelListFragment extends HumlaServiceFragment
         }
 
         // === INTI — PERBARUI BANNER SAAT ADA YANG BICARA ===
-        @Override
-        public void onUserTalkStateUpdated(IUser user) {
-            if (mChannelListAdapter != null && mChannelView != null) {
-                mChannelListAdapter.updateUserStates(user, mChannelView);
-            }
-            if (getActivity() == null || isDetached()) return;
-            
-            getActivity().runOnUiThread(() -> {
-                bannerHideHandler.removeCallbacks(bannerHideRunnable);
-                int sesiUser = user.getSession();
-                
-                // Cek apakah sedang bicara
-                boolean sedangBicara = user.getTalkState() == TalkState.TALKING
-                    || user.getTalkState() == TalkState.SHOUTING
-                    || user.getTalkState() == TalkState.WHISPERING;
+   @Override
+public void onUserTalkStateUpdated(IUser user) {
+    if (mChannelListAdapter != null && mChannelView != null) {
+        mChannelListAdapter.updateUserStates(user, mChannelView);
+    }
+    if (getActivity() == null || isDetached()) return;
+    
+    getActivity().runOnUiThread(() -> {
+        // HAPUS hitungan mundur lama
+        bannerHideHandler.removeCallbacks(bannerHideRunnable);
+        
+        int sesiUser = user.getSession();
+        boolean sedangBicara = user.getTalkState() == TalkState.TALKING
+            || user.getTalkState() == TalkState.SHOUTING
+            || user.getTalkState() == TalkState.WHISPERING;
 
-                if (sedangBicara) {
-                    // Munculkan & perbarui banner
-                    if (bannerActiveSpeaker != null) {
-                        bannerActiveSpeaker.setVisibility(View.VISIBLE);
-                        bannerActiveSpeaker.setAlpha(1f);
-                    }
-                    
-                    // Ganti pembicara kalau orangnya beda
-                    if (currentSpeakerSessionId != sesiUser) {
-                        currentSpeakerSessionId = sesiUser;
-                        
-                        // Tampil Nama
-                        if (tvSpeakerName != null) {
-                            tvSpeakerName.setText(user.getName());
-                        }
-                        
-                        // Tampil OFA-ID
-                        if (tvSpeakerId != null) {
-                            String ofaIdTampil;
-                            Context ctx = getContext();
-                            try {
-                                IHumlaSession sesi = getService().HumlaSession();
-                                if (sesiUser == sesi.getSessionId()) {
-                                    // Diri sendiri → pakai ID terkunci
-                                    ofaIdTampil = OfaIdentity.getSingkat(ctx);
-                                } else {
-                                    // Orang lain → buatkan ID tampilan
-                                    int uid = user.getUserId();
-                                    ofaIdTampil = "OFA-" + Integer.toHexString(uid).toUpperCase();
-                                }
-                            } catch (Exception e) {
-                                ofaIdTampil = "OFA-" + sesiUser;
-                            }
-                            tvSpeakerId.setText(ofaIdTampil);
-                        }
-                        
-                        // Tampil Foto Profil
-                        if (imgSpeakerAvatar != null) {
-                            byte[] dataFoto = user.getTexture();
-                            if (dataFoto != null && dataFoto.length > 0) {
-                                Bitmap bmp = BitmapFactory.decodeByteArray(dataFoto, 0, dataFoto.length);
-                                if (bmp != null) {
-                                    imgSpeakerAvatar.setImageBitmap(bmp);
-                                } else {
-                                    imgSpeakerAvatar.setImageResource(R.drawable.ic_action_microphone);
-                                }
-                            } else {
-                                imgSpeakerAvatar.setImageResource(R.drawable.ic_action_microphone);
-                            }
-                        }
-                    }
-                    
-                    // Tunggu diam → sembunyikan
-                    bannerHideHandler.postDelayed(bannerHideRunnable, 800);
+        if (sedangBicara) {
+            // ✅ DITEKAN → MUNCUL & TETAP MUNCUL, TIDAK HILANG SENDIRI
+            if (bannerActiveSpeaker != null) {
+                bannerActiveSpeaker.setVisibility(View.VISIBLE);
+                bannerActiveSpeaker.setAlpha(1f);
+            }
+            
+            // Perbarui isi hanya kalau orangnya beda
+            if (currentSpeakerSessionId != sesiUser) {
+                currentSpeakerSessionId = sesiUser;
+                
+                if (tvSpeakerName != null) {
+                    tvSpeakerName.setText(user.getName());
                 }
-                // Kalau tidak bicara: biarkan berjalan bannerHideRunnable yang sudah terpasang
-            });
+                
+                if (tvSpeakerId != null) {
+                    String ofaIdTampil;
+                    Context ctx = getContext();
+                    try {
+                        IHumlaSession sesi = getService().HumlaSession();
+                        if (sesiUser == sesi.getSessionId()) {
+                            ofaIdTampil = OfaIdentity.getSingkat(ctx);
+                        } else {
+                            int uid = user.getUserId();
+                            ofaIdTampil = "OFA-" + Integer.toHexString(uid).toUpperCase();
+                        }
+                    } catch (Exception e) {
+                        ofaIdTampil = "OFA-" + sesiUser;
+                    }
+                    tvSpeakerId.setText(ofaIdTampil);
+                }
+                
+                if (imgSpeakerAvatar != null) {
+                    byte[] dataFoto = user.getTexture();
+                    if (dataFoto != null && dataFoto.length > 0) {
+                        Bitmap bmp = BitmapFactory.decodeByteArray(dataFoto, 0, dataFoto.length);
+                        if (bmp != null) {
+                            imgSpeakerAvatar.setImageBitmap(bmp);
+                        } else {
+                            imgSpeakerAvatar.setImageResource(R.drawable.ic_action_microphone);
+                        }
+                    } else {
+                        imgSpeakerAvatar.setImageResource(R.drawable.ic_action_microphone);
+                    }
+                }
+            }
+            
+            // ⚡ PENTING: TIDAK pasang hitungan mundur saat bicara!
+            // Tetap tampil selama PTT ditekan
+        } else {
+            // ✅ DILEPAS → baru tunggu sebentar lalu hilang
+            bannerHideHandler.removeCallbacks(bannerHideRunnable);
+            bannerHideHandler.postDelayed(bannerHideRunnable, 1500); // 1,5 detik
         }
-    };
+    });
+}
+//======Batas ahir Baner
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
