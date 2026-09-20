@@ -396,7 +396,7 @@ public void onUserTalkStateUpdated(IUser user) {
                 }
             }
             
-            // ⚡ PENTING: TIDAK pasang hitungan mundur saat bicara!
+                  // ⚡ PENTING: TIDAK pasang hitungan mundur saat bicara!
             // Tetap tampil selama PTT ditekan
         } else {
             // ✅ DILEPAS → baru tunggu sebentar lalu hilang
@@ -405,7 +405,31 @@ public void onUserTalkStateUpdated(IUser user) {
         }
     });
 }
-//======Batas ahir Baner
+//====== Batas akhir Banner ✅
+
+// === TAMBAHKAN INI DI BAWAH INI ===
+private Handler bannerHideHandler = new Handler(Looper.getMainLooper());
+private int currentSpeakerSessionId = -1;
+
+private Runnable bannerHideRunnable = new Runnable() {
+    @Override
+    public void run() {
+        if (bannerActiveSpeaker != null) {
+            bannerActiveSpeaker.animate()
+                .alpha(0f)
+                .setDuration(300)
+                .withEndAction(() -> {
+                    bannerActiveSpeaker.setVisibility(View.GONE);
+                    bannerActiveSpeaker.setAlpha(1f);
+                })
+                .start();
+        }
+        currentSpeakerSessionId = -1;
+    }
+};
+
+// ✅ PENUTUP KELAS — INI YANG KURANG!
+}
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
