@@ -1,16 +1,41 @@
 # ==================================================
-# ✅ PELINDUNG OFAID — JANGAN DIUBAH!
+# 🔒 PUNYA KITA — DILINDUNGI (nama berubah, isi tetap)
 # ==================================================
+# Hanya nama disembunyikan, TAPI isinya TIDAK dibuang!
+-keepnames class ofaid.ahmad.ptt.** { *; }
+-keepnames class ofaid.ahmad.ptt.ofa.** { *; }
 
--keep class ofaid.ahmad.ptt.** { *; }
--keepnames class ofaid.ahmad.ptt.**
--keepclassmembers class ofaid.ahmad.ptt.** { *; }
+# Khusus fungsi penting — biarkan tetap bisa dipanggil
+-keepclassmembers class ofaid.ahmad.ptt.ofa.OfaIdentity {
+    public <methods>;
+}
 
--keepclassmembers class se.lublin.mumla.util.AvatarUtil { *; }
--keepclassmembers class ofaid.ahmad.ptt.util.OfaIdentity { *; }
+# ==================================================
+# ✅ MUMLA ASLI — TETAP UTUH, JANGAN DIUBAH!
+# ==================================================
+-keep class se.lublin.humla.** { *; }
+-keep interface se.lublin.humla.** { *; }
+-keepnames class se.lublin.humla.** { *; }
 
+# ==================================================
+# ✅ FUNGSI SAMBUNG SERVER — WAJIB UTUH!
+# ==================================================
+-keepclassmembers class se.lublin.humla.model.ServerInfo {
+    public java.lang.String getAddress();
+    public int getPort();
+}
+
+# ==================================================
+# ✅ PUSTAKA PENDUKUNG — TETAP BERFUNGSI
+# ==================================================
 -keep class pl.droidsonroids.gif.** { *; }
 -dontwarn pl.droidsonroids.gif.**
 
+-keep class org.spongycastle.** { *; }
+-dontwarn org.spongycastle.**
+
+# ==================================================
+# ✅ PELACAKAN — BOLEH DIUBAH NAMA
+# ==================================================
 -keepattributes SourceFile,LineNumberTable
 -renamesourcefileattribute SumberOFAID
