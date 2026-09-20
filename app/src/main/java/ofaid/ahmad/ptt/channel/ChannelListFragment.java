@@ -1,6 +1,7 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Modif By Ofaid 2026*/
+ * Modif By Ofaid 2026 — Tampil Foto+Nama+ID di Banner Atas
+ */
 
 package ofaid.ahmad.ptt.channel;
 
@@ -15,6 +16,8 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.database.CursorWrapper;
 import android.graphics.PorterDuff;
 import android.location.Address;
@@ -36,6 +39,7 @@ import android.view.MenuItem;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
@@ -55,6 +59,8 @@ import se.lublin.humla.IHumlaService;
 import se.lublin.humla.IHumlaSession;
 import se.lublin.humla.model.IChannel;
 import se.lublin.humla.model.IUser;
+import se.lublin.humla.model.TalkState;
+import se.lublin.humla.util.HumlaDisconnectedException;
 import se.lublin.humla.util.HumlaException;
 import se.lublin.humla.util.HumlaObserver;
 import se.lublin.humla.util.IHumlaObserver;
@@ -77,9 +83,12 @@ public class ChannelListFragment extends HumlaServiceFragment
     private static final String TAG = ChannelListFragment.class.getName();
     private static final int KODE_IZIN_LOKASI = 1001;
 
+    // === BANNER PEMBICARA — DIPERLUAS ===
     private FrameLayout bannerActiveSpeaker;
+    private ImageView imgSpeakerAvatar;
     private TextView tvSpeakerName;
-    private String currentSpeakerName = null;
+    private TextView tvSpeakerId;
+    private int currentSpeakerSessionId = -1;
 
     private final Handler bannerHideHandler = new Handler(Looper.getMainLooper());
     private final Runnable bannerHideRunnable = () -> {
@@ -89,13 +98,16 @@ public class ChannelListFragment extends HumlaServiceFragment
                 .setDuration(200)
                 .withEndAction(() -> {
                     bannerActiveSpeaker.setVisibility(View.GONE);
-                    tvSpeakerName.setText("");
-                    currentSpeakerName = null;
+                    if (tvSpeakerName != null) tvSpeakerName.setText("");
+                    if (tvSpeakerId != null) tvSpeakerId.setText("");
+                    if (imgSpeakerAvatar != null) imgSpeakerAvatar.setImageResource(R.drawable.ic_launcher);
+                    currentSpeakerSessionId = -1;
                 })
                 .start();
         }
     };
-    
+
+    // === VISUALIZER & LOKASI ===
     private BroadcastReceiver mPenerimaLevel;
     private BroadcastReceiver mPenerimaMonitor;
     private NeonVisualizerView mVisualNeon;
@@ -121,15 +133,14 @@ public class ChannelListFragment extends HumlaServiceFragment
     private ActionMode mActionMode;
     private Settings mSettings;
 
-   private String getMyOfaId() {
-    Context ctx = getContext();
-    if (ctx == null) return null;
-    // ✅ Ambil dari SATU SUMBER — sama dengan adapter & tampilan lain
-    return OfaIdentity.getGlobalOfaId(ctx);
-}
+    // === ID OFA ===
+    private String getMyOfaId() {
+        Context ctx = getContext();
+        if (ctx == null) return null;
+        return OfaIdentity.getSingkat(ctx);
+    }
 
-
-  private void kirimStatusPengguna(String statusTeks) {
+    private void kirimStatusPengguna(String statusTeks) {
         String idOFA = getMyOfaId();
         if (idOFA == null || idOFA.trim().isEmpty()) {
             Log.w(TAG, "ID OFA belum tersedia");
@@ -253,49 +264,27 @@ public class ChannelListFragment extends HumlaServiceFragment
     }
 
     private void kirimLokasiKeServer(String teksLokasi) {
-         if (getService() == null || !getService().isConnected()) return;
-         try {
-             IHumlaSession sesi = getService().HumlaSession();
-             IUser saya = sesi.getSessionUser();
-             if (saya == null) return;
-             int sesiSaya = saya.getSession();
-             String keteranganLama = saya.getComment();
-             
-             if (keteranganLama == null || keteranganLama.trim().isEmpty()) {
-                 sesi.setUserComment(sesiSaya, teksLokasi);
-             } else if (keteranganLama.trim().equals(teksLokasi.trim())) {
-                 return;
-             } else {
-                 sesi.setUserComment(sesiSaya, teksLokasi);
-             }
-         } catch (Exception e) {
-             Log.e(TAG, "Gagal kirim lokasi", e);
-         }
-     }
+        if (getService() == null || !getService().isConnected()) return;
+        try {
+            IHumlaSession sesi = getService().HumlaSession();
+            IUser saya = sesi.getSessionUser();
+            if (saya == null) return;
+            int sesiSaya = saya.getSession();
+            String keteranganLama = saya.getComment();
+            String keteranganBaru = (keteranganLama == null || keteranganLama.trim().isEmpty())
+                ? teksLokasi
+                : keteranganLama + "\n" + teksLokasi;
+            sesi.setUserComment(sesiSaya, keteranganBaru);
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal kirim lokasi", e);
+        }
+    }
 
-/*========================= PEMANTAU =========================*/
+    // === PEMANTAU PERUBAHAN STATUS ===
     private final IHumlaObserver mServiceObserver = new HumlaObserver() {
         @Override
         public void onDisconnected(HumlaException e) {
             if (mChannelView != null) mChannelView.setAdapter(null);
-        }
-
-        @Override
-        public void onUserConnected(IUser user) {
-            if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
-            
-            // ✅ OTOMATIS DAFTAR JIKA BELUM TERDAFTAR
-            if (user.getUserId() < 0 &&
-                user.getHash() != null && !user.getHash().isEmpty() &&
-                getService() != null && getService().isConnected()) {
-                try {
-                    IHumlaSession sesi = getService().HumlaSession();
-                    sesi.registerUser(user.getSession());
-                    Log.i("OFA_AUTOREG", "📤 Otomatis daftar: " + user.getName());
-                } catch (Exception e) {
-                    Log.e("OFA_AUTOREG", "Gagal daftar: " + user.getName(), e);
-                }
-            }
         }
 
         @Override
@@ -321,6 +310,9 @@ public class ChannelListFragment extends HumlaServiceFragment
         @Override public void onChannelStateUpdated(IChannel channel) {
             if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
         }
+        @Override public void onUserConnected(IUser user) {
+            if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
+        }
         @Override public void onUserRemoved(IUser user, String reason) {
             if (mChannelListAdapter != null) mChannelListAdapter.updateChannels();
         }
@@ -328,21 +320,6 @@ public class ChannelListFragment extends HumlaServiceFragment
         @Override
         public void onUserStateUpdated(IUser user) {
             super.onUserStateUpdated(user);
-            
-            // ✅ CEK ULANG & DAFTARKAN JIKA BELUM TERDAFTAR
-            if (user != null && user.getUserId() < 0 &&
-                user.getHash() != null && !user.getHash().isEmpty() &&
-                getService() != null && getService().isConnected()) {
-                try {
-                    IHumlaSession sesi = getService().HumlaSession();
-                    sesi.registerUser(user.getSession());
-                    Log.i("OFA_AUTOREG", "📤 Cek ulang daftar: " + user.getName());
-                } catch (Exception e) {
-                    Log.e("OFA_AUTOREG", "Gagal daftar: " + user.getName(), e);
-                }
-            }
-            
-            // ✅ PERBARUI TAMPILAN
             if (mChannelListAdapter != null && mChannelView != null && user != null) {
                 mChannelListAdapter.refreshUserStatus(user.getSession());
                 int posisi = mChannelListAdapter.getUserPositionBySession(user.getSession());
@@ -355,30 +332,82 @@ public class ChannelListFragment extends HumlaServiceFragment
             }
         }
 
+        // === INTI — PERBARUI BANNER SAAT ADA YANG BICARA ===
         @Override
         public void onUserTalkStateUpdated(IUser user) {
             if (mChannelListAdapter != null && mChannelView != null) {
                 mChannelListAdapter.updateUserStates(user, mChannelView);
             }
-            if (getActivity() != null && !isDetached()) {
-                getActivity().runOnUiThread(() -> {
-                    bannerHideHandler.removeCallbacks(bannerHideRunnable);
-                    String displayName = user.getName();
-                    if (!displayName.equals(currentSpeakerName)) {
-                        currentSpeakerName = displayName;
-                        if (tvSpeakerName != null) tvSpeakerName.setText(displayName);
-                    }
-                    if (bannerActiveSpeaker != null &&
-                        bannerActiveSpeaker.getVisibility() != View.VISIBLE) {
+            if (getActivity() == null || isDetached()) return;
+            
+            getActivity().runOnUiThread(() -> {
+                bannerHideHandler.removeCallbacks(bannerHideRunnable);
+                int sesiUser = user.getSession();
+                
+                // Cek apakah sedang bicara
+                boolean sedangBicara = user.getTalkState() == TalkState.TALKING
+                    || user.getTalkState() == TalkState.SHOUTING
+                    || user.getTalkState() == TalkState.WHISPERING;
+
+                if (sedangBicara) {
+                    // Munculkan & perbarui banner
+                    if (bannerActiveSpeaker != null) {
                         bannerActiveSpeaker.setVisibility(View.VISIBLE);
                         bannerActiveSpeaker.setAlpha(1f);
                     }
-                    bannerHideHandler.postDelayed(bannerHideRunnable, 500);
-                });
-            }
+                    
+                    // Ganti pembicara kalau orangnya beda
+                    if (currentSpeakerSessionId != sesiUser) {
+                        currentSpeakerSessionId = sesiUser;
+                        
+                        // Tampil Nama
+                        if (tvSpeakerName != null) {
+                            tvSpeakerName.setText(user.getName());
+                        }
+                        
+                        // Tampil OFA-ID
+                        if (tvSpeakerId != null) {
+                            String ofaIdTampil;
+                            Context ctx = getContext();
+                            try {
+                                IHumlaSession sesi = getService().HumlaSession();
+                                if (sesiUser == sesi.getSessionId()) {
+                                    // Diri sendiri → pakai ID terkunci
+                                    ofaIdTampil = OfaIdentity.getSingkat(ctx);
+                                } else {
+                                    // Orang lain → buatkan ID tampilan
+                                    int uid = user.getUserId();
+                                    ofaIdTampil = "OFA-" + Integer.toHexString(uid).toUpperCase();
+                                }
+                            } catch (Exception e) {
+                                ofaIdTampil = "OFA-" + sesiUser;
+                            }
+                            tvSpeakerId.setText(ofaIdTampil);
+                        }
+                        
+                        // Tampil Foto Profil
+                        if (imgSpeakerAvatar != null) {
+                            byte[] dataFoto = user.getTexture();
+                            if (dataFoto != null && dataFoto.length > 0) {
+                                Bitmap bmp = BitmapFactory.decodeByteArray(dataFoto, 0, dataFoto.length);
+                                if (bmp != null) {
+                                    imgSpeakerAvatar.setImageBitmap(bmp);
+                                } else {
+                                    imgSpeakerAvatar.setImageResource(R.drawable.ic_launcher);
+                                }
+                            } else {
+                                imgSpeakerAvatar.setImageResource(R.drawable.ic_launcher);
+                            }
+                        }
+                    }
+                    
+                    // Tunggu diam → sembunyikan
+                    bannerHideHandler.postDelayed(bannerHideRunnable, 800);
+                }
+                // Kalau tidak bicara: biarkan berjalan bannerHideRunnable yang sudah terpasang
+            });
         }
     };
-/*=======================*/
 
     private final BroadcastReceiver mBluetoothReceiver = new BroadcastReceiver() {
         @Override
@@ -412,8 +441,12 @@ public class ChannelListFragment extends HumlaServiceFragment
         View view = inflater.inflate(R.layout.fragment_channel_list, container, false);
         mChannelView = view.findViewById(R.id.channelUsers);
         mChannelView.setLayoutManager(new LinearLayoutManager(getActivity()));
+        
+        // === SAMBUNGKAN BANNER ===
         bannerActiveSpeaker = view.findViewById(R.id.bannerActiveSpeaker);
+        imgSpeakerAvatar = view.findViewById(R.id.imgSpeakerAvatar);
         tvSpeakerName = view.findViewById(R.id.tvSpeakerName);
+        tvSpeakerId = view.findViewById(R.id.tvSpeakerId);
         
         mVisualNeon = view.findViewById(R.id.neonVisualizer);
         mVisualMonitor = view.findViewById(R.id.visualizerMonitor);
@@ -426,6 +459,7 @@ public class ChannelListFragment extends HumlaServiceFragment
         super.onViewCreated(view, savedInstanceState);
         mintaIzinLokasiOtomatis();
         
+        // 🎤 Penerima untuk Neon (suara sendiri)
         mPenerimaLevel = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
@@ -439,12 +473,12 @@ public class ChannelListFragment extends HumlaServiceFragment
         };
         requireContext().registerReceiver(mPenerimaLevel, new IntentFilter("ofaid.ahmad.ptt.LEVEL_SUARA"));
 
+        // 📊 Penerima untuk Monitor (suara teman)
         mPenerimaMonitor = new BroadcastReceiver() {
             @Override
             public void onReceive(Context context, Intent intent) {
                 if ("ofaid.ahmad.ptt.LEVEL_MONITOR".equals(intent.getAction())) {
                     float level = intent.getFloatExtra("level", 0f);
-                    
                     level = level * 5f;
                     if (level > 1f) level = 1f;
                     
