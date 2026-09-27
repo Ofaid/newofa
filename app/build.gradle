@@ -20,22 +20,6 @@ repositories {
     maven { url 'https://jitpack.io' }
 }
 
-// ✅ SIGNING CONFIGS MODEL TEAMTALK5D (PAKE DEBUG KEYSTORE TANPA SECRET CODE)
-signingConfigs {
-    release {
-        storeFile file(System.getProperty("user.home") + "/.android/debug.keystore")
-        storePassword "android"
-        keyAlias "androiddebugkey"
-        keyPassword "android"
-        
-        // ✅ METODE SIGNING TERBARU (V1, V2, V3, V4)
-        enableV1Signing = true
-        enableV2Signing = true
-        enableV3Signing = true
-        enableV4Signing = false // Set true kalau mau upload ke Play Store
-    }
-}
-
 allprojects {
     repositories {
         google()
@@ -51,6 +35,34 @@ android {
     namespace = 'ofaid.ahmad.ptt'
     compileSdk = 36
 
+    // ✅ SIGNING CONFIGS DENGAN FALLBACK DEBUG KEYSTORE (AMAN UNTUK GITHUB ACTIONS)
+    signingConfigs {
+        release {
+            def ksFile = rootProject.file('keystore.properties')
+            def ks = new Properties()
+            
+            if (ksFile.exists()) {
+                // Mode HP: Pakai keystore.properties
+                ksFile.withInputStream { ks.load(it) }
+                storeFile = rootProject.file(ks['storeFile'])
+                storePassword = ks['storePassword']
+                keyAlias = ks['keyAlias']
+                keyPassword = ks['keyPassword']
+            } else {
+                // Mode GitHub Actions: Pakai debug keystore bawaan sistem
+                storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
+                storePassword = "android"
+                keyAlias = "androiddebugkey"
+                keyPassword = "android"
+            }
+            
+            enableV1Signing = true
+            enableV2Signing = true
+            enableV3Signing = true
+            enableV4Signing = false
+        }
+    }
+
     defaultConfig {
         minSdkVersion 21
         targetSdk 36
@@ -59,7 +71,6 @@ android {
         versionName "3.7.3"
         
         multiDexEnabled true 
-        
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
 
@@ -68,7 +79,7 @@ android {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig = signingConfigs.release  // ✅ LANGSUNG ASSIGN TANPA IF-CHECK
+            signingConfig = signingConfigs.release // ✅ LANGSUNG ASSIGN, TANPA IF-CHECK LAGI
         }
         
         debug {
