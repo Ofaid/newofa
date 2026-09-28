@@ -20,6 +20,11 @@ repositories {
     maven { url 'https://jitpack.io' }
 }
 
+def signingFile = file('signing.gradle')
+if (signingFile.exists()) apply from: signingFile
+def signingBetaFile = file('signing-beta.gradle')
+if (signingBetaFile.exists()) apply from: signingBetaFile
+
 allprojects {
     repositories {
         google()
@@ -35,81 +40,10 @@ android {
     namespace = 'ofaid.ahmad.ptt'
     compileSdk = 36
 
-    // ✅ SIGNING CONFIGS DENGAN FALLBACK DEBUG KEYSTORE
-    signingConfigs {
-        release {
-            def ksFile = rootProject.file('keystore.properties')
-            def ks = new Properties()
-            
-            if (ksFile.exists()) {
-                ksFile.withInputStream { ks.load(it) }
-                storeFile = rootProject.file(ks['storeFile'])
-                storePassword = ks['storePassword']
-                keyAlias = ks['keyAlias']
-                keyPassword = ks['keyPassword']
-            } else {
-                storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
-                storePassword = "android"
-                keyAlias = "androiddebugkey"
-                keyPassword = "android"
-            }
-            
-            enableV1Signing = true
-            enableV2Signing = true
-            enableV3Signing = true
-            enableV4Signing = false
-        }
-    }
-
-    defaultConfig {
-        minSdkVersion 21
-        targetSdk 36
-        applicationId "ofaid.ahmad.ptt"
-        versionCode 3070300
-        versionName "3.7.3"
-        
-        multiDexEnabled true 
-        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
-
-        // ✅ PERBAIKAN UTAMA: DEFINISIKAN VARIABEL BUILDCONFIG YANG DICARI JAVA
-        buildConfigField "String", "VERSIONTAG", '"3.7.3"'
-        buildConfigField "String", "FLAVOR", '"foss"' // Default value agar tidak null
-        buildConfigField "long", "TIMESTAMP", System.currentTimeMillis() + "L"
-    }
-
-    // ✅ FLAVOR DIMENSIONS (Penting agar BuildConfig.FLAVOR ter-generate)
-    flavorDimensions "release"
-    productFlavors {
-        goog {
-            dimension "release"
-            applicationId "ofaid.ahmad.ptt"
-            // Override FLAVOR khusus untuk flavor goog jika perlu
-            buildConfigField "String", "FLAVOR", '"goog"'
-        }
-        // Tambahkan flavor lain jika ada (beta, donation, dll) sesuai kebutuhan
-    }
-
-    buildTypes {
-        release {
-            minifyEnabled false
-            shrinkResources false
-            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig = signingConfigs.release
-        }
-        
-        debug {
-            versionNameSuffix "-debug"
-            minifyEnabled false
-            shrinkResources false
-            signingConfig = signingConfigs.release
-        }
-    }
-
     compileOptions {
         sourceCompatibility JavaVersion.VERSION_21
         targetCompatibility JavaVersion.VERSION_21
     }
-    
     kotlinOptions {
         jvmTarget = "21"
     }
@@ -122,6 +56,66 @@ android {
         buildConfig = true
     }
 
+    def gitDescribe = providers.exec {
+        commandLine "git", "describe", "--tags", "--match", "[0-9]*.[0-9]*.[0-9]*", "--always"
+    }.standardOutput.asText.get().trim()
+
+    defaultConfig {
+        minSdkVersion 21
+        targetSdk 36
+        applicationId "ofaid.ahmad.ptt"
+        versionCode 3070300
+        versionName gitDescribe
+
+        // WAJIB TRUE AGAR SEMUA DEX MASUK
+        multiDexEnabled true 
+
+        buildConfigField "long", "TIMESTAMP", System.currentTimeMillis() + "L"
+        buildConfigField "String", "VERSIONTAG", "\"" + gitDescribe.split("-")[0] + "\""
+
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+    }
+
+    flavorDimensions "release"
+    productFlavors {
+        goog {
+            dimension "release"
+            applicationId "ofaid.ahmad.ptt"
+        }
+    }
+
+    // STRUKTUR BUILD TYPES SUDAH DIPERBAIKI
+    buildTypes {
+        release {
+            minifyEnabled false
+            shrinkResources false
+            
+            proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'),
+                          'proguard-rules.pro'
+
+            if (android.hasProperty("signingConfigs")) {
+                if (signingConfigs.hasProperty("release")) {
+                    signingConfig = signingConfigs.release
+                }
+                if (signingConfigs.hasProperty("beta")) {
+                    signingConfig = signingConfigs.beta
+                }
+            }
+        }
+        
+        debug {
+            versionNameSuffix "-debug"
+            minifyEnabled false
+            shrinkResources false
+            if (android.hasProperty("signingConfigs")) {
+                if (signingConfigs.hasProperty("beta")) {
+                    signingConfig = signingConfigs.beta
+                }
+            }
+        }
+    }
+
+    // JANGAN BUANG RESOURCE/APA PUN SAAT PACKAGING
     packagingOptions {
         resources {
             excludes += ['META-INF/DEPENDENCIES', 'META-INF/LICENSE', 'META-INF/LICENSE.txt']
@@ -135,6 +129,14 @@ android {
         explainIssues = true
         ignoreWarnings = false
         quiet = false
+    }
+
+    applicationVariants.all { variant ->
+        if (variant.flavorName == "beta") {
+            variant.outputs.each { output ->
+                output.versionCodeOverride = System.currentTimeSeconds() / 60
+            }
+        }
     }
 }
 
