@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos--Kembali ke komit 38f2e42
- * OFAID/AHMAD (C) 2026 — Simpan&Pulih + Izin Penyimpanan + Anti-FC Android 13–15
+ * OFAID/AHMAD (C) 2026 — Simpan&Pulih + Izin Penyimpanan + Izin Lokasi di Depan + Anti-FC Android 13–15
  */
 package ofaid.ahmad.ptt.app;
 
@@ -108,6 +108,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     private static final int PERMISSIONS_REQUEST_RECORD_AUDIO = 1;
     private static final int PERMISSIONS_REQUEST_POST_NOTIFICATIONS = 2;
     private static final int PERMISSIONS_REQUEST_STORAGE = 917;
+    private static final int PERMISSIONS_REQUEST_LOCATION = 1001; // ✅ Izin Lokasi — Kode Baru
 
     private IMumlaService mService;
     private MumlaDatabase mDatabase;
@@ -262,6 +263,25 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
 
+        // ✅ ==================================================
+        // ✅ LANGKAH 1: MINTA IZIN LOKASI PALING DEPAN
+        // ✅ ==================================================
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED
+            && ContextCompat.checkSelfPermission(this, Manifest.permission.ACCESS_COARSE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED) {
+
+            ActivityCompat.requestPermissions(this,
+                    new String[]{
+                        Manifest.permission.ACCESS_FINE_LOCATION,
+                        Manifest.permission.ACCESS_COARSE_LOCATION
+                    },
+                    PERMISSIONS_REQUEST_LOCATION);
+        } else {
+            // Sudah dapat izin lokasi → lanjut ke izin penyimpanan
+            cekIzinPenyimpananDanLanjut();
+        }
+
         Toolbar toolbar = findViewById(R.id.toolbar);
         setSupportActionBar(toolbar);
 
@@ -346,11 +366,8 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
         getSupportActionBar().setDisplayHomeAsUpEnabled(true);
         getSupportActionBar().setHomeButtonEnabled(true);
 
-        if (savedInstanceState == null) {
-            if (cekIzinPenyimpanan()) {
-                lanjutKeAwal();
-            }
-        }
+        // ⚠️ Bagian ini dipindah ke cekIzinPenyimpananDanLanjut() — dipanggil setelah izin lokasi
+        // if (savedInstanceState == null) { ... } → TIDAK DI SINI LAGI
 
         if (getIntent() != null && Intent.ACTION_VIEW.equals(getIntent().getAction())) {
             String url = getIntent().getDataString();
@@ -366,6 +383,15 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
 
         setVolumeControlStream(mSettings.isHandsetMode() ?
                 AudioManager.STREAM_VOICE_CALL : AudioManager.STREAM_MUSIC);
+    }
+
+    // ✅ ==================================================
+    // ✅ CEK PENYIMPANAN & LANJUT — DIPANGGIL SETELAH IZIN LOKASI
+    // ✅ ==================================================
+    private void cekIzinPenyimpananDanLanjut() {
+        if (cekIzinPenyimpanan()) {
+            lanjutKeAwal();
+        }
     }
 
     private boolean cekIzinPenyimpanan() {
@@ -400,6 +426,18 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
                                            @NonNull int[] grantResults) {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults);
         if (grantResults.length == 0) return;
+
+        // ✅ HASIL IZIN LOKASI — PALING ATAS
+        if (requestCode == PERMISSIONS_REQUEST_LOCATION) {
+            if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                Log.i("OFA_LOKASI", "✅ Izin lokasi diberikan di awal");
+            } else {
+                Log.w("OFA_LOKASI", "⚠️ Izin lokasi ditolak — tetap bisa dipakai");
+            }
+            // Lanjut ke izin penyimpanan & masuk aplikasi
+            cekIzinPenyimpananDanLanjut();
+            return;
+        }
 
         if (requestCode == PERMISSIONS_REQUEST_STORAGE) {
             if (grantResults[0] == PackageManager.PERMISSION_GRANTED) {
@@ -485,7 +523,7 @@ public class MumlaActivity extends AppCompatActivity implements ListView.OnItemC
     }
 
     @Override
-    public boolean onOptionsItemSelected(@NotNull MenuItem item) {
+    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
         if (mDrawerToggle.onOptionsItemSelected(item)) return true;
         if (item.getItemId() == R.id.action_disconnect && mService != null) {
             mService.disconnect();
