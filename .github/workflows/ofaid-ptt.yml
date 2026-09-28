@@ -1,5 +1,5 @@
-name: Bangun Mumla (Release Test)
-run-name: Bangun Mumla - APK Release Testing
+name: Bangun OFA (Debug)
+run-name: Bangun OFA - APK Debug Lengkap
 
 on:
   push:
@@ -47,15 +47,6 @@ jobs:
           echo "sdk.dir=$ANDROID_SDK_ROOT" > local.properties
           echo "ndk.dir=$NDK_PATH" >> local.properties
 
-      # ✅ STEP BARU: BIKIN DEBUG KEYSTORE OTOMATIS DI SERVER GITHUB
-      - name: Buat Debug Keystore Dummy
-        run: |
-          mkdir -p ~/.android
-          keytool -genkey -v -keystore ~/.android/debug.keystore \
-            -alias androiddebugkey -storepass android -keypass android \
-            -keyalg RSA -keysize 2048 -validity 10000 \
-            -dname "CN=Android Debug,O=Android,C=US"
-
       - name: Izin Gradle
         run: chmod +x gradlew libraries/humla/gradlew
 
@@ -65,15 +56,15 @@ jobs:
           ../../../../gradlew jar --no-daemon
           cd ../../../../
 
-      # ✅ BUILD RELEASE UNTUK TEST FC
-      - name: Bangun APK RELEASE
+      # PERUBAHAN UTAMA DI SINI: Ganti assembleRelease jadi assembleDebug
+      - name: Bangun APK DEBUG
         run: |
-          ./gradlew assembleRelease \
+          ./gradlew assembleDebug \
             --stacktrace --no-daemon
 
-      # Upload artifact dengan nama jelas
-      - name: Simpan APK Release
+      # Ubah nama artifact agar tidak tertukar dengan versi release
+      - name: Simpan APK Debug
         uses: actions/upload-artifact@v4
         with:
-          name: OFAID-RELEASE-APK-Test
-          path: "**/*release*.apk"
+          name: OFA-DEBUG-APK-Lengkap
+          path: "**/*debug*.apk"
