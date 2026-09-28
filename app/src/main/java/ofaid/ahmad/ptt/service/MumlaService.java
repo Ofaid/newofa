@@ -1,7 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- *
- modif by Ofaid-2026*/
+ * modif by Ofaid-2026*/
 
 package ofaid.ahmad.ptt.service;
 
@@ -44,10 +43,6 @@ import ofaid.ahmad.ptt.Settings;
 import ofaid.ahmad.ptt.service.ipc.TalkBroadcastReceiver;
 import ofaid.ahmad.ptt.util.HtmlUtils;
 
-/**
- * An extension of the Humla service with some added Mumla-exclusive non-standard Mumble features.
- * Created by andrew on 28/07/13.
- */
 public class MumlaService extends HumlaService implements
         SharedPreferences.OnSharedPreferenceChangeListener,
         MumlaConnectionNotification.OnActionListener,
@@ -87,15 +82,12 @@ public class MumlaService extends HumlaService implements
                 public void onHotCornerDown() {
                     onTalkKeyDown();
                 }
-
                 @Override
                 public void onHotCornerUp() {
                     onTalkKeyUp();
                 }
             };
 
-    // ✅ PERBAIKAN: Ambil buffer langsung dari kelas induk HumlaService
-    // TIDAK pakai mHumlaService yang tidak ada — TIDAK buat AudioRecord baru!
     @Override
     public short[] getRecordingBuffer() {
         return super.getRecordingBuffer();
@@ -110,13 +102,10 @@ public class MumlaService extends HumlaService implements
                 mReconnectNotification.hide();
                 mReconnectNotification = null;
             }
-
             final String tor = mSettings.isTorEnabled() ? " (Tor)" : "";
             mNotification = MumlaConnectionNotification.create(MumlaService.this,
-                    getString(R.string.mumlaConnecting) + tor,
-                    MumlaService.this);
+                    getString(R.string.mumlaConnecting) + tor, MumlaService.this);
             mNotification.show();
-
             mErrorShown = false;
         }
 
@@ -154,7 +143,6 @@ public class MumlaService extends HumlaService implements
         @Override
         public void onUserStateUpdated(IUser user) {
             if (user == null) return;
-
             int selfSession;
             try {
                 selfSession = getSessionId();
@@ -162,7 +150,6 @@ public class MumlaService extends HumlaService implements
                 Log.d(TAG, "exception in onUserStateUpdated: " + e);
                 return;
             }
-
             if (user.getSession() == selfSession) {
                 mSettings.setMutedAndDeafened(user.isSelfMuted(), user.isSelfDeafened());
                 if(mNotification != null) {
@@ -177,7 +164,6 @@ public class MumlaService extends HumlaService implements
                     mNotification.show();
                 }
             }
-
             if (user.getTextureHash() != null && user.getTexture() == null) {
                 requestAvatar(user.getSession());
             }
@@ -187,7 +173,6 @@ public class MumlaService extends HumlaService implements
         public void onMessageLogged(IMessage message) {
             Document parsedMessage = Jsoup.parseBodyFragment(message.getMessage());
             String strippedMessage = parsedMessage.text();
-
             String ttsMessage;
             if(mShortTtsMessagesEnabled) {
                 for (Element anchor : parsedMessage.getElementsByTag("A")) {
@@ -203,10 +188,8 @@ public class MumlaService extends HumlaService implements
             } else {
                 ttsMessage = strippedMessage;
             }
-
             String formattedTtsMessage = getString(R.string.notification_message,
                     message.getActorName(), ttsMessage);
-
             if(mSettings.isTextToSpeechEnabled() &&
                     mTTS != null &&
                     formattedTtsMessage.length() <= TTS_THRESHOLD &&
@@ -214,11 +197,9 @@ public class MumlaService extends HumlaService implements
                     !getSessionUser().isSelfDeafened()) {
                 mTTS.speak(formattedTtsMessage, TextToSpeech.QUEUE_ADD, null);
             }
-
             if (mSettings.isChatNotifyEnabled()) {
                 mMessageNotification.show(message);
             }
-
             mMessageLog.add(new IChatMessage.TextMessage(message));
         }
 
@@ -226,24 +207,20 @@ public class MumlaService extends HumlaService implements
         public void onLogInfo(String message) {
             mMessageLog.add(new IChatMessage.InfoMessage(IChatMessage.InfoMessage.Type.INFO, message));
         }
-
         @Override
         public void onLogWarning(String message) {
             mMessageLog.add(new IChatMessage.InfoMessage(IChatMessage.InfoMessage.Type.WARNING, message));
         }
-
         @Override
         public void onLogError(String message) {
             mMessageLog.add(new IChatMessage.InfoMessage(IChatMessage.InfoMessage.Type.ERROR, message));
         }
-
         @Override
         public void onPermissionDenied(String reason) {
             if(mNotification != null && !mSuppressNotifications) {
                 mNotification.show();
             }
         }
-
         @Override
         public void onUserTalkStateUpdated(IUser user) {
             int selfSession = -1;
@@ -252,7 +229,6 @@ public class MumlaService extends HumlaService implements
             } catch (IllegalStateException e) {
                 Log.d(TAG, "exception in onUserTalkStateUpdated: " + e);
             }
-
             if (isConnectionEstablished() &&
                     user.getSession() == selfSession &&
                     getTransmitMode() == Constants.TRANSMIT_PUSH_TO_TALK &&
@@ -276,10 +252,10 @@ public class MumlaService extends HumlaService implements
         preferences.registerOnSharedPreferenceChangeListener(this);
 
         setTheme(R.style.Theme_Mumla);
-
         mMessageLog = new ArrayList<>();
         mMessageNotification = new MumlaMessageNotification(MumlaService.this);
 
+        // ✅ Dibuat SETELAH mSettings siap — urutan sudah benar
         mChannelOverlay = new MumlaOverlay(this);
         mHotCorner = new MumlaHotCorner(this, mSettings.getHotCornerGravity(), mHotCornerListener);
 
@@ -304,7 +280,6 @@ public class MumlaService extends HumlaService implements
             mReconnectNotification.hide();
             mReconnectNotification = null;
         }
-
         SharedPreferences preferences = PreferenceManager.getDefaultSharedPreferences(this);
         preferences.unregisterOnSharedPreferenceChangeListener(this);
         try {
@@ -312,7 +287,6 @@ public class MumlaService extends HumlaService implements
         } catch (IllegalArgumentException e) {
             e.printStackTrace();
         }
-
         unregisterObserver(mObserver);
         if(mTTS != null) mTTS.shutdown();
         mMessageLog = null;
@@ -328,21 +302,17 @@ public class MumlaService extends HumlaService implements
             Log.d(TAG, "exception in onConnectionSynchronized: " + e);
             return;
         }
-
         if(mSettings.isMuted() || mSettings.isDeafened()) {
             setSelfMuteDeafState(mSettings.isMuted(), mSettings.isDeafened());
         }
-
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             registerReceiver(mTalkReceiver, new IntentFilter(TalkBroadcastReceiver.BROADCAST_TALK), RECEIVER_EXPORTED);
         } else {
             registerReceiver(mTalkReceiver, new IntentFilter(TalkBroadcastReceiver.BROADCAST_TALK));
         }
-
         if (mSettings.isHotCornerEnabled()) {
             mHotCorner.setShown(true);
         }
-
         if (mSettings.isHandsetMode()) {
             setProximitySensorOn(true);
         }
@@ -353,10 +323,8 @@ public class MumlaService extends HumlaService implements
         super.onConnectionDisconnected(e);
         try {
             unregisterReceiver(mTalkReceiver);
-        } catch (IllegalArgumentException iae) {
-        }
-
-        mChannelOverlay.hide();
+        } catch (IllegalArgumentException iae) { }
+        if (mChannelOverlay != null) mChannelOverlay.hide();
         mHotCorner.setShown(false);
         setProximitySensorOn(false);
         clearMessageLog();
@@ -371,7 +339,10 @@ public class MumlaService extends HumlaService implements
             case Settings.PREF_INPUT_METHOD:
                 int inputMethod = mSettings.getHumlaInputMethod();
                 changedExtras.putInt(HumlaService.EXTRAS_TRANSMIT_MODE, inputMethod);
-                mChannelOverlay.setPushToTalkShown(inputMethod == Constants.TRANSMIT_PUSH_TO_TALK);
+                // ✅ Cek dulu mChannelOverlay sudah dibuat
+                if (mChannelOverlay != null) {
+                    mChannelOverlay.setPushToTalkShown(inputMethod == Constants.TRANSMIT_PUSH_TO_TALK);
+                }
                 break;
             case Settings.PREF_HANDSET_MODE:
                 setProximitySensorOn(isConnectionEstablished() && mSettings.isHandsetMode());
@@ -438,7 +409,6 @@ public class MumlaService extends HumlaService implements
                 e.printStackTrace();
             }
         }
-
         if (requiresReconnect && isConnectionEstablished()) {
             Toast.makeText(this, R.string.change_requires_reconnect, Toast.LENGTH_LONG).show();
         }
@@ -475,11 +445,15 @@ public class MumlaService extends HumlaService implements
 
     @Override
     public void onOverlayToggled() {
+        // ✅ Cek dulu apakah sudah siap
+        if (mChannelOverlay == null) {
+            Log.w(TAG, "Overlay belum siap");
+            return;
+        }
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             Intent close = new Intent(Intent.ACTION_CLOSE_SYSTEM_DIALOGS);
             getApplicationContext().sendBroadcast(close);
         }
-
         if (!mChannelOverlay.isShown()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                 if (!android.provider.Settings.canDrawOverlays(getApplicationContext())) {
@@ -496,15 +470,12 @@ public class MumlaService extends HumlaService implements
             mChannelOverlay.hide();
         }
     }
-       // =====================================================
-    // ✅ KIRIM STATUS BESERTA ID OFA
-    // =====================================================
+
     public void kirimStatusDenganId(String idOFA, String statusTeks) {
         if (!isConnected() || !isSynchronized()) {
             Log.w(TAG, "Belum terhubung — tidak bisa kirim status");
             return;
         }
-
         try {
             setStatusDenganId(idOFA, statusTeks);
             Log.i(TAG, "✅ Status terkirim: " + idOFA + " | " + statusTeks);
@@ -512,7 +483,6 @@ public class MumlaService extends HumlaService implements
             Log.e(TAG, "❌ Gagal kirim status: " + e.getMessage());
         }
     }
-
 
     @Override
     public void onReconnectNotificationDismissed() {
@@ -535,6 +505,8 @@ public class MumlaService extends HumlaService implements
 
     @Override
     public void setOverlayShown(boolean showOverlay) {
+        // ✅ Cek dulu
+        if (mChannelOverlay == null) return;
         if(!mChannelOverlay.isShown()) {
             mChannelOverlay.show();
         } else {
@@ -544,7 +516,7 @@ public class MumlaService extends HumlaService implements
 
     @Override
     public boolean isOverlayShown() {
-        return mChannelOverlay.isShown();
+        return mChannelOverlay != null && mChannelOverlay.isShown();
     }
 
     @Override
@@ -568,29 +540,47 @@ public class MumlaService extends HumlaService implements
 
     @Override
     public void onTalkKeyDown() {
-        if(isConnectionEstablished()
-                && Settings.ARRAY_INPUT_METHOD_PTT.equals(mSettings.getInputMethod())) {
-            if (!mSettings.isPushToTalkToggle() && !isTalking()) {
-                setTalkingState(true);
+        // ✅ Cek SEMUA dulu — TIDAK BISA KOSONG
+        if (mSettings == null) {
+            Log.w(TAG, "mSettings belum siap");
+            return;
+        }
+        if (!isConnectionEstablished()) {
+            Log.w(TAG, "Belum tersambung ke server");
+            return;
+        }
+        if (Settings.ARRAY_INPUT_METHOD_PTT.equals(mSettings.getInputMethod())) {
+            try {
+                if (!mSettings.isPushToTalkToggle() && !isTalking()) {
+                    setTalkingState(true);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Gagal mulai bicara: " + e.getMessage());
             }
         }
     }
 
     @Override
     public void onTalkKeyUp() {
-        if(isConnectionEstablished()
-                && Settings.ARRAY_INPUT_METHOD_PTT.equals(mSettings.getInputMethod())) {
-            if (mSettings.isPushToTalkToggle()) {
-                setTalkingState(!isTalking());
-            } else if (isTalking()) {
-                setTalkingState(false);
+        // ✅ Cek SEMUA dulu
+        if (mSettings == null) return;
+        if (!isConnectionEstablished()) return;
+        if (Settings.ARRAY_INPUT_METHOD_PTT.equals(mSettings.getInputMethod())) {
+            try {
+                if (mSettings.isPushToTalkToggle()) {
+                    setTalkingState(!isTalking());
+                } else if (isTalking()) {
+                    setTalkingState(false);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Gagal berhenti bicara: " + e.getMessage());
             }
         }
     }
 
     @Override
     public List<IChatMessage> getMessageLog() {
-        return Collections.unmodifiableList(mMessageLog);
+        return mMessageLog == null ? Collections.emptyList() : Collections.unmodifiableList(mMessageLog);
     }
 
     @Override
@@ -607,11 +597,9 @@ public class MumlaService extends HumlaService implements
 
     public static class MumlaBinder extends Binder {
         private final MumlaService mService;
-
         private MumlaBinder(MumlaService service) {
             mService = service;
         }
-
         public IMumlaService getService() {
             return mService;
         }
@@ -620,14 +608,18 @@ public class MumlaService extends HumlaService implements
     @Override
     public Message sendUserTextMessage(int session, String message) {
         Message msg = super.sendUserTextMessage(session, message);
-        mMessageLog.add(new IChatMessage.TextMessage(msg));
+        if (mMessageLog != null) {
+            mMessageLog.add(new IChatMessage.TextMessage(msg));
+        }
         return msg;
     }
 
     @Override
     public Message sendChannelTextMessage(int channel, String message, boolean tree) {
         Message msg = super.sendChannelTextMessage(channel, message, tree);
-        mMessageLog.add(new IChatMessage.TextMessage(msg));
+        if (mMessageLog != null) {
+            mMessageLog.add(new IChatMessage.TextMessage(msg));
+        }
         return msg;
     }
 }
