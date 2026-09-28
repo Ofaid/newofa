@@ -1,10 +1,7 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
  * OFAID 2026
- * You should have received a copy of the GNU General Public License
- * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 package ofaid.ahmad.ptt.service;
 
 import android.content.Context;
@@ -82,10 +79,15 @@ public class MumlaOverlay {
 
     public MumlaOverlay(MumlaService service) {
         mService = service;
-        mOverlayView = View.inflate(service, R.layout.overlay, null);
+        try {
+            mOverlayView = View.inflate(service, R.layout.overlay, null);
+        } catch (Exception e) {
+            Log.e(TAG, "❌ Gagal memuat layout overlay: " + e.getMessage());
+            return;
+        }
         
         if (mOverlayView == null) {
-            Log.e(TAG, "❌ Gagal memuat layout overlay!");
+            Log.e(TAG, "❌ Overlay view null!");
             return;
         }
 
@@ -95,6 +97,7 @@ public class MumlaOverlay {
         mTitleView = mOverlayView.findViewById(R.id.overlay_title);
         mOverlayList = (ListView) mOverlayView.findViewById(R.id.overlay_list);
 
+        // ✅ DRAG TITLE BAR
         mTitleView.setOnTouchListener(new View.OnTouchListener() {
             private final WindowManager wm = (WindowManager) mService.getSystemService(Context.WINDOW_SERVICE);
             private float x0, y0;
@@ -108,13 +111,14 @@ public class MumlaOverlay {
                 } else if (e.getAction() == MotionEvent.ACTION_MOVE) {
                     mOverlayParams.x = (int) (e.getRawX() - x0);
                     mOverlayParams.y = (int) (e.getRawY() - y0);
-                    wm.updateViewLayout(mOverlayView, mOverlayParams);
+                    try { wm.updateViewLayout(mOverlayView, mOverlayParams); } catch (Exception ignored) {}
                     return true;
                 }
                 return false;
             }
         });
 
+        // ✅ RESIZE HANDLE
         mDragButton.setOnTouchListener(new View.OnTouchListener() {
             private final WindowManager wm = (WindowManager) mService.getSystemService(Context.WINDOW_SERVICE);
             private float x0, y0, w0, h0;
@@ -126,32 +130,40 @@ public class MumlaOverlay {
                     w0 = mOverlayView.getWidth(); h0 = mOverlayView.getHeight();
                     return true;
                 } else if (e.getAction() == MotionEvent.ACTION_MOVE) {
-                    mOverlayParams.width = (int) (w0 + (e.getRawX() - x0));
-                    mOverlayParams.height = (int) (h0 + (e.getRawY() - y0));
-                    wm.updateViewLayout(mOverlayView, mOverlayParams);
+                    mOverlayParams.width = Math.max(100, (int) (w0 + (e.getRawX() - x0)));
+                    mOverlayParams.height = Math.max(100, (int) (h0 + (e.getRawY() - y0)));
+                    try { wm.updateViewLayout(mOverlayView, mOverlayParams); } catch (Exception ignored) {}
                     return true;
                 }
                 return false;
             }
         });
 
+        // ✅ PTT BUTTON DENGAN SAFETY CHECK LENGKAP
         mTalkButton.setOnTouchListener(new View.OnTouchListener() {
             @Override
             public boolean onTouch(View v, MotionEvent e) {
                 if (mService == null) {
-                    Toast.makeText(mService, "Layanan belum siap", Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "Service null saat touch PTT");
                     return false;
                 }
+                
                 try {
                     if (e.getAction() == MotionEvent.ACTION_DOWN) {
+                        if (!mService.isConnectionEstablished()) {
+                            Toast.makeText(mService, "Belum connect ke server!", Toast.LENGTH_SHORT).show();
+                            return false;
+                        }
                         mService.onTalkKeyDown();
                         return true;
-                    } else if (e.getAction() == MotionEvent.ACTION_UP) {
+                    } else if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL) {
+                        if (!mService.isConnectionEstablished()) return false;
                         mService.onTalkKeyUp();
                         return true;
                     }
                 } catch (Exception ex) {
-                    Toast.makeText(mService, "Error: " + ex.getMessage(), Toast.LENGTH_SHORT).show();
+                    Log.e(TAG, "CRASH SAAT PTT: " + ex.getMessage(), ex);
+                    Toast.makeText(mService, "Error Mic: " + ex.getMessage(), Toast.LENGTH_LONG).show();
                 }
                 return false;
             }
@@ -187,11 +199,16 @@ public class MumlaOverlay {
             return;
         }
 
-        IChannel saluran;
+        IChannel saluran = null;
         try {
+            if (!mService.isConnectionEstablished()) {
+                Toast.makeText(mService, "Sambung ke server dulu!", Toast.LENGTH_SHORT).show();
+                return;
+            }
             saluran = mService.getSessionChannel();
         } catch (Exception e) {
-            Toast.makeText(mService, "Sambung ke server dulu!", Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Gagal ambil channel: " + e.getMessage());
+            Toast.makeText(mService, "Error ambil data channel", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -200,17 +217,18 @@ public class MumlaOverlay {
             return;
         }
 
-        mShown = true;
-        mChannelAdapter = new ChannelAdapter(mService, saluran);
-        mOverlayList.setAdapter(mChannelAdapter);
-        mService.registerObserver(mObserver);
-
         try {
+            mShown = true;
+            mChannelAdapter = new ChannelAdapter(mService, saluran);
+            mOverlayList.setAdapter(mChannelAdapter);
+            mService.registerObserver(mObserver);
+            
             WindowManager wm = (WindowManager) mService.getSystemService(Context.WINDOW_SERVICE);
             wm.addView(mOverlayView, mOverlayParams);
-            Log.i(TAG, "✅ Overlay tampil");
+            Log.i(TAG, "✅ Overlay tampil sukses");
         } catch (Exception e) {
-            Toast.makeText(mService, "Gagal tampil: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            Log.e(TAG, "Gagal tampilkan overlay: " + e.getMessage(), e);
+            Toast.makeText(mService, "Gagal tampil overlay", Toast.LENGTH_SHORT).show();
             mShown = false;
         }
     }
