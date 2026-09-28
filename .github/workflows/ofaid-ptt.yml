@@ -1,5 +1,5 @@
-name: Bangun Mumla (Debug)
-run-name: Bangun Mumla - APK Debug Lengkap
+name: Bangun Mumla (Release Test)
+run-name: Bangun Mumla - APK Release Testing
 
 on:
   push:
@@ -56,15 +56,15 @@ jobs:
           ../../../../gradlew jar --no-daemon
           cd ../../../../
 
-      # PERUBAHAN UTAMA DI SINI: Ganti assembleRelease jadi assembleDebug
-      - name: Bangun APK DEBUG
+      # ✅ SWITCH KE RELEASE UNTUK TEST FC
+      - name: Bangun APK RELEASE
         run: |
-          ./gradlew assembleDebug \
+          ./gradlew assembleRelease \
             --stacktrace --no-daemon
 
-      # Ubah nama artifact agar tidak tertukar dengan versi release
-      - name: Simpan APK Debug
+      # Upload artifact dengan nama jelas
+      - name: Simpan APK Release
         uses: actions/upload-artifact@v4
         with:
-          name: OFAID-DEBUG-APK-Lengkap
-          path: "**/*debug*.apk"
+          name: OFAID-RELEASE-APK-Test
+          path: "**/*release*.apk"
