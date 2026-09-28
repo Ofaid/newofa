@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Modif By Ofaid/Ahmad 12-9-2026 — ID Tetap Diri Sendiri + Anti-Null-FC
+ * Modif By Ofaid/Ahmad 12-9-2026 — ID Tetap Diri Sendiri + Sesuaikan ID Layout + Anti-FC
  */
 package ofaid.ahmad.ptt.channel;
 
@@ -78,7 +78,8 @@ public class ChannelAdapter extends BaseAdapter {
             holder.userId = v.findViewById(R.id.user_row_id);
             holder.userStatus = v.findViewById(R.id.user_row_status);
             holder.userLokasi = v.findViewById(R.id.user_lokasi);
-            holder.userState = v.findViewById(R.id.user_row_state);
+            // ✅ SUDAH DIPERBAIKI: Pakai ID yang BENAR-BENAR ADA di layout
+            holder.userState = v.findViewById(R.id.user_row_talk_highlight);
 
             v.setTag(holder);
         } else {
@@ -149,9 +150,9 @@ public class ChannelAdapter extends BaseAdapter {
         }
 
         // =============================================
-        // ✅ IKON STATUS — DITAMBAH CEK NULL → TIDAK FC
+        // ✅ IKON STATUS — CEK NULL AMAN + ID SUDAH BENAR
         // =============================================
-        if (holder.userState != null) {  // ✅ INI YANG DITAMBAH — CEK DULU!
+        if (holder.userState != null) {
             if (user.isSelfDeafened())
                 holder.userState.setImageResource(R.drawable.outline_circle_deafened);
             else if (user.isSelfMuted())
@@ -167,7 +168,7 @@ public class ChannelAdapter extends BaseAdapter {
             else
                 holder.userState.setImageResource(R.drawable.outline_circle_talking_off);
         }
-        // Kalau null → dilewati, aplikasi tetap berjalan 💪
+        // Kalau null → dilewati, TIDAK MATI 💪
 
         return v;
     }
