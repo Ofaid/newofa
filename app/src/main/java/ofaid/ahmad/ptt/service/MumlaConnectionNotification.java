@@ -32,6 +32,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
+import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
 
@@ -39,11 +40,8 @@ import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.app.DrawerAdapter;
 import ofaid.ahmad.ptt.app.MumlaActivity;
 
-/**
- * Wrapper to create Mumla notifications.
- * Created by andrew on 08/08/14.
- */
 public class MumlaConnectionNotification {
+    private static final String TAG = "OFAID-Notif";
     private static final int NOTIFICATION_ID = 1;
     private static final String BROADCAST_MUTE = "b_mute";
     private static final String BROADCAST_DEAFEN = "b_deafen";
@@ -53,26 +51,26 @@ public class MumlaConnectionNotification {
     private OnActionListener mListener;
     private String mCustomContentText;
     private boolean mActionsShown;
+    private boolean mReceiverRegistered = false; // ✅ Cek sudah terdaftar
 
     private BroadcastReceiver mNotificationReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (BROADCAST_MUTE.equals(intent.getAction())) {
-                mListener.onMuteToggled();
-            } else if (BROADCAST_DEAFEN.equals(intent.getAction())) {
-                mListener.onDeafenToggled();
-            } else if (BROADCAST_OVERLAY.equals(intent.getAction())) {
-                mListener.onOverlayToggled();
+            if (intent.getAction() == null) return;
+            switch (intent.getAction()) {
+                case BROADCAST_MUTE:
+                    if (mListener != null) mListener.onMuteToggled();
+                    break;
+                case BROADCAST_DEAFEN:
+                    if (mListener != null) mListener.onDeafenToggled();
+                    break;
+                case BROADCAST_OVERLAY:
+                    if (mListener != null) mListener.onOverlayToggled();
+                    break;
             }
         }
     };
 
-    /**
-     * Creates a foreground Mumla notification for the given service.
-     * @param service The service to register a foreground notification for.
-     * @param listener An listener for notification actions.
-     * @return A new MumlaNotification instance.
-     */
     public static MumlaConnectionNotification create(Service service, String contentText,
                                                      OnActionListener listener) {
         return new MumlaConnectionNotification(service, contentText, listener);
@@ -94,58 +92,71 @@ public class MumlaConnectionNotification {
         mActionsShown = actionsShown;
     }
 
-    /**
-     * Shows the notification and registers the notification action button receiver.
-     */
     public void show() {
         createNotification();
+
+        // ✅ TIDAK daftar ulang kalau sudah ada
+        if (mReceiverRegistered) {
+            Log.d(TAG, "Penerima sudah terdaftar");
+            return;
+        }
 
         IntentFilter filter = new IntentFilter();
         filter.addAction(BROADCAST_DEAFEN);
         filter.addAction(BROADCAST_MUTE);
         filter.addAction(BROADCAST_OVERLAY);
+
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
                 mService.registerReceiver(mNotificationReceiver, filter, RECEIVER_NOT_EXPORTED);
             } else {
                 mService.registerReceiver(mNotificationReceiver, filter);
             }
+            mReceiverRegistered = true; // ✅ Tandai sudah terdaftar
+            Log.i(TAG, "✅ Penerima tombol aktif");
         } catch (IllegalArgumentException e) {
-            // Thrown if receiver is already registered.
-            e.printStackTrace();
+            Log.w(TAG, "Penerima sudah terdaftar: " + e.getMessage());
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal daftar penerima: " + e.getMessage());
         }
     }
 
-    /**
-     * Hides the notification and unregisters the action receiver.
-     */
     public void hide() {
+        // ✅ TIDAK lepas kalau belum terdaftar
+        if (!mReceiverRegistered) return;
+
         try {
             mService.unregisterReceiver(mNotificationReceiver);
+            mReceiverRegistered = false; // ✅ Tandai sudah dilepas
+            Log.i(TAG, "✅ Penerima tombol dinonaktifkan");
         } catch (IllegalArgumentException e) {
-            // Thrown if receiver is not registered.
-            e.printStackTrace();
+            Log.w(TAG, "Penerima sudah dilepas: " + e.getMessage());
+            mReceiverRegistered = false;
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal lepas penerima: " + e.getMessage());
+            mReceiverRegistered = false;
         }
-        mService.stopForeground(true);
+
+        try {
+            mService.stopForeground(true);
+        } catch (Exception e) {
+            Log.e(TAG, "Gagal sembunyikan notifikasi: " + e.getMessage());
+        }
     }
 
-    /**
-     * Called to update/create the service's foreground Mumla notification.
-     */
     private Notification createNotification() {
-        String channelId = "";
+        String channelId = "connected_channel";
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            channelId = "connected_channel";
             String channelName = mService.getString(R.string.connected);
             NotificationChannel chan = new NotificationChannel(channelId, channelName,
                     NotificationManager.IMPORTANCE_DEFAULT);
-            NotificationManager manager = mService.getSystemService(NotificationManager.class);
+            NotificationManager manager =
+                    (NotificationManager) mService.getSystemService(Context.NOTIFICATION_SERVICE);
             manager.createNotificationChannel(chan);
         }
-        NotificationCompat.Builder builder =
-                new NotificationCompat.Builder(mService, channelId);
 
-        // app name is always displayed in notification on >= O
+        NotificationCompat.Builder builder = new NotificationCompat.Builder(mService, channelId);
+
         if (Build.VERSION.SDK_INT <= Build.VERSION_CODES.M) {
             builder.setContentTitle(mService.getString(R.string.app_name));
         }
@@ -157,7 +168,6 @@ public class MumlaConnectionNotification {
         builder.setOngoing(true);
 
         if (mActionsShown) {
-            // Add notification triggers
             Intent muteIntent = new Intent(BROADCAST_MUTE);
             muteIntent.setPackage(mService.getPackageName());
             Intent deafenIntent = new Intent(BROADCAST_DEAFEN);
@@ -166,29 +176,34 @@ public class MumlaConnectionNotification {
             overlayIntent.setPackage(mService.getPackageName());
 
             builder.addAction(R.drawable.ic_action_microphone,
-                    mService.getString(R.string.mute), PendingIntent.getBroadcast(mService, 1,
-                            muteIntent, FLAG_CANCEL_CURRENT | FLAG_IMMUTABLE));
+                    mService.getString(R.string.mute), PendingIntent.getBroadcast(
+                            mService, 1, muteIntent,
+                            FLAG_CANCEL_CURRENT | FLAG_IMMUTABLE));
             builder.addAction(R.drawable.ic_action_audio,
-                    mService.getString(R.string.deafen), PendingIntent.getBroadcast(mService, 1,
-                            deafenIntent, FLAG_CANCEL_CURRENT | FLAG_IMMUTABLE));
+                    mService.getString(R.string.deafen), PendingIntent.getBroadcast(
+                            mService, 1, deafenIntent,
+                            FLAG_CANCEL_CURRENT | FLAG_IMMUTABLE));
             builder.addAction(R.drawable.ic_action_channels,
-                    mService.getString(R.string.overlay), PendingIntent.getBroadcast(mService, 2,
-                            overlayIntent, FLAG_CANCEL_CURRENT | FLAG_IMMUTABLE));
+                    mService.getString(R.string.overlay), PendingIntent.getBroadcast(
+                            mService, 2, overlayIntent,
+                            FLAG_CANCEL_CURRENT | FLAG_IMMUTABLE));
         }
 
         Intent channelListIntent = new Intent(mService, MumlaActivity.class);
         channelListIntent.putExtra(MumlaActivity.EXTRA_DRAWER_FRAGMENT, DrawerAdapter.ITEM_SERVER);
-        // FLAG_CANCEL_CURRENT ensures that the extra always gets sent.
-        PendingIntent pendingIntent = PendingIntent.getActivity(mService, 0,
-                channelListIntent, FLAG_CANCEL_CURRENT | FLAG_IMMUTABLE);
+        PendingIntent pendingIntent = PendingIntent.getActivity(
+                mService, 0, channelListIntent,
+                FLAG_CANCEL_CURRENT | FLAG_IMMUTABLE);
         builder.setContentIntent(pendingIntent);
 
         Notification notification = builder.build();
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
             mService.startForeground(NOTIFICATION_ID, notification, FOREGROUND_SERVICE_TYPE_MICROPHONE);
         } else {
             mService.startForeground(NOTIFICATION_ID, notification);
         }
+
         return notification;
     }
 
