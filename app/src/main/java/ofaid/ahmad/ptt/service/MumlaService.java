@@ -42,6 +42,7 @@ import ofaid.ahmad.ptt.R;
 import ofaid.ahmad.ptt.Settings;
 import ofaid.ahmad.ptt.service.ipc.TalkBroadcastReceiver;
 import ofaid.ahmad.ptt.util.HtmlUtils;
+import ofaid.ahmad.ptt.service.MumlaOverlay;
 
 public class MumlaService extends HumlaService implements
         SharedPreferences.OnSharedPreferenceChangeListener,
