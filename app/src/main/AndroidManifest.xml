@@ -41,8 +41,7 @@
 android:label="OFAID PTT"
         android:theme="@style/Theme.Mumla"
         android:requestLegacyExternalStorage="true"
-        android:localeConfig="@xml/local_config"
-        android:networkSecurityConfig="@xml/network_security_config">
+              android:networkSecurityConfig="@xml/network_security_config">
 
         <activity
             android:name=".preference.SettingsActivity"
