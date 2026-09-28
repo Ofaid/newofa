@@ -35,21 +35,19 @@ android {
     namespace = 'ofaid.ahmad.ptt'
     compileSdk = 36
 
-    // ✅ SIGNING CONFIGS DENGAN FALLBACK DEBUG KEYSTORE (AMAN UNTUK GITHUB ACTIONS)
+    // ✅ SIGNING CONFIGS DENGAN FALLBACK DEBUG KEYSTORE
     signingConfigs {
         release {
             def ksFile = rootProject.file('keystore.properties')
             def ks = new Properties()
             
             if (ksFile.exists()) {
-                // Mode HP: Pakai keystore.properties
                 ksFile.withInputStream { ks.load(it) }
                 storeFile = rootProject.file(ks['storeFile'])
                 storePassword = ks['storePassword']
                 keyAlias = ks['keyAlias']
                 keyPassword = ks['keyPassword']
             } else {
-                // Mode GitHub Actions: Pakai debug keystore bawaan sistem
                 storeFile = file(System.getProperty("user.home") + "/.android/debug.keystore")
                 storePassword = "android"
                 keyAlias = "androiddebugkey"
@@ -72,6 +70,23 @@ android {
         
         multiDexEnabled true 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+
+        // ✅ PERBAIKAN UTAMA: DEFINISIKAN VARIABEL BUILDCONFIG YANG DICARI JAVA
+        buildConfigField "String", "VERSIONTAG", '"3.7.3"'
+        buildConfigField "String", "FLAVOR", '"foss"' // Default value agar tidak null
+        buildConfigField "long", "TIMESTAMP", System.currentTimeMillis() + "L"
+    }
+
+    // ✅ FLAVOR DIMENSIONS (Penting agar BuildConfig.FLAVOR ter-generate)
+    flavorDimensions "release"
+    productFlavors {
+        goog {
+            dimension "release"
+            applicationId "ofaid.ahmad.ptt"
+            // Override FLAVOR khusus untuk flavor goog jika perlu
+            buildConfigField "String", "FLAVOR", '"goog"'
+        }
+        // Tambahkan flavor lain jika ada (beta, donation, dll) sesuai kebutuhan
     }
 
     buildTypes {
@@ -79,7 +94,7 @@ android {
             minifyEnabled false
             shrinkResources false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            signingConfig = signingConfigs.release // ✅ LANGSUNG ASSIGN, TANPA IF-CHECK LAGI
+            signingConfig = signingConfigs.release
         }
         
         debug {
