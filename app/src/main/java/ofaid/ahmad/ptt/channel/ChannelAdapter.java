@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2014 Andrew Comminos
- * Modif By Ofaid/Ahmad 12-9-2026 — ID Tetap Diri Sendiri
+ * Modif By Ofaid/Ahmad 12-9-2026 — ID Tetap Diri Sendiri + Anti-Null-FC
  */
 package ofaid.ahmad.ptt.channel;
 
@@ -148,21 +148,26 @@ public class ChannelAdapter extends BaseAdapter {
             }
         }
 
-        // === IKON BICARA/DIAM ===
-        if (user.isSelfDeafened())
-            holder.userState.setImageResource(R.drawable.outline_circle_deafened);
-        else if (user.isSelfMuted())
-            holder.userState.setImageResource(R.drawable.outline_circle_muted);
-        else if (user.isDeafened())
-            holder.userState.setImageResource(R.drawable.outline_circle_server_deafened);
-        else if (user.isMuted())
-            holder.userState.setImageResource(R.drawable.outline_circle_server_muted);
-        else if (user.isSuppressed())
-            holder.userState.setImageResource(R.drawable.outline_circle_suppressed);
-        else if (user.getTalkState() == TalkState.TALKING)
-            holder.userState.setImageResource(R.drawable.outline_circle_talking_on);
-        else
-            holder.userState.setImageResource(R.drawable.outline_circle_talking_off);
+        // =============================================
+        // ✅ IKON STATUS — DITAMBAH CEK NULL → TIDAK FC
+        // =============================================
+        if (holder.userState != null) {  // ✅ INI YANG DITAMBAH — CEK DULU!
+            if (user.isSelfDeafened())
+                holder.userState.setImageResource(R.drawable.outline_circle_deafened);
+            else if (user.isSelfMuted())
+                holder.userState.setImageResource(R.drawable.outline_circle_muted);
+            else if (user.isDeafened())
+                holder.userState.setImageResource(R.drawable.outline_circle_server_deafened);
+            else if (user.isMuted())
+                holder.userState.setImageResource(R.drawable.outline_circle_server_muted);
+            else if (user.isSuppressed())
+                holder.userState.setImageResource(R.drawable.outline_circle_suppressed);
+            else if (user.getTalkState() == TalkState.TALKING)
+                holder.userState.setImageResource(R.drawable.outline_circle_talking_on);
+            else
+                holder.userState.setImageResource(R.drawable.outline_circle_talking_off);
+        }
+        // Kalau null → dilewati, aplikasi tetap berjalan 💪
 
         return v;
     }
